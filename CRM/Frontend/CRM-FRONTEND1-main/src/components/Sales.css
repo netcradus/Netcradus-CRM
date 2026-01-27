@@ -1,0 +1,100 @@
+.sales-container {
+  margin-left: 220px;
+  padding: 30px 40px;
+  background: radial-gradient(circle at top right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  color: #f1f1f1;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sales-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.sales-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+    background: linear-gradient(
+    90deg,
+    #FF4F9A 5%,   /* Pink / Magenta */
+    #FF8A3D 50%,  /* Orange */
+    #FFC83D 100%  /* Yellow / Gold */
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 8px #ff6a3d;
+}
+
+.sales-header button {
+  padding: 10px 18px;
+  background: linear-gradient(90deg, #ff6a3d, #ff3c78);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #ff3c78;
+  transition: background 0.3s ease;
+  position: fixed;
+  bottom: 30px;
+  right: 40px;
+  z-index: 10;
+}
+
+.sales-header button:hover {
+  background: linear-gradient(90deg, #ff3c78, #ff6a3d);
+}
+
+.sales-graph {
+  margin-top: 30px;
+  padding: 20px;
+  background: #1a1a1f;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(255, 58, 92, 0.3);
+}
+
+.sales-graph h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+.sales-stats {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.sales-card {
+  background: #1b1b21;
+  border-radius: 10px;
+  padding: 20px;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 58, 92, 0.15);
+  transition: transform 0.3s ease;
+}
+
+.sales-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 20px rgba(255, 58, 92, 0.3);
+}
+
+.sales-card h3 {
+  font-size: 16px;
+  color: #ff6a3d;
+  margin-bottom: 8px;
+}
+
+.sales-card p {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f1f1;
+}

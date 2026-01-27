@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #ffffff;
+}
+
+.hr-dashboard {
+  padding: 2rem;
+  margin-left: 250px;
+  margin-right: 40px;
+}
+
+.hr-header-card {
+  background-color: #1a1a1a;
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 0 12px #00bcd440;
+  margin-bottom: 2rem;
+}
+
+.hr-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.hr-title .highlight {
+  color: #00c6ff;
+}
+
+.hr-subtitle {
+  font-size: 1rem;
+  color: #ccc;
+}
+
+.hr-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.hr-search,
+.hr-select {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background-color: #262626;
+  color: #fff;
+  flex: 1;
+  min-width: 200px;
+  outline: none;
+}
+
+.hr-search::placeholder {
+  color: #888;
+}
+
+.btn-primary,
+.btn-outline {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: #00c6ff;
+  border: none;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #00a6dd;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 2px solid #00c6ff;
+  color: #00c6ff;
+}
+
+.btn-outline:hover {
+  background-color: #00c6ff;
+  color: #fff;
+}
+
+.hr-metrics {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background-color: #1f1f1f;
+  padding: 1.5rem;
+  border-radius: 12px;
+  flex: 1;
+  min-width: 220px;
+  box-shadow: 0 0 10px rgba(0, 198, 255, 0.2);
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.metric-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-top: 0.25rem;
+  color: #fff;
+}
+
+.hr-charts {
+  background-color: #1a1a1a;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 0 12px #00bcd440;
+}
+
+.chart-heading {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.recharts-cartesian-axis-tick-value {
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+}

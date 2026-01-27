@@ -1,0 +1,36 @@
+.dashboard-container {
+  display: flex;
+}
+
+.dashboard {
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.dashboard h2{
+      background: linear-gradient(
+    90deg,
+    #FF4F9A 0%,   /* Pink / Magenta */
+    #FF8A3D 10%,  /* Orange */
+    #FFC83D 100%  /* Yellow / Gold */
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+}
+
+.report-box {
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.report-box h4 {
+  margin-bottom: 10px;
+  color: #333;
+}

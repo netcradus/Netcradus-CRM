@@ -1,0 +1,169 @@
+/* Sidebar main container */
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #0f0f11;
+  background-image: linear-gradient(180deg, #1a1a1f 0%, #0f0f11 100%);
+  box-shadow: 3px 0 15px rgba(0, 0, 0, 0.8);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 1000;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Logo Text */
+.logo {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ff6a3d;
+  margin-bottom: 40px;
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #ff6a3d;
+  user-select: none;
+}
+
+/* Logo Image */
+.logo-image {
+  width: 100px;
+  height: auto;
+  margin: 0 auto 10px auto;
+  display: block;
+  filter: drop-shadow(0 0 5px rgba(255, 106, 61, 0.5));
+}
+/* Search Bar */
+.sidebar-search {
+  padding: 10px 0 20px;
+}
+
+/* Wrapper handles alignment */
+.search-input-wrapper {
+  display: flex;
+  align-items: center;            /* ✅ PERFECT vertical centering */
+  gap: 10px;
+  background: #1c1c22;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Icon */
+.search-icon {
+  font-size: 15px;
+  color: #ff6a3d;
+  flex-shrink: 0;
+}
+
+/* Input */
+.search-input-wrapper input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+}
+
+.search-input-wrapper input::placeholder {
+  color: #aaa;
+}
+
+.no-result {
+  padding: 12px 16px;
+  color: #999;
+  font-size: 14px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Nav List */
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Nav Items */
+.sidebar ul li {
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #e3e3e3;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.1);
+  background: transparent;
+}
+
+.sidebar ul li:hover {
+  background: linear-gradient(90deg, #ff6a3d, #ff3c78);
+  color: white;
+  /* transform: translateX(6px); */
+  box-shadow: 0 0 15px #ff3c78;
+  text-shadow: none;
+}
+
+/* Nav Links */
+.sidebar ul li a {
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Nav Icons */
+.sidebar ul li a svg {
+  font-size: 18px;
+  fill: #ff6a3d;
+  transition: fill 0.3s ease;
+}
+
+.sidebar ul li:hover a svg {
+  fill: #fff;
+}
+
+/* Scrollbar Styling */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #121214;
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #ff3c78;
+  border-radius: 10px;
+  box-shadow: 0 0 6px #ff3c78;
+}
+
+/* Main Content Area */
+.crm-main-content {
+  margin-left: 220px;
+  min-height: 100vh;
+  padding: 30px 40px;
+  background: #121212;
+  background-image: radial-gradient(circle at top right, rgba(255, 58, 92, 0.1), transparent 80%);
+  border-radius: 12px 0 0 12px;
+  box-shadow: inset 0 0 15px rgba(255, 58, 92, 0.2);
+  color: #ddd;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: background 0.3s ease;
+}

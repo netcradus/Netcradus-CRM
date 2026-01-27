@@ -1,0 +1,204 @@
+/* SalesInbox.css - Netcradus Dark Theme */
+
+/* Container */
+.sales-inbox-container {
+  margin-left: 220px; /* Sidebar offset */
+  padding: 25px;
+  min-height: 100vh;
+  background: radial-gradient(circle at bottom right, rgba(255, 58, 92, 0.08), #0f0f0f);
+  color: #f1f1f1;
+  font-family: 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+}
+
+/* Heading */
+.sales-inbox-heading {
+  font-size: 28px;
+  margin-bottom: 20px;
+   background: linear-gradient(
+    90deg,
+    #FF4F9A 5%,   /* Pink / Magenta */
+    #FF8A3D 10%,  /* Orange */
+    #FFC83D 20%  /* Yellow / Gold */
+  );
+-webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Actions */
+.sales-inbox-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.sales-inbox-actions .btn-primary {
+  background: linear-gradient(135deg, #ff3a5c, #ff5a7b);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(255, 58, 92, 0.5);
+  transition: 0.3s;
+}
+
+.sales-inbox-actions .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(255, 58, 92, 0.7);
+}
+
+.inbox-search-bar {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  padding: 7px 12px;
+  border-radius: 8px;
+  color: #f1f1f1;
+  width: 220px;
+}
+
+/* Table */
+.sales-inbox-table {
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(255, 58, 92, 0.05);
+}
+
+.sales-inbox-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sales-inbox-table th,
+.sales-inbox-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #2c2c2c;
+  text-align: left;
+}
+
+.sales-inbox-table th {
+  background-color: #1a1a1a;
+  color: #ff3a5c;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sales-inbox-table tr:hover {
+  background-color: #1c1c1c;
+}
+
+/* Badges */
+.badge {
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  display: inline-block;
+  text-align: center;
+}
+
+.badge.unread {
+  background: linear-gradient(135deg, #ff3a5c, #ff5a7b);
+  color: white;
+}
+
+.badge.read {
+  background-color: #333;
+  color: #ddd;
+}
+
+/* Delete Button */
+.delete-btn {
+  background: linear-gradient(135deg, #ff3a5c, #ff5a7b);
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(255, 58, 92, 0.4);
+  transition: 0.3s;
+}
+
+.delete-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 58, 92, 0.6);
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 15, 15, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Content */
+.modal-content {
+  background: radial-gradient(circle at top left, #1a1a1a, #0f0f0f);
+  padding: 25px;
+  border-radius: 15px;
+  width: 450px;
+  max-width: 90%;
+  color: #f1f1f1;
+  box-shadow: 0 0 30px rgba(255, 58, 92, 0.2);
+}
+
+.modal-content h3 {
+  margin-bottom: 15px;
+  color: #ff3a5c;
+  text-align: center;
+}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  background-color: #1a1a1a;
+  color: #f1f1f1;
+  font-size: 14px;
+}
+
+.modal-content textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-buttons .btn-primary {
+  background: linear-gradient(135deg, #ff3a5c, #ff5a7b);
+}
+
+.modal-buttons .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(255, 58, 92, 0.6);
+}
+
+.modal-buttons .btn-cancel {
+  background-color: #333;
+  color: #f1f1f1;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.modal-buttons .btn-cancel:hover {
+  background-color: #555;
+}

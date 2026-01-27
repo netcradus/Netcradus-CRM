@@ -1,0 +1,131 @@
+.invoices-container {
+  margin-left: 220px;
+  padding: 25px;
+  color: #f1f1f1;
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.invoices-title {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  background: linear-gradient(
+    90deg,
+    #FF4F9A 50%,   /* Pink / Magenta */
+    #FF8A3D 50%,  /* Orange */
+    #FFC83D 100%  /* Yellow / Gold */
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+
+/* Action Button */
+.add-invoice-btn {
+  background: linear-gradient(90deg, #ff4b2b, #ff416c);
+  color: #fff;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(255, 75, 43, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.add-invoice-btn:hover {
+  transform: scale(1.03);
+}
+
+/* Table Wrapper */
+.invoice-table-wrapper {
+  overflow-x: auto;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
+  padding: 16px;
+}
+
+/* Table Styling */
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1a1a1a;
+  overflow: hidden;
+}
+
+.invoice-table th,
+.invoice-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ddd;
+}
+
+.invoice-table th {
+  background-color: #1c1c1c;
+  color: #ff4b2b;
+  font-weight: 600;
+}
+
+.invoice-table tr:hover {
+  background-color: #222;
+}
+
+/* Invoice Status Badges */
+.paid,
+.unpaid {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.paid {
+  background-color: #00cc88;
+  color: #fff;
+}
+
+.unpaid {
+  background-color: #cc0000;
+  color: #fff;
+}
+
+/* Center button */
+.button-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.edit-btn {
+  background-color: #2196f3;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  margin-right: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background-color: #1976d2;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
+}

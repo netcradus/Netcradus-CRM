@@ -1,0 +1,210 @@
+/* Container and layout */
+.accounts-container {
+  margin-left: 220px; /* Pushes it to the right of the fixed sidebar */
+  padding: 25px;
+  color: #f1f1f1;
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Heading */
+.accounts-heading {
+  font-size: 26px;
+  margin-bottom: 20px;
+  background: linear-gradient(
+    90deg,
+    #FF4F9A 2%,   /* Pink / Magenta */
+    #FF8A3D 5%,  /* Orange */
+    #FFC83D 10%  /* Yellow / Gold */
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+}
+
+/* Actions: Add + Search */
+.accounts-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+
+/* Edit Button */
+.accounts-table .btn-primary {
+  padding: 5px 10px;
+  background-color: #ff4b2b;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.accounts-table .btn-primary:hover {
+  background-color: #e04322;
+}
+
+/* Delete Button */
+.accounts-table .btn-delete {
+  padding: 5px 10px;
+  background-color: #ff3333;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.accounts-table .btn-delete:hover {
+  background-color: #cc0000;
+}
+
+/* Modal tweaks */
+.modal input, .modal textarea {
+  background-color: #111;
+  color: #f1f1f1;
+  border: 1px solid #333;
+}
+
+.modal-buttons button {
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  background-color: #ff4b2b;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-primary:hover {
+  background-color: #e03e1f;
+}
+
+.search-bar {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background-color: #1c1c1c;
+  color: #f1f1f1;
+  flex: 1;
+}
+
+.search-bar::placeholder {
+  color: #888;
+}
+
+/* Account type filters */
+.account-types {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.type {
+  background-color: #1c1c1c;
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #ccc;
+  border-left: 4px solid #ff4b2b;
+  font-weight: 500;
+}
+
+.type.partner {
+  border-color: #3399ff;
+}
+
+.type.inactive {
+  border-color: #999;
+}
+
+/* Table styling */
+.accounts-table {
+  overflow-x: auto; /* For small screens */
+}
+
+.accounts-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1a1a1a;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accounts-table th,
+.accounts-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ddd;
+}
+
+.accounts-table th {
+  background-color: #1c1c1c;
+  color: #ff4b2b;
+  font-weight: 600;
+}
+
+.accounts-table tbody tr:hover {
+  background-color: #222;
+}
+
+/* Badges for status */
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.badge.active {
+  background-color: #00cc88;
+  color: #fff;
+}
+
+.badge.inactive {
+  background-color: #999;
+  color: #fff;
+}
+
+.badge.client {
+  background-color: #ff4b2b;
+  color: #fff;
+}
+
+.badge.partner {
+  background-color: #3399ff;
+  color: #fff;
+}
+
+/* Responsive for small screens */
+@media screen and (max-width: 768px) {
+  .accounts-container {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .accounts-actions {
+    flex-direction: column;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+}

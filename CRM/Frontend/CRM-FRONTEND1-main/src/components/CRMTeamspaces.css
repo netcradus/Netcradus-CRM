@@ -1,0 +1,195 @@
+.crm-teamspaces-container {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 100%);
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: background 0.3s ease;
+}
+
+/* Sidebar styles */
+.sidebar {
+  width: 220px;
+  height: 100vh;      /* Full viewport height */
+  position: fixed;    /* Fix sidebar on screen */
+  top: 0;
+  left: 0;
+  background: #1a1a1a;
+  padding: 20px;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.8);
+  overflow-y: auto;   /* Scroll if content overflows */
+}
+
+.sidebar nav ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar nav ul li {
+  padding: 12px 0;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  font-weight: 600;
+  color: #ccc;
+  transition: color 0.3s ease;
+}
+
+.sidebar nav ul li:hover {
+  color: #ff4b2b;
+}
+
+/* Main content styles */
+.crm-main-content {
+  margin-left: 220px; /* Same as sidebar width */
+  flex: 1;
+  padding: 30px 40px;
+  background: radial-gradient(circle at top right, rgba(255, 75, 43, 0.12), #121212);
+  border-radius: 12px 0 0 12px;
+  box-shadow: inset 0 0 15px rgba(255, 75, 43, 0.15);
+  min-height: 100vh;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Header */
+.crm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #ff4b2b;
+  margin-bottom: 30px;
+}
+
+.crm-header h1 {
+  font-size: 2.4rem;
+   background: linear-gradient(
+    90deg,
+    #FF4F9A 5%,   /* Pink / Magenta */
+    #FF8A3D 50%,  /* Orange */
+    #FFC83D 100%  /* Yellow / Gold */
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  /* text-shadow: 0 0 8px rgba(255, 75, 43, 0.6); */
+}
+
+/* Content section */
+.crm-content-section {
+  background-color: #222222;
+  padding: 30px 40px;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 24px rgba(255, 75, 43, 0.25),
+    inset 0 0 15px rgba(255, 75, 43, 0.1);
+  min-height: 500px;
+}
+
+/* Section titles */
+.crm-content-section h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  color: #ff6b4b;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 4px rgba(255, 107, 75, 0.8);
+  border-bottom: 2px solid #ff6b4b;
+  padding-bottom: 6px;
+}
+
+/* Lists styling */
+.crm-content-section ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.crm-content-section ul li {
+  background: #1a1a1a;
+  padding: 14px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(255, 75, 43, 0.3);
+  min-width: 180px;
+  flex-grow: 1;
+  color: #fff3e6;
+  font-weight: 600;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: default;
+}
+
+.crm-content-section ul li:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 8px 24px rgba(255, 75, 43, 0.6);
+}
+
+/* Collaboration box */
+.collaboration-container {
+  margin-top: 40px;
+}
+
+.collaboration-messages {
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1.5px solid #ff4b2b;
+  padding: 16px;
+  background: #1f1f1f;
+  color: #ffb7a1;
+  font-size: 15px;
+  box-shadow: 0 4px 20px rgba(255, 75, 43, 0.4);
+  scroll-behavior: smooth;
+}
+
+.collaboration-messages p {
+  margin: 8px 0;
+}
+
+.collaboration-input {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.collaboration-input input[type="text"] {
+  flex: 1;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1.5px solid #ff4b2b;
+  background-color: #121212;
+  color: #f1f1f1;
+  font-size: 16px;
+  font-weight: 600;
+  transition: border-color 0.3s ease;
+}
+
+.collaboration-input input[type="text"]:focus {
+  outline: none;
+  border-color: #ff6b4b;
+  box-shadow: 0 0 8px #ff6b4b;
+}
+
+.collaboration-input button {
+  padding: 14px 28px;
+  background: linear-gradient(90deg, #ff4b2b, #ff416c);
+  border: none;
+  border-radius: 16px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 75, 43, 0.6);
+  transition: background 0.4s ease;
+}
+
+.collaboration-input button:hover {
+  background: linear-gradient(90deg, #ff416c, #ff4b2b);
+  box-shadow: 0 6px 24px rgba(255, 65, 108, 0.8);
+}
