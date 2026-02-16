@@ -3,13 +3,7 @@ import "./Social.css";
 
 const Social = () => {
   const socialPlatforms = [
-    { name: "Facebook", status: "Connected", color: "#3b5998" },
-    { name: "Twitter", status: "Not Connected", color: "#1da1f2" },
-    { name: "LinkedIn", status: "Connected", color: "#0077b5" },
-    { name: "Instagram", status: "Not Connected", color: "#e1306c" },
-    { name: "YouTube", status: "Connected", color: "#ff0000" },
-    { name: "Reddit", status: "Not Connected", color: "#ff4500" },
-    { name: "Threads", status: "Connected", color: "#000000" },
+   
   ];
 
   return (

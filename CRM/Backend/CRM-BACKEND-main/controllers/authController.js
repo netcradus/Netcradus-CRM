@@ -138,9 +138,21 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Get all users (for admin to assign leads)
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('_id name email role');
+    res.json(users);
+  } catch (err) {
+    console.error("Get Users Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
+  getUsers,
 };

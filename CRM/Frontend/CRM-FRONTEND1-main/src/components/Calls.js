@@ -226,26 +226,10 @@ function Calls() {
         </thead>
         <tbody>
           <tr>
-            <td>Amit</td>
-            <td>Nandini</td>
-            <td>2025-09-01</td>
-            <td className="status completed">Completed</td>
-            <td>15 mins</td>
-            <td>
-              <button className="btn-small">View</button>
-              <button className="btn-small danger">Delete</button>
-            </td>
+          
           </tr>
           <tr>
-            <td>Rohit</td>
-            <td>Team</td>
-            <td>2025-09-02</td>
-            <td className="status scheduled">Scheduled</td>
-            <td>—</td>
-            <td>
-              <button className="btn-small">View</button>
-              <button className="btn-small danger">Delete</button>
-            </td>
+           
           </tr>
         </tbody>
       </table>

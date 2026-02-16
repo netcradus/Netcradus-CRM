@@ -3,10 +3,7 @@ import "./Products.css";
 
 function Products() {
   const [products, setProducts] = useState([
-    { name: "Product A", category: "Electronics", price: 1200, currency: "INR", tax: 18, discount: 5, status: "Active", updated: "2025-08-01", stock: "Available" },
-    { name: "Product B", category: "Software", price: 800, currency: "USD", tax: 10, discount: 0, status: "Inactive", updated: "2025-07-25", stock: "Out of Stock" },
-    { name: "Product C", category: "Furniture", price: 3400, currency: "INR", tax: 12, discount: 10, status: "Active", updated: "2025-07-30", stock: "Available" },
-    { name: "Product D", category: "Books", price: 450, currency: "INR", tax: 5, discount: 2, status: "Active", updated: "2025-07-28", stock: "Low Stock" },
+    
   ]);
 
   const [showModal, setShowModal] = useState(false);

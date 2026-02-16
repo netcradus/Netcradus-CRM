@@ -2,38 +2,7 @@ import React, { useState } from "react";
 import "./Documents.css";
 
 const initialDocuments = [
-  {
-    name: "Company Profile",
-    category: "PDF",
-    created: "2025-07-12",
-    modified: "2025-07-30",
-    owner: "Admin",
-    status: "Active",
-  },
-  {
-    name: "Service Agreement",
-    category: "DOCX",
-    created: "2025-06-20",
-    modified: "2025-07-28",
-    owner: "Legal Team",
-    status: "Inactive",
-  },
-  {
-    name: "Product Catalog",
-    category: "XLSX",
-    created: "2025-07-01",
-    modified: "2025-07-29",
-    owner: "Marketing",
-    status: "Active",
-  },
-  {
-    name: "Invoice Guidelines",
-    category: "PDF",
-    created: "2025-06-15",
-    modified: "2025-07-25",
-    owner: "Finance",
-    status: "Inactive",
-  },
+ 
 ];
 
 const Documents = () => {

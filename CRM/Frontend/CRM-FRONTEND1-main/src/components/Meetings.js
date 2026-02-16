@@ -3,9 +3,7 @@ import "./Meetings.css";
 
 function Meetings() {
   const [meetings, setMeetings] = useState([
-    { title: "Client Kickoff", participants: "John, Ayesha", date: "2025-08-03", status: "Upcoming" },
-    { title: "Demo Review", participants: "Nandini, Sarah", date: "2025-07-29", status: "Completed" },
-    { title: "Follow-up Call", participants: "Amit, Rehan", date: "2025-07-15", status: "Cancelled" },
+   
   ]);
 
   const [filter, setFilter] = useState("All");

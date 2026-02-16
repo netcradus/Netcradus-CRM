@@ -2,30 +2,8 @@ import React, { useState } from "react";
 import "./CT.css";
 
 const initialCalls = [
-  {
-    id: "C001",
-    caller: "Rahul Sharma",
-    phone: "+91 9876543210",
-    date: "2025-08-01 10:30 AM",
-    status: "Completed",
-    notes: "Discussed product details.",
-  },
-  {
-    id: "C002",
-    caller: "Neha Singh",
-    phone: "+91 9123456789",
-    date: "2025-08-01 11:00 AM",
-    status: "Follow-up",
-    notes: "Asked for pricing details.",
-  },
-  {
-    id: "C003",
-    caller: "Amit Verma",
-    phone: "+91 9988776655",
-    date: "2025-08-01 01:15 PM",
-    status: "Missed",
-    notes: "Left voicemail.",
-  },
+  
+    
 ];
 
 function CT() {

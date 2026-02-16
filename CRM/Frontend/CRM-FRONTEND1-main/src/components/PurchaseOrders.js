@@ -3,9 +3,7 @@ import "./PurchaseOrders.css";
 
 const PurchaseOrders = () => {
   const [orders, setOrders] = useState([
-    { id: "#PO1234", vendor: "ABC Supplies", amount: "$1,200", status: "pending", date: "Aug 01, 2025" },
-    { id: "#PO1235", vendor: "XYZ Traders", amount: "$2,450", status: "completed", date: "Jul 28, 2025" },
-    { id: "#PO1236", vendor: "FreshMart", amount: "$980", status: "cancelled", date: "Jul 25, 2025" },
+    
   ]);
 
   const [showModal, setShowModal] = useState(false);

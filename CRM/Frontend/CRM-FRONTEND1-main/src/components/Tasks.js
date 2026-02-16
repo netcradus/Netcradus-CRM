@@ -3,9 +3,7 @@ import "./Tasks.css";
 
 function Tasks() {
   const [tasks, setTasks] = useState([
-    { id: 1, name: "Follow-up Call", assignedTo: "John", status: "Pending", dueDate: "2025-08-01" },
-    { id: 2, name: "Demo Meeting", assignedTo: "Sourabh", status: "Completed", dueDate: "2025-07-28" },
-    { id: 3, name: "Product Demo", assignedTo: "Diya", status: "In Progress", dueDate: "2025-07-28" },
+ 
   ]);
 
   const [filter, setFilter] = useState("All");

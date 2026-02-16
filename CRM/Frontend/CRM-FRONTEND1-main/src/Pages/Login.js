@@ -328,14 +328,20 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(""); // Clear error when user starts typing
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
       const res = await axios.post("http://localhost:5000/api/auth/login", form);
       const { token, user } = res.data;
@@ -343,21 +349,24 @@ function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
+      localStorage.setItem("userName", user.name);
       localStorage.setItem("profileComplete", user.profileComplete ? "true" : "false");
-
-      alert("Login successful!");
 
       if (!user.profileComplete) {
         navigate("/welcome");
       } else {
+        // Redirect based on user role
         if (user.role === "admin") navigate("/admin-dashboard");
         else if (user.role === "support") navigate("/support-dashboard");
         else if (user.role === "sales") navigate("/sales-dashboard");
         else navigate("/dashboard");
       }
     } catch (err) {
+      const errorMsg = err.response?.data?.message || "Login failed. Please try again.";
+      setError(errorMsg);
       console.log(err);
-      alert(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -382,12 +391,31 @@ function Login() {
             Login
           </span>
         </h2>
+
+        {/* Error Message Display */}
+        {error && (
+          <div style={{
+            background: "#fee2e2",
+            border: "1px solid #fca5a5",
+            borderRadius: "6px",
+            padding: "12px",
+            marginBottom: "20px",
+            color: "#991b1b",
+            fontSize: "14px"
+          }}>
+            <p style={{ margin: "0", fontWeight: "600" }}>Error</p>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{error}</p>
+          </div>
+        )}
+
         <input
           type="email"
           name="email"
           placeholder="Email"
           onChange={handleChange}
+          value={form.email}
           required
+          disabled={loading}
           style={inputStyle}
         />
 
@@ -406,7 +434,9 @@ function Login() {
     name="password"
     placeholder="Password"
     onChange={handleChange}
+    value={form.password}
     required
+    disabled={loading}
     style={{ ...inputStyle, paddingRight: "42px" }}
   />
 
@@ -434,21 +464,28 @@ function Login() {
             marginBottom: "15px",
             cursor: "pointer",
             textAlign: "right",
+            opacity: loading ? 0.5 : 1,
+            pointerEvents: loading ? "none" : "auto"
           }}
           onClick={() => navigate("/forgot-password")}
         >
           Forgot your password?
         </p>
 
-        <button type="submit" style={buttonStyle}>
-          Log in
+        <button type="submit" style={buttonStyle} disabled={loading}>
+          {loading ? "Logging in..." : "Log in"}
         </button>
 
-        <p style={{ marginTop: "15px", color: "#ccc" }}>
-          Don’t have an account?{" "}
+        <p style={{ marginTop: "15px", color: "#ccc", opacity: loading ? 0.5 : 1 }}>
+          Don't have an account?{" "}
           <span
-            onClick={() => navigate("/register")}
-            style={{ color: "#ff5e00", cursor: "pointer", textDecoration: "underline" }}
+            onClick={() => !loading && navigate("/register")}
+            style={{ 
+              color: "#ff5e00", 
+              cursor: loading ? "not-allowed" : "pointer", 
+              textDecoration: "underline",
+              opacity: loading ? 0.5 : 1
+            }}
           >
             Register
           </span>
@@ -482,6 +519,8 @@ const inputStyle = {
   color: "#fff",
   border: "1px solid #444",
   borderRadius: "6px",
+  opacity: 1,
+  cursor: "inherit"
 };
 
 const buttonStyle = {
@@ -493,6 +532,7 @@ const buttonStyle = {
   fontWeight: "bold",
   borderRadius: "6px",
   cursor: "pointer",
+  transition: "opacity 0.2s",
 };
 
 export default Login;

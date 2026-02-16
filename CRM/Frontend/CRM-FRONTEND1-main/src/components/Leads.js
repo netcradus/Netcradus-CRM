@@ -1,33 +1,182 @@
 import React, { useEffect, useState } from "react";
 import "./Leads.css";
+import axios from "axios";
 
 function Leads() {
-  const [leads, setLeads] = useState([]); // All leads from backend
-  const [loading, setLoading] = useState(true); // Loading state
-  const [search, setSearch] = useState(""); // Search filter
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editingLead, setEditingLead] = useState(null);
+  const [users, setUsers] = useState([]);
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    status: "Cold",
+    notes: "",
+    assignedTo: ""
+  });
 
-  // ✅ Backend se data fetch karna
+  const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("userRole");
+  const BACKEND_URL = "http://localhost:5000";
+
+  const LEAD_STATUSES = ["Hot", "Warm", "Cold"];
+
+  // Fetch leads
   useEffect(() => {
-    fetch("http://localhost:5000/api/leads")
-      .then((res) => res.json())
-      .then((data) => {
-        setLeads(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching leads:", err);
-        setLoading(false);
-      });
+    fetchLeads();
+    if (userRole === "admin") {
+      fetchUsers();
+    }
   }, []);
 
-  // ✅ Search filter logic
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${BACKEND_URL}/api/leads`);
+      setLeads(response.data);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setError(err.response?.data?.message || "Failed to fetch leads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/auth/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log("Users fetched:", response.data);
+      setUsers(response.data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Failed to fetch users for assignment");
+    }
+  };
+
+  // Filter leads
   const filteredLeads = leads.filter(
     (lead) =>
       lead.name.toLowerCase().includes(search.toLowerCase()) ||
       lead.email.toLowerCase().includes(search.toLowerCase()) ||
-      lead.phone.includes(search) ||
-      lead.company.toLowerCase().includes(search.toLowerCase())
+      (lead.phone && lead.phone.includes(search)) ||
+      (lead.company && lead.company.toLowerCase().includes(search.toLowerCase()))
   );
+
+  // Handle form input change
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Open modal for adding new lead
+  const handleAddLead = () => {
+    setEditingLead(null);
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      status: "Cold",
+      notes: "",
+      assignedTo: ""
+    });
+    setShowModal(true);
+  };
+
+  // Open modal for editing lead
+  const handleEditLead = (lead) => {
+    setEditingLead(lead._id);
+    setFormData({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || "",
+      company: lead.company || "",
+      status: lead.status || "Cold",
+      notes: lead.notes || "",
+      assignedTo: lead.assignedTo?._id || ""
+    });
+    setShowModal(true);
+  };
+
+  // Submit form (Create or Update)
+  const handleSubmitForm = async (e) => {
+    e.preventDefault();
+
+    // Validate
+    if (!formData.name || !formData.email) {
+      setError("Name and email are required");
+      return;
+    }
+
+    try {
+      if (editingLead) {
+        // Update lead
+        const response = await axios.put(
+          `${BACKEND_URL}/api/leads/${editingLead}`,
+          formData,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        setLeads(leads.map(lead => lead._id === editingLead ? response.data : lead));
+        setSuccess("Lead updated successfully!");
+      } else {
+        // Create lead
+        const response = await axios.post(
+          `${BACKEND_URL}/api/leads`,
+          formData,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        setLeads([response.data, ...leads]);
+        setSuccess("Lead created successfully!");
+      }
+      setShowModal(false);
+      setError("");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Error saving lead:", err);
+      setError(err.response?.data?.message || "Failed to save lead");
+    }
+  };
+
+  // Delete lead (Admin only)
+  const handleDeleteLead = async (leadId) => {
+    if (!window.confirm("Are you sure you want to delete this lead?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${BACKEND_URL}/api/leads/${leadId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLeads(leads.filter(lead => lead._id !== leadId));
+      setSuccess("Lead deleted successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Error deleting lead:", err);
+      setError(err.response?.data?.message || "Failed to delete lead");
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingLead(null);
+  };
 
   if (loading) {
     return (
@@ -39,20 +188,21 @@ function Leads() {
 
   return (
     <div className="leads-container">
-      <h2 className="leads-heading">Leads</h2>
+      <h2 className="leads-heading">📋 Leads Management</h2>
 
-      {/* Actions: Add Lead button + Search */}
+      {/* Alerts */}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
+
+      {/* Actions */}
       <div className="leads-actions">
-        <button
-          className="btn-primary"
-          onClick={() => alert("Add Lead feature coming soon 🚀")}
-        >
-          + Add Lead
+        <button className="btn-primary" onClick={handleAddLead}>
+          ➕ Add New Lead
         </button>
         <input
           className="search-bar"
           type="text"
-          placeholder="Search Leads..."
+          placeholder="Search by name, email, phone, or company..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -60,52 +210,190 @@ function Leads() {
 
       {/* Status Legend */}
       <div className="lead-status">
-        <div className="status hot">Hot</div>
-        <div className="status warm">Warm</div>
-        <div className="status cold">Cold</div>
+        <div className="status-item hot">🔥 Hot</div>
+        <div className="status-item warm">🌤 Warm</div>
+        <div className="status-item cold">❄️ Cold</div>
       </div>
 
       {/* Leads Table */}
       <div className="leads-table">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Company</th>
-              <th>Status</th>
-              <th>Created At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLeads.length > 0 ? (
-              filteredLeads.map((lead, index) => (
+        {filteredLeads.length > 0 ? (
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Company</th>
+                <th>Status</th>
+                <th>Assigned To</th>
+                <th>Created By</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLeads.map((lead, index) => (
                 <tr key={lead._id}>
                   <td>{index + 1}</td>
-                  <td>{lead.name}</td>
-                  <td>{lead.email}</td>
-                  <td>{lead.phone}</td>
-                  <td>{lead.company}</td>
+                  <td className="lead-name">{lead.name}</td>
+                  <td className="lead-email">{lead.email}</td>
+                  <td>{lead.phone || "-"}</td>
+                  <td>{lead.company || "-"}</td>
                   <td>
                     <span className={`badge ${lead.status.toLowerCase()}`}>
                       {lead.status}
                     </span>
                   </td>
+                  <td>{lead.assignedTo?.name || "-"}</td>
+                  <td>{lead.createdBy?.name || "Unknown"}</td>
                   <td>{new Date(lead.createdAt).toLocaleDateString()}</td>
+                  <td className="actions-cell">
+                    <button
+                      className="btn-edit"
+                      onClick={() => handleEditLead(lead)}
+                      title="Edit lead"
+                    >
+                      ✏️ Edit
+                    </button>
+                    {userRole === "admin" && (
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteLead(lead._id)}
+                        title="Delete lead"
+                      >
+                        🗑 Delete
+                      </button>
+                    )}
+                  </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ textAlign: "center", color: "#999" }}>
-                  No leads found 😢
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="no-leads">
+            <p>No leads found 😢</p>
+          </div>
+        )}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>{editingLead ? "Edit Lead" : "Add New Lead"}</h3>
+              <button className="close-btn" onClick={closeModal}>✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitForm} className="lead-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleFormChange}
+                    placeholder="Enter lead name"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleFormChange}
+                    placeholder="Enter email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleFormChange}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Company</label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleFormChange}
+                    placeholder="Enter company name"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleFormChange}
+                  >
+                    {LEAD_STATUSES.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {userRole === "admin" && (
+                <div className="form-row">
+                  <div className="form-group">
+                  <label>Assign To</label>
+                  <select
+                    name="assignedTo"
+                    value={formData.assignedTo}
+                    onChange={handleFormChange}
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {users.map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.name} ({user.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                </div>
+              )}
+
+              <div className="form-group full-width">
+                <label>Notes</label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleFormChange}
+                  placeholder="Add any notes about this lead"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-cancel" onClick={closeModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-submit">
+                  {editingLead ? "Update Lead" : "Create Lead"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

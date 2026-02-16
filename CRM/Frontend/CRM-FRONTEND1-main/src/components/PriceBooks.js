@@ -262,28 +262,7 @@ import "./PriceBooks.css";
 
 const PriceBooks = () => {
   const [priceBooks, setPriceBooks] = useState([
-    {
-      id: 1,
-      name: "Standard Book",
-      currency: "USD",
-      type: "Retail",
-      products: "Product A, Product B",
-      effectiveDate: "2025-08-01",
-      expiryDate: "2026-01-01",
-      status: "Active",
-      version: "v1.0",
-    },
-    {
-      id: 2,
-      name: "Wholesale India",
-      currency: "INR",
-      type: "Wholesale",
-      products: "Product C, Product D",
-      effectiveDate: "2025-08-01",
-      expiryDate: "2025-12-31",
-      status: "Inactive",
-      version: "v2.1",
-    },
+ 
   ]);
 
   const [showModal, setShowModal] = useState(false);

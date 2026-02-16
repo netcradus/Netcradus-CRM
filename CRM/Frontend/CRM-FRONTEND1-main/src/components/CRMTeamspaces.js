@@ -32,15 +32,12 @@ import "./CRMTeamspaces.css";
 const CRMTeamspaces = () => {
   // Sample team members
   const [teamMembers, setTeamMembers] = useState([
-    { id: 1, name: "Nandini", role: "Developer" },
-    { id: 2, name: "Rahul", role: "Designer" },
-    { id: 3, name: "Sana", role: "Project Manager" },
+    
   ]);
 
   // Sample tasks
   const [tasks, setTasks] = useState([
-    { id: 1, title: "Design Homepage", assignedTo: "Rahul", status: "In Progress" },
-    { id: 2, title: "Develop Login Feature", assignedTo: "Nandini", status: "Pending" },
+   
   ]);
 
   return (
@@ -89,7 +86,7 @@ const CRMTeamspaces = () => {
 // Simple Collaboration component with message input
 const Collaboration = () => {
   const [messages, setMessages] = useState([
-    { id: 1, user: "Nandini", text: "Hello team, ready to start?" }
+   
   ]);
   const [input, setInput] = useState("");
 

@@ -3,7 +3,7 @@ import "./Deals.css";
 
 function Deals() {
   const [deals, setDeals] = useState([
-    { id: 1, name: "Big Project", status: "In Progress", value: "$20,000", assignedTo: "Nandini" }
+  
   ]);
   const [showModal, setShowModal] = useState(false);
   const [newDeal, setNewDeal] = useState({

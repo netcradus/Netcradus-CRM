@@ -3,9 +3,7 @@ import "./SalesOrders.css";
 
 function SalesOrders() {
   const [orders, setOrders] = useState([
-    { id: "#SO-5001", customer: "Acme Corp", amount: "$5,200", status: "Pending", date: "2025-07-28" },
-    { id: "#SO-5002", customer: "Beta Inc", amount: "$3,150", status: "Shipped", date: "2025-07-25" },
-    { id: "#SO-5003", customer: "Gamma Ltd", amount: "$2,780", status: "Delivered", date: "2025-07-22" },
+   
   ]);
 
   const [searchTerm, setSearchTerm] = useState("");

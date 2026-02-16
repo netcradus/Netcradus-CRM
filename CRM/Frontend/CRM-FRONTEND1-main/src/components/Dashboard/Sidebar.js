@@ -300,7 +300,12 @@ import "./Sidebar.css";
 
 function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
-  const menuItems = [
+  
+  // Get user role from localStorage
+  const userRole = localStorage.getItem("userRole");
+
+  // Admin menu - full access to all features
+  const adminMenuItems = [
     { label: "Home", path: "/dashboard", icon: <FaHome /> },
     { label: "Leads", path: "/leads", icon: <FaUser /> },
     { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
@@ -329,6 +334,19 @@ function Sidebar() {
     { label: "CT", path: "/ct", icon: <FaTools /> },
     { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> }
   ];
+
+  // User menu - limited access
+  const userMenuItems = [
+    { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    { label: "Leads", path: "/leads", icon: <FaUser /> },
+    { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
+    { label: "Deals", path: "/deals", icon: <FaHandshake /> },
+    { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
+    { label: "Calls", path: "/calls", icon: <FaPhoneSquareAlt /> },
+  ];
+
+  // Select menu based on user role
+  const menuItems = userRole === "admin" ? adminMenuItems : userMenuItems;
 
   const filteredMenu = [...menuItems]
     .filter(item =>

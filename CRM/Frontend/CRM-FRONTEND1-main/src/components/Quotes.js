@@ -3,7 +3,7 @@ import "./Quotes.css";
 
 function Quotes() {
   const [quotes, setQuotes] = useState([
-    { id: 1, client: "New Client", amount: "$2000", status: "Sent", date: new Date().toISOString() }
+   
   ]);
   const [showModal, setShowModal] = useState(false);
   const [newQuote, setNewQuote] = useState({

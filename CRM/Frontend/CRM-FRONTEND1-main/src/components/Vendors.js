@@ -60,19 +60,9 @@ function Vendors() {
             </tr>
           </thead>
           <tbody>
+           
             <tr>
-              <td>Alpha Supplies</td>
-              <td>alpha@supplies.com</td>
-              <td>Supplier</td>
-              <td><span className="badge active">Active</span></td>
-              <td>2025-07-28</td>
-            </tr>
-            <tr>
-              <td>Vendor X</td>
-              <td>xvendor@service.com</td>
-              <td>Partner</td>
-              <td><span className="badge inactive">Inactive</span></td>
-              <td>2025-06-18</td>
+             
             </tr>
           </tbody>
         </table>

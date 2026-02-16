@@ -1,76 +1,24 @@
-// const Lead = require("../models/Lead");
-
-// // Get all leads
-// const getLeads = async (req, res) => {
-//     try {
-//         const leads = await leadsService.getAllLeads();
-//         res.json(leads);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-
-// // Get lead by ID
-// const getLead = async (req, res) => {
-//     try {
-//         const lead = await leadsService.getLeadById(req.params.id);
-//         if (!lead) return res.status(404).json({ message: 'Lead not found' });
-//         res.json(lead);
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-
-// // Create new lead
-// const createLead = async (req, res) => {
-//     try {
-//         const lead = await leadsService.createLead(req.body);
-//         res.status(201).json(lead);
-//     } catch (err) {
-//         res.status(400).json({ message: err.message });
-//     }
-// };
-
-// // Update lead
-// const updateLead = async (req, res) => {
-//     try {
-//         const updatedLead = await leadsService.updateLead(req.params.id, req.body);
-//         if (!updatedLead) return res.status(404).json({ message: 'Lead not found' });
-//         res.json(updatedLead);
-//     } catch (err) {
-//         res.status(400).json({ message: err.message });
-//     }
-// };
-
-// // Delete lead
-// const deleteLead = async (req, res) => {
-//     try {
-//         const deletedLead = await leadsService.deleteLead(req.params.id);
-//         if (!deletedLead) return res.status(404).json({ message: 'Lead not found' });
-//         res.json({ message: 'Lead deleted successfully' });
-//     } catch (err) {
-//         res.status(500).json({ message: err.message });
-//     }
-// };
-
-// module.exports = {
-//     getLeads,
-//     getLead,
-//     createLead,
-//     updateLead,
-//     deleteLead
-// };
-
-
-
-
 const Lead = require("../models/Lead");
+const User = require("../models/User");
 
 // Get all leads
 const getLeads = async (req, res) => {
     try {
-        const leads = await Lead.find(); // Directly fetch from MongoDB
-        res.json(leads);
+        const leads = await Lead.find()
+            .populate('createdBy', 'name email')
+            .populate('assignedTo', 'name email')
+            .sort({ createdAt: -1 });
+        
+        // Format response to ensure createdBy has a name even if null
+        const formattedLeads = leads.map(lead => {
+            const leadObj = lead.toObject();
+            if (!leadObj.createdBy) {
+                leadObj.createdBy = { name: 'System', email: 'system@unknown' };
+            }
+            return leadObj;
+        });
+        
+        res.json(formattedLeads);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: err.message });
@@ -80,20 +28,54 @@ const getLeads = async (req, res) => {
 // Get lead by ID
 const getLead = async (req, res) => {
     try {
-        const lead = await Lead.findById(req.params.id);
+        const lead = await Lead.findById(req.params.id)
+            .populate('createdBy', 'name email')
+            .populate('assignedTo', 'name email');
         if (!lead) return res.status(404).json({ message: "Lead not found" });
-        res.json(lead);
+        
+        // Ensure createdBy has a name even if null
+        const leadObj = lead.toObject();
+        if (!leadObj.createdBy) {
+            leadObj.createdBy = { name: 'System', email: 'system@unknown' };
+        }
+        
+        res.json(leadObj);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: err.message });
     }
 };
 
-// Create new lead
+// Create new lead (User and Admin can create)
 const createLead = async (req, res) => {
     try {
-        const lead = new Lead(req.body);
+        const { name, email, phone, company, status, notes, assignedTo } = req.body;
+
+        // Validate required fields
+        if (!name || !email) {
+            return res.status(400).json({ message: "Name and email are required" });
+        }
+
+        // Create lead with createdBy set to current user
+        const lead = new Lead({
+            name,
+            email,
+            phone,
+            company,
+            status: status || 'Cold',
+            notes,
+            assignedTo: assignedTo && assignedTo.trim() ? assignedTo : null,
+            createdBy: req.user._id
+        });
+
         const savedLead = await lead.save();
+        
+        // Populate user details before sending response
+        await savedLead.populate([
+            { path: 'createdBy', select: 'name email' },
+            { path: 'assignedTo', select: 'name email' }
+        ]);
+
         res.status(201).json(savedLead);
     } catch (err) {
         console.error(err);
@@ -101,15 +83,40 @@ const createLead = async (req, res) => {
     }
 };
 
-// Update lead
+// Update lead (Owner, Assigned user, and Admin can update)
 const updateLead = async (req, res) => {
     try {
-        const updatedLead = await Lead.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
-        if (!updatedLead) return res.status(404).json({ message: "Lead not found" });
+        const leadId = req.params.id;
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+            return res.status(404).json({ message: "Lead not found" });
+        }
+
+        // Check authorization: creator or admin can update
+        if (lead.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: "You don't have permission to update this lead" });
+        }
+
+        // Update allowed fields
+        const { name, email, phone, company, status, notes, assignedTo } = req.body;
+        
+        if (name) lead.name = name;
+        if (email) lead.email = email;
+        if (phone) lead.phone = phone;
+        if (company) lead.company = company;
+        if (status) lead.status = status;
+        if (notes) lead.notes = notes;
+        if (assignedTo !== undefined) lead.assignedTo = assignedTo && assignedTo.trim() ? assignedTo : null;
+
+        const updatedLead = await lead.save();
+        
+        // Populate user details before sending response
+        await updatedLead.populate([
+            { path: 'createdBy', select: 'name email' },
+            { path: 'assignedTo', select: 'name email' }
+        ]);
+
         res.json(updatedLead);
     } catch (err) {
         console.error(err);
@@ -117,12 +124,23 @@ const updateLead = async (req, res) => {
     }
 };
 
-// Delete lead
+// Delete lead (Admin only - as per requirement)
 const deleteLead = async (req, res) => {
     try {
-        const deletedLead = await Lead.findByIdAndDelete(req.params.id);
-        if (!deletedLead) return res.status(404).json({ message: "Lead not found" });
-        res.json({ message: "Lead deleted successfully" });
+        const leadId = req.params.id;
+        
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: "Only admins can delete leads" });
+        }
+
+        const deletedLead = await Lead.findByIdAndDelete(leadId);
+        
+        if (!deletedLead) {
+            return res.status(404).json({ message: "Lead not found" });
+        }
+
+        res.json({ message: "Lead deleted successfully", lead: deletedLead });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: err.message });

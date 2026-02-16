@@ -3,9 +3,7 @@ import "./Cases.css";
 
 function Cases() {
   const [cases, setCases] = useState([
-    { id: "#C-2001", title: "Login not working", assignedTo: "John Doe", status: "Open", created: "2025-07-26" },
-    { id: "#C-2002", title: "Email not sent", assignedTo: "Sarah Lee", status: "In Progress", created: "2025-07-24" },
-    { id: "#C-2003", title: "Unable to reset password", assignedTo: "Alex Smith", status: "Resolved", created: "2025-07-22" },
+   
   ]);
 
   const [search, setSearch] = useState("");

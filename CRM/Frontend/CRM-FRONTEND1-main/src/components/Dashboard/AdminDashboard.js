@@ -220,15 +220,15 @@ const AdminDashboard = () => {
       <div className="sales-metrics">
         <div className="metric-card">
           <div className="metric-label">Total Users</div>
-          <div className="metric-value">124</div>
+          <div className="metric-value"></div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Pending Requests</div>
-          <div className="metric-value">6</div>
+          <div className="metric-value"></div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Active Sessions</div>
-          <div className="metric-value">22</div>
+          <div className="metric-value"></div>
         </div>
       </div>
 

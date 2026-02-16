@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -21,7 +21,9 @@ const chartData = [
   { month: 'Aug', deals: 26 },
 ];
 
+
 const SalesDashboard = () => {
+  const [search, setSearch] = useState("");
   return (
     <div className="sales-dashboard">
       <div className="sales-header-card">

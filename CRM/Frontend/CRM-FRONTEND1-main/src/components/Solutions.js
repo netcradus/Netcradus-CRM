@@ -2,30 +2,7 @@ import React, { useState } from "react";
 import "./Solutions.css";
 
 const initialSolutions = [
-  {
-    id: "S001",
-    title: "CRM Integration",
-    client: "Nandini Gupta",
-    date: "2025-07-20",
-    status: "Delivered",
-    notes: "Integrated CRM with marketing tools.",
-  },
-  {
-    id: "S002",
-    title: "Mobile App Prototype",
-    client: "Ankit Verma",
-    date: "2025-07-25",
-    status: "In Progress",
-    notes: "Working on UI/UX wireframes.",
-  },
-  {
-    id: "S003",
-    title: "E-commerce Optimization",
-    client: "Riya Malhotra",
-    date: "2025-07-27",
-    status: "Pending",
-    notes: "Need approval for deployment.",
-  },
+ 
 ];
 
 function Solutions() {
