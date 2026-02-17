@@ -5,27 +5,49 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
 
-// Register User
-const register = async (req, res) => {
+// Create user (admin only)
+const createUserByAdmin = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { username, password, role } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
+    const normalizedUsername = String(username).trim();
+    const normalizedEmail = `${normalizedUsername.toLowerCase()}@netcradus.local`;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [{ name: normalizedUsername }, { email: normalizedEmail }],
+    });
+
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "Username already exists" });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const user = new User({ name, email, password: hashedPassword, role });
+    const user = new User({
+      name: normalizedUsername,
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: role || "sales",
+    });
     await user.save();
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({
+      message: "User created successfully",
+      user: {
+        id: user._id,
+        username: user.name,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    console.error("Register Error:", err);
+    console.error("Create User Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
@@ -33,10 +55,17 @@ const register = async (req, res) => {
 // Login User
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
+    const identifier = String(email || username || "").trim();
 
-    // Check if user exists
-    const user = await User.findOne({ email });
+    if (!identifier || !password) {
+      return res.status(400).json({ message: "Username/email and password are required" });
+    }
+
+    // Check if user exists by email or username
+    const user = await User.findOne({
+      $or: [{ email: identifier.toLowerCase() }, { name: identifier }],
+    });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -141,7 +170,7 @@ const resetPassword = async (req, res) => {
 // Get all users (for admin to assign leads)
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('_id name email role');
+    const users = await User.find().select("_id name email role createdAt");
     res.json(users);
   } catch (err) {
     console.error("Get Users Error:", err);
@@ -150,7 +179,7 @@ const getUsers = async (req, res) => {
 };
 
 module.exports = {
-  register,
+  createUserByAdmin,
   login,
   forgotPassword,
   resetPassword,

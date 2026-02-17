@@ -307,6 +307,7 @@ function Sidebar() {
   // Admin menu - full access to all features
   const adminMenuItems = [
     { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    { label: "User Management", path: "/admin-dashboard", icon: <FaUserTie /> },
     { label: "Leads", path: "/leads", icon: <FaUser /> },
     { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
     { label: "Accounts", path: "/accounts", icon: <FaBuilding /> },

@@ -1,16 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, getUsers } = require("../controllers/authController");
+const { createUserByAdmin, login, getUsers } = require("../controllers/authController");
+const { seedAdmin } = require("../controllers/adminSeedController");
 const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
 
-// Register Route
-router.post("/register", register);
+// Seed first admin
+router.post("/seed-admin", seedAdmin);
 
 // Login Route
 router.post("/login", login);
 
-// Get all users (admin only - for assigning leads)
-router.get("/users", authMiddleware, getUsers);
+// Admin-only user management
+router.get("/users", authMiddleware, adminMiddleware, getUsers);
+router.post("/users", authMiddleware, adminMiddleware, createUserByAdmin);
 
 module.exports = router;
 

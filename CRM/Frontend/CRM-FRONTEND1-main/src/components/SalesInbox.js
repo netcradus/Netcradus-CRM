@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./SalesInbox.css";
-
-const BACKEND_URL = "http://localhost:5000"; // backend URL
+import { apiUrl } from "../config/api";
 
 const SalesInbox = () => {
   const [inboxData, setInboxData] = useState([]);
@@ -25,7 +24,7 @@ const SalesInbox = () => {
 
   const fetchInbox = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/sales-inbox`);
+      const res = await fetch(apiUrl("/api/sales-inbox"));
       const data = await res.json();
       setInboxData(data);
       setLoading(false);
@@ -41,7 +40,7 @@ const SalesInbox = () => {
     const updatedStatus = msg.status === "Unread" ? "Read" : "Unread";
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/sales-inbox/${id}`, {
+      const res = await fetch(apiUrl(`/api/sales-inbox/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: updatedStatus }),
@@ -57,7 +56,7 @@ const SalesInbox = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this message?")) return;
     try {
-      await fetch(`${BACKEND_URL}/api/sales-inbox/${id}`, { method: "DELETE" });
+      await fetch(apiUrl(`/api/sales-inbox/${id}`), { method: "DELETE" });
       setInboxData(inboxData.filter((m) => m._id !== id));
     } catch (err) {
       console.error("Error deleting message:", err);
@@ -77,7 +76,7 @@ const SalesInbox = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BACKEND_URL}/api/sales-inbox`, {
+      const res = await fetch(apiUrl("/api/sales-inbox"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newMessage),

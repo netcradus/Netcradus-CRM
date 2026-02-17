@@ -25,6 +25,10 @@ app.get("/test", (req, res) => {
   res.send("API is working");
 });
 
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // Auth routes
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);

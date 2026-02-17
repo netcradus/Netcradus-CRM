@@ -54,6 +54,7 @@
 
 import React, { useState, useEffect } from "react";
 import "./Contacts.css";
+import { apiUrl } from "../config/api";
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
@@ -70,7 +71,7 @@ function Contacts() {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/contacts");
+        const res = await fetch(apiUrl("/api/contacts"));
         if (!res.ok) throw new Error("Failed to fetch contacts");
         const data = await res.json();
         setContacts(data);
@@ -96,7 +97,7 @@ function Contacts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/contacts", {
+      const res = await fetch(apiUrl("/api/contacts"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newContact),

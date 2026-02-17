@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./Invoices.css";
-
-const BACKEND_URL = "http://localhost:5000"; // Replace with your production URL if needed
+import { apiUrl } from "../config/api";
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -22,7 +21,7 @@ const Invoices = () => {
 
   const fetchInvoices = async () => {
     try {
-      const res = await axios.get(`${BACKEND_URL}/api/invoices`);
+      const res = await axios.get(apiUrl("/api/invoices"));
       setInvoices(res.data);
     } catch (err) {
       console.error("Error fetching invoices:", err);
@@ -58,11 +57,11 @@ const Invoices = () => {
     try {
       if (editingInvoice) {
         // Update existing invoice
-        const res = await axios.put(`${BACKEND_URL}/api/invoices/${editingInvoice._id}`, invoiceForm);
+        const res = await axios.put(apiUrl(`/api/invoices/${editingInvoice._id}`), invoiceForm);
         setInvoices(invoices.map((inv) => (inv._id === editingInvoice._id ? res.data : inv)));
       } else {
         // Add new invoice
-        const res = await axios.post(`${BACKEND_URL}/api/invoices`, invoiceForm);
+        const res = await axios.post(apiUrl("/api/invoices"), invoiceForm);
         setInvoices([...invoices, res.data]);
       }
       toggleModal();
@@ -75,7 +74,7 @@ const Invoices = () => {
   const handleDeleteInvoice = async (id) => {
     if (!window.confirm("Are you sure you want to delete this invoice?")) return;
     try {
-      await axios.delete(`${BACKEND_URL}/api/invoices/${id}`);
+      await axios.delete(apiUrl(`/api/invoices/${id}`));
       setInvoices(invoices.filter((inv) => inv._id !== id));
     } catch (err) {
       console.error("Error deleting invoice:", err);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./Leads.css";
 import axios from "axios";
+import { apiUrl } from "../config/api";
 
 function Leads() {
   const [leads, setLeads] = useState([]);
@@ -24,7 +25,6 @@ function Leads() {
 
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
-  const BACKEND_URL = "http://localhost:5000";
 
   const LEAD_STATUSES = ["Hot", "Warm", "Cold"];
 
@@ -39,7 +39,7 @@ function Leads() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${BACKEND_URL}/api/leads`);
+      const response = await axios.get(apiUrl("/api/leads"));
       setLeads(response.data);
       setError("");
     } catch (err) {
@@ -52,7 +52,7 @@ function Leads() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/auth/users`, {
+      const response = await axios.get(apiUrl("/api/auth/users"), {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log("Users fetched:", response.data);
@@ -125,7 +125,7 @@ function Leads() {
       if (editingLead) {
         // Update lead
         const response = await axios.put(
-          `${BACKEND_URL}/api/leads/${editingLead}`,
+          apiUrl(`/api/leads/${editingLead}`),
           formData,
           {
             headers: { Authorization: `Bearer ${token}` }
@@ -136,7 +136,7 @@ function Leads() {
       } else {
         // Create lead
         const response = await axios.post(
-          `${BACKEND_URL}/api/leads`,
+          apiUrl("/api/leads"),
           formData,
           {
             headers: { Authorization: `Bearer ${token}` }
@@ -161,7 +161,7 @@ function Leads() {
     }
 
     try {
-      await axios.delete(`${BACKEND_URL}/api/leads/${leadId}`, {
+      await axios.delete(apiUrl(`/api/leads/${leadId}`), {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLeads(leads.filter(lead => lead._id !== leadId));

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Campaigns.css";
-
-const BACKEND_URL = "http://localhost:5000"; // Backend URL
+import { apiUrl } from "../config/api";
 
 const Campaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -23,7 +22,7 @@ const Campaigns = () => {
 
   const fetchCampaigns = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/campaigns`);
+      const res = await fetch(apiUrl("/api/campaigns"));
       const data = await res.json();
       setCampaigns(data);
       setLoading(false);
@@ -46,7 +45,7 @@ const Campaigns = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BACKEND_URL}/api/campaigns`, {
+      const res = await fetch(apiUrl("/api/campaigns"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCampaign),
@@ -70,7 +69,7 @@ const Campaigns = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this campaign?")) return;
     try {
-      await fetch(`${BACKEND_URL}/api/campaigns/${id}`, { method: "DELETE" });
+      await fetch(apiUrl(`/api/campaigns/${id}`), { method: "DELETE" });
       setCampaigns(campaigns.filter((c) => c._id !== id));
     } catch (err) {
       console.error("Error deleting campaign:", err);

@@ -324,6 +324,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { apiUrl } from "../config/api";
 
 function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -343,7 +344,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", form);
+      const res = await axios.post(apiUrl("/api/auth/login"), form);
       const { token, user } = res.data;
       console.log("User object from backend:", user);
 
@@ -409,9 +410,9 @@ function Login() {
         )}
 
         <input
-          type="email"
+          type="text"
           name="email"
-          placeholder="Email"
+          placeholder="Email or Username"
           onChange={handleChange}
           value={form.email}
           required
@@ -476,20 +477,6 @@ function Login() {
           {loading ? "Logging in..." : "Log in"}
         </button>
 
-        <p style={{ marginTop: "15px", color: "#ccc", opacity: loading ? 0.5 : 1 }}>
-          Don't have an account?{" "}
-          <span
-            onClick={() => !loading && navigate("/register")}
-            style={{ 
-              color: "#ff5e00", 
-              cursor: loading ? "not-allowed" : "pointer", 
-              textDecoration: "underline",
-              opacity: loading ? 0.5 : 1
-            }}
-          >
-            Register
-          </span>
-        </p>
       </form>
     </div>
   );

@@ -311,6 +311,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { apiUrl } from "../config/api";
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -330,7 +331,7 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", form);
+      await axios.post(apiUrl("/api/auth/register"), form);
       alert("🎉 Registration successful!");
       navigate("/login");
     } catch (err) {

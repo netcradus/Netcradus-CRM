@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./Forecasts.css";
+import { apiUrl } from "../config/api";
 import {
   BarChart,
   Bar,
@@ -26,7 +27,7 @@ const Forecasts = () => {
   useEffect(() => {
     const fetchForecasts = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/forecasts");
+        const res = await axios.get(apiUrl("/api/forecasts"));
         setForecastData(res.data);
       } catch (err) {
         console.error("Error fetching forecasts:", err);
@@ -39,7 +40,7 @@ const Forecasts = () => {
   const handleAddForecast = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5000/api/forecasts", form);
+      const res = await axios.post(apiUrl("/api/forecasts"), form);
       setForecastData([...forecastData, res.data]); // add new forecast from backend
       setForm({ period: "", owner: "", target: "", forecast: "", achieved: "" });
       setShowModal(false);

@@ -1,254 +1,129 @@
-// import React from "react";
-// import Chart from "./Chart";
-// import Sidebar from "./Sidebar";
-// import "./AdminDashboard.css";
-
-// import "./AdminDashboard.css";
-
-// function AdminDashboard() {
-//   return (
-//     <div className="dashboard-container">
-//       <Sidebar />
-//       <div className="dashboard">
-//         <h2>Welcome, Admin 👑</h2>
-//         <div className="top-cards">
-//           <div className="card"><p>Total Users</p><strong>350</strong></div>
-//           <div className="card"><p>Active Tickets</p><strong>87</strong></div>
-//           <div className="card"><p>Reports</p><strong>18</strong></div>
-//         </div>
-//         <div className="chart-tasks">
-//           <div className="card chart"><Chart /></div>
-//           <div className="card tasks">
-//             <p><strong>Admin Tasks</strong></p>
-//             <ul>
-//               <li>Review reports</li>
-//               <li>Manage roles</li>
-//               <li>Approve requests</li>
-//             </ul>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default AdminDashboard;
-
-
-
-// import React from "react";
-// import Sidebar from "./Sidebar";
-// import Chart from "./Chart";
-// import "./AdminDashboard.css";
-
-// function AdminDashboard() {
-//   return (
-//     <div className="dashboard-container">
-//       <Sidebar />
-//       <div className="dashboard-content">
-//         <h2>Welcome, Admin 👑</h2>
-//         <div className="top-cards">
-//           <div className="card"><p>Total Users</p><strong>350</strong></div>
-//           <div className="card"><p>Active Tickets</p><strong>87</strong></div>
-//           <div className="card"><p>Reports</p><strong>18</strong></div>
-//         </div>
-//         <div className="chart-tasks">
-//           <div className="card chart"><Chart /></div>
-//           <div className="card tasks">
-//             <p><strong>Admin Tasks</strong></p>
-//             <ul>
-//               <li>Review reports</li>
-//               <li>Manage roles</li>
-//               <li>Approve requests</li>
-//             </ul>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default AdminDashboard;
-   
-
-
-// import React from "react";
-// import Chart from "./Chart";
-// import "./AdminDashboard.css";
-
-// function AdminDashboard() {
-//   return (
-//     <div className="dashboard-content">
-//       <h2>Welcome, Admin 👑</h2>
-//       <div className="top-cards">
-//         <div className="card"><p>Total Users</p><strong>350</strong></div>
-//         <div className="card"><p>Active Tickets</p><strong>87</strong></div>
-//         <div className="card"><p>Reports</p><strong>18</strong></div>
-//       </div>
-//       <div className="chart-tasks">
-//         <div className="card chart"><Chart /></div>
-//         <div className="card tasks">
-//           <p><strong>Admin Tasks</strong></p>
-//           <ul>
-//             <li>Review reports</li>
-//             <li>Manage roles</li>
-//             <li>Approve requests</li>
-//           </ul>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default AdminDashboard;
-
-// import React from "react";
-// import Chart from "./Chart";
-// import Sidebar from "../Dashboard/Sidebar"; // Make sure path is correct
-// import "./AdminDashboard.css";
-
-// function AdminDashboard() {
-//   return (
-//     <div className="dashboard-container">
-//       <Sidebar />
-
-//       <div className="crm-main-content">
-//         <div className="dashboard-content">
-//           <div className="welcome-banner">
-//             <h2>Welcome, Admin 👑</h2>
-//             <p className="subtitle">Manage everything from here</p>
-//           </div>
-
-//           <div className="admin-box">
-//             {/* Top Summary Cards */}
-//             <div className="top-cards">
-//               <div className="card">
-//                 <p>Total Users</p>
-//                 <strong>350</strong>
-//               </div>
-//               <div className="card">
-//                 <p>Active Tickets</p>
-//                 <strong>87</strong>
-//               </div>
-//               <div className="card">
-//                 <p>Reports</p>
-//                 <strong>18</strong>
-//               </div>
-//             </div>
-
-//             {/* Chart and Task Section */}
-//             <div className="chart-tasks">
-//               <div className="card chart" style={{ height: "320px" }}>
-//                 <Chart />
-//               </div>
-
-//               <div className="card tasks">
-//                 <p><strong>Admin Tasks</strong></p>
-//                 <ul>
-//                   <li>📊 Review reports</li>
-//                   <li>🛠️ Manage roles</li>
-//                   <li>✅ Approve requests</li>
-//                 </ul>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default AdminDashboard;
-
-
-
-
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from 'recharts';
-import './AdminDashboard.css'; // Same CSS used for consistent styling
-
-const chartData = [
-  { month: 'Jan', users: 5 },
-  { month: 'Feb', users: 9 },
-  { month: 'Mar', users: 12 },
-  { month: 'Apr', users: 8 },
-  { month: 'May', users: 11 },
-  { month: 'Jun', users: 15 },
-  { month: 'Jul', users: 14 },
-  { month: 'Aug', users: 17 },
-];
+import React, { useCallback, useEffect, useState } from "react";
+import axios from "axios";
+import { apiUrl } from "../../config/api";
+import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    role: "sales",
+  });
+
+  const token = localStorage.getItem("token");
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(apiUrl("/api/auth/users"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(res.data);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const onChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    if (error) setError("");
+    if (success) setSuccess("");
+  };
+
+  const onCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(apiUrl("/api/auth/users"), form, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess(res.data?.message || "User created successfully");
+      setForm({ username: "", password: "", role: "sales" });
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create user");
+    }
+  };
+
   return (
-    <div className="sales-dashboard">
-      <div className="sales-header-card">
-        <h2 className="sales-title">
-          Welcome <span className="highlight">ADMIN PANEL</span>
-        </h2>
-        <p className="sales-subtitle">
-          Centralized control & user insights at your fingertips 🔧
-        </p>
-      </div>
+    <div className="admin-panel">
+      <h2 className="admin-panel-title">Admin User Management</h2>
 
-      <div className="sales-controls">
-        <input
-          className="sales-search"
-          type="text"
-          placeholder="Search users or settings..."
-        />
-        <select className="sales-select">
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="sales">Sales</option>
-          <option value="support">Support</option>
-        </select>
-        <button className="btn-primary">+ Add New User</button>
-        <button className="btn-outline">📥 Export Users</button>
-        <button className="btn-outline">🔒 Manage Access</button>
-        <button className="btn-outline">⚙️ Settings</button>
-        <button className="btn-outline">📄 Audit Logs</button>
-      </div>
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
+      {success && <div className="admin-alert admin-alert-success">{success}</div>}
 
-      <div className="sales-metrics">
-        <div className="metric-card">
-          <div className="metric-label">Total Users</div>
-          <div className="metric-value"></div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Pending Requests</div>
-          <div className="metric-value"></div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-label">Active Sessions</div>
-          <div className="metric-value"></div>
-        </div>
-      </div>
+      <div className="admin-grid">
+        <section className="admin-card">
+          <h3>Create New User</h3>
+          <form onSubmit={onCreateUser} className="admin-form">
+            <input
+              type="text"
+              name="username"
+              value={form.username}
+              onChange={onChange}
+              placeholder="Username"
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={onChange}
+              placeholder="Password"
+              required
+            />
+            <select name="role" value={form.role} onChange={onChange}>
+              <option value="sales">Sales</option>
+              <option value="support">Support</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="submit">Create User</button>
+          </form>
+        </section>
 
-      <div className="sales-charts">
-        <h3 className="chart-heading">User Growth Overview</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-            <XAxis dataKey="month" stroke="#444"/>
-            <YAxis stroke="#e4e3f4ff" />
-            <Tooltip />
-            <defs>
-              <linearGradient id="adminGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4facfe" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="#00f2fe" stopOpacity={0.3} />
-              </linearGradient>
-            </defs>
-            <Bar dataKey="users" fill="url(#adminGradient)" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <section className="admin-card">
+          <h3>All Users</h3>
+          {loading ? (
+            <p className="admin-muted">Loading users...</p>
+          ) : (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length > 0 ? (
+                    users.map((user) => (
+                      <tr key={user._id}>
+                        <td>{user.name}</td>
+                        <td>{user.role}</td>
+                        <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3" className="admin-muted">No users found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

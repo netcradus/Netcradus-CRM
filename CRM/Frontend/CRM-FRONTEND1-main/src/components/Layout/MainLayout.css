@@ -1,18 +1,18 @@
-src/components/Layout/MainLayout.css
-/* 
+/* Legacy layout rules kept for reference
 .dashboard-container {
   display: flex;
   min-height: 100vh;
-  background-color: #121212; /* Dark background like Netcradus */
-/* } */
-/* 
+  background-color: #121212;
+}
+
 .dashboard {
   flex: 1;
   padding: 30px;
   overflow-y: auto;
   background-color: #1a1a1a;
   color: #fff;
-} */ */
+}
+*/
 
 /* MainLayout.css */
 

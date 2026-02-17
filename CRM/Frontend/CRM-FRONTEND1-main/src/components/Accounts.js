@@ -203,6 +203,7 @@
 
 import React, { useState, useEffect } from "react";
 import "./Accounts.css";
+import { apiUrl } from "../config/api";
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);
@@ -224,7 +225,7 @@ function Accounts() {
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/accounts");
+      const res = await fetch(apiUrl("/api/accounts"));
       if (!res.ok) throw new Error("Failed to fetch accounts");
       const data = await res.json();
       setAccounts(data);
@@ -263,7 +264,7 @@ function Accounts() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this account?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/accounts/${id}`, {
+      const res = await fetch(apiUrl(`/api/accounts/${id}`), {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete account");
@@ -283,8 +284,8 @@ function Accounts() {
     e.preventDefault();
     try {
       const url = editingAccount
-        ? `http://localhost:5000/api/accounts/${editingAccount._id}`
-        : "http://localhost:5000/api/accounts";
+        ? apiUrl(`/api/accounts/${editingAccount._id}`)
+        : apiUrl("/api/accounts");
       const method = editingAccount ? "PUT" : "POST";
 
       const res = await fetch(url, {

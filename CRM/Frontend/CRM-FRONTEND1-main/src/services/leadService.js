@@ -1,7 +1,8 @@
 // Frontend service for Leads (API calls)
 import axios from 'axios';
+import { apiUrl } from "../config/api";
 
-const API_URL = "http://localhost:5000/api/leads";
+const API_URL = apiUrl("/api/leads");
 
 const getToken = () => localStorage.getItem("token");
 
