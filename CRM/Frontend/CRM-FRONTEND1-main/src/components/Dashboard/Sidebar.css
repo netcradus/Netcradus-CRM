@@ -170,3 +170,85 @@
   
 }
 
+/* ===== SIDEBAR TOGGLE ANIMATION ===== */
+.sidebar {
+  transition: transform 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+}
+
+.sidebar-open {
+  transform: translateX(0);
+  opacity: 1;
+  width: 220px;
+}
+
+.sidebar-closed {
+  transform: translateX(-100%);
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ===== TOGGLE BUTTON ===== */
+.sidebar-toggle-btn {
+  position: fixed;
+  top: 16px;
+  z-index: 1100;
+  background: linear-gradient(135deg, #ff6a3d, #ff3c78);
+  border: none;
+  color: white;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px rgba(255, 60, 120, 0.5);
+  transition: left 0.3s ease, background 0.2s ease;
+}
+
+/* Button sits at edge of open sidebar */
+.sidebar-toggle-btn.btn-inside {
+  left: 228px;
+}
+
+/* Button sits at screen edge when sidebar is hidden */
+.sidebar-toggle-btn.btn-outside {
+  left: 10px;
+}
+
+.sidebar-toggle-btn:hover {
+  background: linear-gradient(135deg, #ff3c78, #ff6a3d);
+  box-shadow: 0 0 18px rgba(255, 60, 120, 0.8);
+}
+
+/* ===== ACTIVE NAV LINK ===== */
+.sidebar ul li.active {
+  background: linear-gradient(90deg, #ff6a3d, #ff3c78);
+  box-shadow: 0 0 15px #ff3c78;
+  border-radius: 10px;
+}
+
+.sidebar ul li.active a {
+  color: #fff;
+}
+
+.sidebar ul li.active a svg {
+  fill: #fff;
+}
+
+/* ===== MAIN CONTENT SHIFT ===== */
+.crm-main-content {
+  transition: margin-left 0.3s ease;
+}
+
+/* Use this class on your main content wrapper instead of the fixed margin */
+.content-shifted {
+  margin-left: 220px;
+}
+
+.content-full {
+  margin-left: 0;
+}
