@@ -9,6 +9,8 @@ import {
   FaCogs, FaProjectDiagram, FaTools, FaUserFriends
 } from "react-icons/fa";
 import "./Sidebar.css";
+import { FaSignOutAlt } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,76 +65,103 @@ function Sidebar() {
     .filter(item => item.label.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => searchTerm ? a.label.localeCompare(b.label) : 0);
 
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName"); // if you store it
+
+    navigate("/login");
+  };
+
+
   return (
-  <>
-    {/* Floating button shown ONLY when sidebar is closed */}
-    {!isOpen && (
-      <button
-        className="sidebar-toggle-btn btn-outside"
-        onClick={() => setIsOpen(true)}
-        title="Expand sidebar"
-      >
-        <FaBars />
-      </button>
-    )}
-
-    <div className={`sidebar ${isOpen ? "sidebar-open" : "sidebar-closed"}`}>
-
-      {/* ✅ Toggle button INSIDE sidebar at top-left */}
-      <div className="sidebar-header">
+    <>
+      {/* Floating button shown ONLY when sidebar is closed */}
+      {!isOpen && (
         <button
-          className="sidebar-toggle-btn-inner"
-          onClick={() => setIsOpen(!isOpen)}
-          title={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          className="sidebar-toggle-btn btn-outside"
+          onClick={() => setIsOpen(true)}
+          title="Expand sidebar"
         >
-          {isOpen ? <FaTimes /> : <FaBars />}
+          <FaBars size={22} />
         </button>
+      )}
+
+      <div className={`sidebar ${isOpen ? "sidebar-open" : "sidebar-closed"}`}>
+
+        {/* ✅ Toggle button INSIDE sidebar at top-left */}
+        <div className="sidebar-header">
+          <button
+            className="sidebar-toggle-btn-inner"
+            onClick={() => setIsOpen(!isOpen)}
+            title={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {isOpen ? <FaTimes size={22}  /> : <FaBars />}
+          </button>
+
+          {isOpen && (
+            <div className="logo-container">
+              <img src="/NETCRADUS logo2.png" alt="Netcradus Logo" className="logo-image" />
+            </div>
+          )}
+        </div>
 
         {isOpen && (
-          <div className="logo-container">
-            <img src="/NETCRADUS logo2.png" alt="Netcradus Logo" className="logo-image" />
-          </div>
+          <>
+            <div className="sidebar-search">
+              <div className="search-input-wrapper">
+                <FaSearch className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search menu..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <nav className="sidebar-nav">
+
+              <ul>
+                {filteredMenu.length > 0 ? (
+                  filteredMenu.map((item, index) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <li key={index}>
+                        <Link
+                          to={item.path}
+                          className={`nav-link ${isActive ? "active" : ""}`}
+                        >
+                          {item.icon}
+                          <span className="nav-label">{item.label}</span>
+                        </Link>
+                      </li>
+
+                    );
+                  })
+                ) : (
+                  <li className="no-result">No results found</li>
+                )}
+              </ul>
+            </nav>
+
+            {/* ===== Logout Button ===== */}
+            {isOpen && (
+              <div className="sidebar-footer">
+                <button className="logout-btn" onClick={handleLogout}>
+                  <FaSignOutAlt />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+
+          </>
         )}
       </div>
-
-      {isOpen && (
-        <>
-          <div className="sidebar-search">
-            <div className="search-input-wrapper">
-              <FaSearch className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search menu..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <nav>
-            <ul>
-              {filteredMenu.length > 0 ? (
-                filteredMenu.map((item, index) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <li key={index} className={isActive ? "active" : ""}>
-                      <Link to={item.path}>
-                        {item.icon}
-                        <span className="nav-label">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })
-              ) : (
-                <li className="no-result">No results found</li>
-              )}
-            </ul>
-          </nav>
-        </>
-      )}
-    </div>
-  </>
-);
+    </>
+  );
 }
 
 export default Sidebar;

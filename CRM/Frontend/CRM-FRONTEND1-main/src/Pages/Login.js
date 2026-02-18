@@ -351,17 +351,13 @@ function Login() {
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
       localStorage.setItem("userName", user.name);
-      localStorage.setItem("profileComplete", user.profileComplete ? "true" : "false");
+   
 
-      if (!user.profileComplete) {
-        navigate("/welcome");
-      } else {
-        // Redirect based on user role
-        if (user.role === "admin") navigate("/admin-dashboard");
-        else if (user.role === "support") navigate("/support-dashboard");
-        else if (user.role === "sales") navigate("/sales-dashboard");
-        else navigate("/dashboard");
-      }
+    if (user.role === "admin") navigate("/admin-dashboard");
+else if (user.role === "support") navigate("/support-dashboard");
+else if (user.role === "sales") navigate("/sales-dashboard");
+
+else navigate("/dashboard");
     } catch (err) {
       const errorMsg = err.response?.data?.message || "Login failed. Please try again.";
       setError(errorMsg);
