@@ -42,7 +42,7 @@ const CRMTeamspaces = () => {
 
   return (
     <div className="crm-teamspaces-container">
-      <Sidebar />
+
       <main className="crm-main-content">
         <header className="crm-header">
           <h1>CRM Teamspaces</h1>
