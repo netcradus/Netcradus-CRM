@@ -85,7 +85,7 @@ function Sidebar() {
           onClick={() => setIsOpen(true)}
           title="Expand sidebar"
         >
-          <FaBars size={22} />
+          <FaBars />
         </button>
       )}
 
@@ -98,12 +98,12 @@ function Sidebar() {
             onClick={() => setIsOpen(!isOpen)}
             title={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {isOpen ? <FaTimes size={22}  /> : <FaBars />}
+            {isOpen ? <FaTimes  /> : <FaBars />}
           </button>
 
           {isOpen && (
             <div className="logo-container">
-              <img src="/NETCRADUS logo2.png" alt="Netcradus Logo" className="logo-image" />
+              <img src="sidebar-logo.jpeg" alt="Netcradus Logo" className="logo-image" />
             </div>
           )}
         </div>
