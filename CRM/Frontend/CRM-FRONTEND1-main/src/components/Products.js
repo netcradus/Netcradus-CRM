@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaBox } from "react-icons/fa";
 import "./Products.css";
 
 function Products() {
@@ -26,7 +27,7 @@ function Products() {
   return (
     <div className="products-container">
       <div className="products-header">
-        <h2>Products</h2>
+        <h2><FaBox /> Products</h2>
       </div>
 
       <div className="products-table-wrapper">

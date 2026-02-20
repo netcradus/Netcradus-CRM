@@ -178,10 +178,68 @@ const getUsers = async (req, res) => {
   }
 };
 
+// Delete user (admin only)
+const deleteUserByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // optional: prevent deleting main admin
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Cannot delete admin user" });
+    }
+
+    await user.deleteOne();
+
+    res.json({ message: "User deleted successfully" });
+
+  } catch (err) {
+    console.error("Delete User Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Admin change password of created user
+const adminChangeUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: "New password required" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    user.password = hashed;
+    await user.save();
+
+    res.json({
+      message: `Password updated for ${user.name}`
+    });
+
+  } catch (err) {
+    console.error("Admin Change Password Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+
+
 module.exports = {
   createUserByAdmin,
   login,
   forgotPassword,
   resetPassword,
   getUsers,
+  deleteUserByAdmin,
+  adminChangeUserPassword,
 };

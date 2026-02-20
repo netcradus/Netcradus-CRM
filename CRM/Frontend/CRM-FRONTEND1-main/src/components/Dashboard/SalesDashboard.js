@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaChartLine } from 'react-icons/fa';
 import {
   BarChart,
   Bar,
@@ -28,7 +29,7 @@ const SalesDashboard = () => {
     <div className="sales-dashboard">
       <div className="sales-header-card">
         <h2 className="sales-title">
-          Welcome <span className="highlight">SALES TEAM</span>
+          <FaChartLine /> Welcome <span className="highlight">SALES TEAM</span>
         </h2>
         <p className="sales-subtitle">
           Empowering your sales momentum with actionable insights 🚀

@@ -26,6 +26,7 @@
 
 
 import React, { useState } from 'react';
+import { FaUsers } from 'react-icons/fa';
 import Sidebar from './Dashboard/Sidebar';
 import "./CRMTeamspaces.css";
 
@@ -45,7 +46,7 @@ const CRMTeamspaces = () => {
 
       <main className="crm-main-content">
         <header className="crm-header">
-          <h1>CRM Teamspaces</h1>
+          <h1 className="crm-teamspaces-heading"><FaUsers /> CRM Teamspaces</h1>
         </header>
         <section className="crm-content-section">
 

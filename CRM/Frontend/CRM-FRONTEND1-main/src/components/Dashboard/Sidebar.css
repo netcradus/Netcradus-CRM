@@ -199,8 +199,8 @@
   border: none;
   color: white;
 
-  width: 36px;
-  height: 36px;
+   width: 40px;
+  height: 40px;
   border-radius: 8px;
 font-size: 30px;
   cursor: pointer;
@@ -217,7 +217,7 @@ font-size: 30px;
 
 .sidebar-toggle-btn svg,
 .sidebar-toggle-btn-inner svg {
-  font-size: 24px;
+  font-size: 30px;
 }
  
 

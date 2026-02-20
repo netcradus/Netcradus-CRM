@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaFileAlt } from "react-icons/fa";
 import "./Quotes.css";
 
 function Quotes() {
@@ -45,7 +46,7 @@ function Quotes() {
 
   return (
     <div className="quotes-container">
-      <h2 className="quotes-heading">Quotes Management</h2>
+      <h2 className="quotes-heading"><FaFileAlt /> Quotes Management</h2>
 
       {/* Success/Error Messages */}
       {success && <p className="success-message">{success}</p>}

@@ -1,28 +1,29 @@
 /* Container */
 .meetings-container {
   padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
-  margin-left: 220px; /* Prevent overlap with sidebar */
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 /* Heading */
 .meetings-heading {
-  font-size: 26px;
-  margin-bottom: 20px;
- background: linear-gradient(
-    90deg,
-    #FF4F9A 2%,   /* Pink / Magenta */
-    #FF8A3D 5%,  /* Orange */
-    #FFC83D 10%  /* Yellow / Gold */
-  );
-
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* Action Buttons + Search */
@@ -31,6 +32,8 @@
   gap: 15px;
   margin-bottom: 25px;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
 }
 
 .btn-primary {
@@ -39,15 +42,19 @@
   padding: 10px 18px;
   border: none;
   border-radius: 6px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
   box-shadow: 0 2px 10px rgba(255, 75, 43, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 75, 43, 0.5);
+  background: linear-gradient(90deg, #e03f1c, #e03f3f);
 }
 
 .btn-secondary {
@@ -56,13 +63,14 @@
   padding: 10px 18px;
   border: none;
   border-radius: 6px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
 }
 
 .btn-secondary:hover {
   background: #444;
+  transform: translateY(-2px);
 }
 
 /* Search Bar */
@@ -72,12 +80,16 @@
   border: 1px solid #444;
   background-color: #1e1e1e;
   color: #fff;
-  width: 250px;
+  flex: 1;
+  min-width: 250px;
+  transition: all 0.3s ease;
   outline: none;
 }
 
 .search-bar:focus {
-  border-color: #ff4b2b;
+  border: 1px solid #ff4b2b;
+  background-color: #222;
+  box-shadow: 0 0 8px rgba(255, 75, 43, 0.2);
 }
 
 /* Status Filters */
@@ -86,46 +98,60 @@
   gap: 12px;
   margin-bottom: 25px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .stage {
   background-color: #1c1c1c;
   padding: 8px 14px;
-  border-radius: 5px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
   color: #ccc;
   border-left: 4px solid transparent;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .stage:hover {
+  transform: translateY(-2px);
   background-color: #2a2a2a;
-  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 75, 43, 0.3);
 }
 
 .stage.active {
   border-color: #ff4b2b;
   color: #fff;
-  font-weight: bold;
-  background: #222;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ff4b2b, #ff416c);
+  border-left: 4px solid transparent;
+  box-shadow: 0 2px 8px rgba(255, 75, 43, 0.5);
 }
 
 /* Table */
+.meetings-table {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  background-color: #1a1a1a;
+  margin-top: 10px;
+}
+
 .meetings-table table {
   width: 100%;
   border-collapse: collapse;
   background-color: #1a1a1a;
-  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .meetings-table th,
 .meetings-table td {
-  padding: 14px;
+  padding: 14px 15px;
   text-align: left;
   border-bottom: 1px solid #2a2a2a;
   color: #ddd;
+  white-space: nowrap;
 }
 
 .meetings-table th {
@@ -133,33 +159,38 @@
   color: #ff4b2b;
   font-weight: 600;
   text-transform: uppercase;
+  font-size: 13px;
   letter-spacing: 0.5px;
+  border-bottom: 2px solid #ff6a00;
 }
 
 .meetings-table tr:hover {
   background-color: #222;
+  transition: background 0.2s ease;
 }
 
 /* Status Badges */
 .badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
 }
 
 .badge.upcoming {
-  background-color: #444;
+  background: linear-gradient(135deg, #2196f3, #1976d2);
   color: #fff;
 }
 
 .badge.completed {
-  background-color: #00cc88;
+  background: linear-gradient(135deg, #4caf50, #388e3c);
   color: #fff;
 }
 
 .badge.cancelled {
-  background-color: #ff4b2b;
+  background: linear-gradient(135deg, #f44336, #c62828);
   color: #fff;
 }
 
@@ -178,38 +209,82 @@
 }
 
 .modal {
-  background: #1e1e1e;
+  background: #1a1a1a;
   padding: 25px;
-  border-radius: 10px;
+  border-radius: 12px;
   width: 400px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  max-width: 95%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.3s ease;
 }
 
 .modal h3 {
   margin-bottom: 20px;
   color: #ff4b2b;
+  font-size: 20px;
+  text-align: center;
 }
 
 .modal form input,
 .modal form select {
   width: 100%;
-  padding: 10px;
+  padding: 10px 12px;
   margin-bottom: 15px;
   border-radius: 6px;
   border: 1px solid #444;
   background: #2a2a2a;
   color: #fff;
+  font-size: 14px;
   outline: none;
+  transition: all 0.3s ease;
 }
 
 .modal form input:focus,
 .modal form select:focus {
   border-color: #ff4b2b;
+  box-shadow: 0 0 8px rgba(255, 75, 43, 0.2);
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-actions .btn-primary {
+  background: linear-gradient(90deg, #ff4b2b, #ff416c);
+  padding: 8px 16px;
+}
+
+.modal-actions .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(255, 75, 43, 0.4);
+}
+
+.modal-actions .btn-cancel {
+  background: #555;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.modal-actions .btn-cancel:hover {
+  background: #666;
+  transform: translateY(-2px);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { FaBriefcase } from "react-icons/fa";
 import "./Services.css";
 
 const Services = () => {
@@ -8,7 +9,7 @@ const Services = () => {
 
   return (
     <div className="services-container">
-      <h2 className="services-title">Our Services</h2>
+      <h2 className="services-title"><FaBriefcase /> Our Services</h2>
       <div className="services-grid">
         {services.map((service, index) => (
           <div key={index} className="service-card">

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaStore } from "react-icons/fa";
 import "./Vendors.css";
 
 function Vendors() {
@@ -33,7 +34,7 @@ function Vendors() {
 
   return (
     <div className="vendors-container">
-      <h2 className="vendors-heading">Vendors</h2>
+      <h2 className="vendors-heading"><FaStore /> Vendors</h2>
 
       <div className="vendors-actions">
         <button className="btn-primary" onClick={handleAddVendor}>

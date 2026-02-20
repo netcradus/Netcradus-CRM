@@ -8,15 +8,27 @@
 
 .dashboard {
   flex-grow: 1;
-  padding: 30px;
-  margin-left: 220px; /* To avoid sidebar overlap */
+  padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   box-sizing: border-box;
+  transition: padding-left 0.3s ease;
 }
 
 h2 {
-  font-size: 26px;
+  font-size: 28px;
+  font-weight: 600;
   margin-bottom: 25px;
-  color: #ffffff;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
 /* Top Summary Cards */

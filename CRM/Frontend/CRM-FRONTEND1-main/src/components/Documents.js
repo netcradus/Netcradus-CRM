@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaFolder } from "react-icons/fa";
 import "./Documents.css";
 
 const initialDocuments = [
@@ -34,7 +35,7 @@ const Documents = () => {
 
   return (
     <div className="documents-container">
-      <h2 className="documents-title">Documents</h2>
+      <h2 className="documents-title"><FaFolder /> Documents</h2>
 
       <div className="document-table-wrapper">
         <table className="document-table">

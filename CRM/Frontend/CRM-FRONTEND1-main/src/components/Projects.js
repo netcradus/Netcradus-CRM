@@ -1,10 +1,11 @@
 import React from "react";
+import { FaProjectDiagram } from "react-icons/fa";
 import "./Projects.css";
 
 function Projects() {
   return (
     <div className="projects-container">
-      <h2 className="projects-heading">Projects</h2>
+      <h2 className="projects-heading"><FaProjectDiagram /> Projects</h2>
 
       {/* 🔶 Project Summary Section */}
       <div className="project-summary-cards">

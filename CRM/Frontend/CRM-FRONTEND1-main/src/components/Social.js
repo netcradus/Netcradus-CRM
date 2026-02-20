@@ -1,4 +1,5 @@
 import React from "react";
+import { FaShareAlt } from "react-icons/fa";
 import "./Social.css";
 
 const Social = () => {
@@ -8,7 +9,7 @@ const Social = () => {
 
   return (
     <div className="social-container">
-      <h2 className="social-title">Social Media Integration</h2>
+      <h2 className="social-title"><FaShareAlt /> Social Media Integration</h2>
 
       <div className="platforms-wrapper">
         {socialPlatforms.map((platform, index) => (

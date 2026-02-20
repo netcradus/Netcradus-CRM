@@ -1,28 +1,28 @@
 .forecast-container {
-  margin-left: 220px;
-  padding: 30px;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 /* Title */
 .forecast-title {
-  font-size: 26px;
-  font-weight: bold;
-  margin-bottom: 30px;
-  text-align: center;
-   background: linear-gradient(
-    90deg,
-    #FF4F9A 40%,   /* Pink / Magenta */
-    #FF8A3D 50%,  /* Orange */
-    #FFC83D 100%  /* Yellow / Gold */
-  );
-
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* Summary Cards */

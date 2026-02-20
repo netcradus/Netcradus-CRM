@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { FaUsersCog } from "react-icons/fa";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 import "./AdminDashboard.css";
@@ -13,6 +14,10 @@ const AdminDashboard = () => {
     password: "",
     role: "sales",
   });
+
+
+  const [pwdUserId, setPwdUserId] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -55,9 +60,40 @@ const AdminDashboard = () => {
     }
   };
 
+  const onDeleteUser = async (id) => {
+    if (!window.confirm("Delete this user?")) return;
+
+    try {
+      await axios.delete(apiUrl(`/api/auth/users/${id}`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setSuccess("User deleted");
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Delete failed");
+    }
+  };
+
+  const onChangePassword = async (id) => {
+    try {
+      await axios.put(
+        apiUrl(`/api/auth/users/${id}/password`),
+        { password: newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccess("Password updated");
+      setPwdUserId(null);
+      setNewPassword("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Update failed");
+    }
+  };
+
   return (
     <div className="admin-panel">
-      <h2 className="admin-panel-title">Admin User Management</h2>
+      <h2 className="admin-panel-title"><FaUsersCog /> Admin User Management</h2>
 
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
       {success && <div className="admin-alert admin-alert-success">{success}</div>}
@@ -103,6 +139,8 @@ const AdminDashboard = () => {
                     <th>Username</th>
                     <th>Role</th>
                     <th>Created</th>
+                    <th>Actions</th>
+
                   </tr>
                 </thead>
                 <tbody>
@@ -111,16 +149,70 @@ const AdminDashboard = () => {
                       <tr key={user._id}>
                         <td>{user.name}</td>
                         <td>{user.role}</td>
-                        <td>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</td>
+                        <td>
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString()
+                            : "-"}
+                        </td>
+
+                        <td>
+                          {/* DELETE BUTTON */}
+                          <button
+                            className="btn-delete"
+                            onClick={() => onDeleteUser(user._id)}
+                          >
+                            🗑 Delete
+                          </button>
+
+                          {/* PASSWORD CHANGE UI */}
+                          {pwdUserId === user._id ? (
+                            <>
+                              <input
+                                type="password"
+                                placeholder="New password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                              />
+
+                              <button
+                                className="btn-save"
+                                onClick={() => onChangePassword(user._id)}
+                              >
+                                Save
+                              </button>
+
+                              <button
+                                className="btn-cancel"
+                                onClick={() => {
+                                  setPwdUserId(null);
+                                  setNewPassword("");
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="btn-edit"
+                              onClick={() => setPwdUserId(user._id)}
+                            >
+                              Change Password
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="3" className="admin-muted">No users found.</td>
+                      <td colSpan="4" className="admin-muted">
+                        No users found.
+                      </td>
                     </tr>
                   )}
                 </tbody>
+
               </table>
+
             </div>
           )}
         </section>

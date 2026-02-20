@@ -1,32 +1,30 @@
 /* Container */
 .solutions-container {
-  padding: 30px;
-  padding-left: 240px; /* to avoid sidebar overlap */
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 /* Heading */
 .solutions-heading {
   text-align: center;
   font-size: 28px;
-  margin-bottom: 30px;
-  background: linear-gradient(90deg, #ff4b2b, #ff416c);
-  padding: 14px;
-  border-radius: 10px;
-       background: linear-gradient(
-    90deg,
-    #FF4F9A 0%,   /* Pink / Magenta */
-    #FF8A3D 50%,  /* Orange */
-    #FFC83D 100%  /* Yellow / Gold */
-  );
-
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  box-shadow: 0 4px 10px rgba(255, 75, 43, 0.2);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* Summary Cards */

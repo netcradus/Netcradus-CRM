@@ -204,6 +204,7 @@
 import React, { useState, useEffect } from "react";
 import "./Accounts.css";
 import { apiUrl } from "../config/api";
+import { FaBuilding } from "react-icons/fa";
 
 function Accounts() {
   const [accounts, setAccounts] = useState([]);
@@ -323,7 +324,7 @@ function Accounts() {
 
   return (
     <div className="accounts-container">
-      <h2 className="accounts-heading">Accounts</h2>
+      <h2 className="accounts-heading"><FaBuilding /> Accounts</h2>
 
       {/* Actions */}
       <div className="accounts-actions">

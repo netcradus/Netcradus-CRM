@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaBoxes } from "react-icons/fa";
 import "./PurchaseOrders.css";
 
 const PurchaseOrders = () => {
@@ -29,7 +30,7 @@ const PurchaseOrders = () => {
 
   return (
     <div className="po-container">
-      <div className="po-header">Purchase Orders</div>
+      <h2 className="po-heading"><FaBoxes /> Purchase Orders</h2>
 
       <div className="po-actions">
         <button className="po-add-btn" onClick={() => setShowModal(true)}>

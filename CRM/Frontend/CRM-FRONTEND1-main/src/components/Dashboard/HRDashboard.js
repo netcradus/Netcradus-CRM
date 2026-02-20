@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaPeopleCarry } from 'react-icons/fa';
 import {
   BarChart,
   Bar,
@@ -26,7 +27,7 @@ const HRDashboard = () => {
     <div className="hr-dashboard">
       <div className="hr-header-card">
         <h2 className="hr-title">
-          Welcome <span className="highlight">HR TEAM</span>
+          <FaPeopleCarry /> Welcome <span className="highlight">HR TEAM</span>
         </h2>
         <p className="hr-subtitle">
           Streamlining your workforce management and employee engagement 💼

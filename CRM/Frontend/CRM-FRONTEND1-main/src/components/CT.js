@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaPhone } from "react-icons/fa";
 import "./CT.css";
 
 const initialCalls = [
@@ -29,7 +30,7 @@ function CT() {
 
   return (
     <div className="ct-container">
-      <h2 className="ct-title">Call Tracking</h2>
+      <h2 className="ct-title"><FaPhone /> Call Tracking</h2>
       <div className="ct-table-wrapper">
         <table className="ct-table">
           <thead>

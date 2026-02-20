@@ -1,30 +1,28 @@
 .ct-container {
-  margin-left: 220px;
-  padding: 30px 40px;
-  background: radial-gradient(circle at top right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 .ct-title {
-  font-size: 30px;
-  font-weight: 700;
-   background: linear-gradient(
-    90deg,
-    #FF4F9A 50%,   /* Pink / Magenta */
-    #FF8A3D 40%,  /* Orange */
-    #FFC83D 80%  /* Yellow / Gold */
-  );
-
+  font-size: 28px;
+  font-weight: 600;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
   text-align: center;
-  letter-spacing: 1.2px;
-
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .ct-table-wrapper {
