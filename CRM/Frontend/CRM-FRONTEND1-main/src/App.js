@@ -46,6 +46,7 @@ import Campaigns from "./components/Campaigns";
 import PriceBooks from "./components/PriceBooks";
 import Solutions from "./components/Solutions";
 import CT from "./components/CT";
+import UserManagement from "./components/Dashboard/UserManagement";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -81,31 +82,40 @@ function App() {
 
           <Route path="/admin-dashboard" element={
             <RoleRoute roleNeeded="admin">
-              <AdminDashboard />
+              <Dashboard />
             </RoleRoute>
           } />
 
+          <Route
+            path="/user-management"
+            element={
+              <RoleRoute roleNeeded="admin">
+                <UserManagement />
+              </RoleRoute>
+            }
+          />
+
           <Route path="/support-dashboard" element={
             <RoleRoute roleNeeded="support">
-              <SupportDashboard />
+            <Dashboard />
             </RoleRoute>
           } />
 
           <Route path="/sales-dashboard" element={
             <RoleRoute roleNeeded="sales">
-              <SalesDashboard />
+             <Dashboard />
             </RoleRoute>
           } />
 
           <Route path="/hr-dashboard" element={
             <RoleRoute roleNeeded="hr">
-              <HRDashboard />
+             <Dashboard />
             </RoleRoute>
           } />
 
           <Route path="/tech-dashboard" element={
             <RoleRoute roleNeeded="tech">
-              <TechDashboard />
+            <Dashboard />
             </RoleRoute>
           } />
 
