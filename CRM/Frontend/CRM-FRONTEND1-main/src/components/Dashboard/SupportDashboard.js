@@ -1,4 +1,5 @@
 import React from "react";
+import { FaHeadset } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import "./SupportDashboard.css";
 
@@ -7,7 +8,7 @@ function SupportDashboard() {
     <div className="dashboard-container">
       <Sidebar />
       <div className="dashboard">
-        <h2>Welcome, Support Agent 🎧</h2>
+        <h2><FaHeadset /> Welcome, Support Agent 🎧</h2>
 
         {/* Action buttons and filters */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>

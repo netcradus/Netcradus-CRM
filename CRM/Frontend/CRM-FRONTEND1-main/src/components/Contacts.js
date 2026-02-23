@@ -55,6 +55,7 @@
 import React, { useState, useEffect } from "react";
 import "./Contacts.css";
 import { apiUrl } from "../config/api";
+import { FaPhone } from "react-icons/fa";
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
@@ -119,7 +120,7 @@ function Contacts() {
 
   return (
     <div className="contacts-container">
-      <h2 className="contacts-heading">Contacts</h2>
+      <h2 className="contacts-heading"><FaPhone /> Contacts</h2>
 
       {/* Actions */}
       <div className="contacts-actions">

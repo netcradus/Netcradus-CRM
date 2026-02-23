@@ -2,28 +2,30 @@
 
 /* Container */
 .sales-inbox-container {
-  margin-left: 220px; /* Sidebar offset */
   padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
   min-height: 100vh;
-  background: radial-gradient(circle at bottom right, rgba(255, 58, 92, 0.08), #0f0f0f);
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
+  transition: padding-left 0.3s ease;
 }
 
 /* Heading */
 .sales-inbox-heading {
   font-size: 28px;
-  margin-bottom: 20px;
-   background: linear-gradient(
-    90deg,
-    #FF4F9A 5%,   /* Pink / Magenta */
-    #FF8A3D 10%,  /* Orange */
-    #FFC83D 20%  /* Yellow / Gold */
-  );
--webkit-background-clip: text;
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
+  -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* Actions */

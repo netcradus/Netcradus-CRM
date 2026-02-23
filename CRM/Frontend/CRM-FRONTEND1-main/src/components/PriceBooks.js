@@ -258,6 +258,7 @@
 
 
 import React, { useState } from "react";
+import { FaBook } from "react-icons/fa";
 import "./PriceBooks.css";
 
 const PriceBooks = () => {
@@ -321,7 +322,7 @@ const PriceBooks = () => {
     <div className="pricebooks-container">
       {/* Header */}
       <div className="pricebooks-header">
-        <h2>📚 Price Books</h2>
+        <h2 className="pricebooks-heading"><FaBook /> Price Books</h2>
         <button className="btn-add" onClick={() => setShowModal(true)}>
           + Add New Price Book
         </button>

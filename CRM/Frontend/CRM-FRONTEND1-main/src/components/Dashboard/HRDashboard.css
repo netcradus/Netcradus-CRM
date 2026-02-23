@@ -9,9 +9,14 @@ body {
 }
 
 .hr-dashboard {
-  padding: 2rem;
-  margin-left: 250px;
-  margin-right: 40px;
+  padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
+  color: #f0f0f0;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 .hr-header-card {
@@ -24,13 +29,25 @@ body {
 }
 
 .hr-title {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 0;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 .hr-title .highlight {
-  color: #00c6ff;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
 }
 
 .hr-subtitle {

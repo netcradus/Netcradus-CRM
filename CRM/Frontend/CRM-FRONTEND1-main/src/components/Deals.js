@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./Deals.css";
+import { FaHandshake } from "react-icons/fa";
 
 function Deals() {
   const [deals, setDeals] = useState([
@@ -33,7 +34,7 @@ function Deals() {
 
   return (
     <div className="deals-container">
-      <h2 className="deals-heading">Deals Management</h2>
+      <h2 className="deals-heading"><FaHandshake /> Deals Management</h2>
 
       <div className="deals-actions">
         <button className="btn-primary" onClick={openModal}>+ Add New Deal</button>

@@ -1,4 +1,5 @@
  import React, { useState } from "react";
+import { FaShoppingCart } from "react-icons/fa";
 import "./SalesOrders.css";
 
 function SalesOrders() {
@@ -39,7 +40,7 @@ function SalesOrders() {
 
   return (
     <div className="salesorders-container">
-      <h2 className="salesorders-heading">Sales Orders</h2>
+      <h2 className="salesorders-heading"><FaShoppingCart /> Sales Orders</h2>
 
       <div className="salesorders-actions">
         <button className="btn-primary" onClick={() => setShowModal(true)}>

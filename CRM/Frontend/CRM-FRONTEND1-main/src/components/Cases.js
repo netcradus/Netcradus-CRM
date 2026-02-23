@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaCheckDouble } from "react-icons/fa";
 import "./Cases.css";
 
 function Cases() {
@@ -37,7 +38,7 @@ function Cases() {
 
   return (
     <div className="cases-container">
-      <h2 className="cases-heading">Cases</h2>
+      <h2 className="cases-heading"><FaCheckDouble /> Cases</h2>
 
       {/* Actions */}
       <div className="cases-actions">

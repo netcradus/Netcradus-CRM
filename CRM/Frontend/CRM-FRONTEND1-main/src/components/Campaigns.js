@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FaBullhorn } from "react-icons/fa";
 import "./Campaigns.css";
 import { apiUrl } from "../config/api";
 
@@ -87,7 +88,7 @@ const Campaigns = () => {
   return (
     <div className="campaigns-container">
       <div className="campaigns-header">
-        <h2 className="campaigns-heading">Campaigns</h2>
+        <h2 className="campaigns-heading"><FaBullhorn /> Campaigns</h2>
         <button className="add-campaign-btn" onClick={handleAddCampaign}>
           + Add New Campaign
         </button>

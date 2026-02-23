@@ -1,27 +1,28 @@
 /* ===== Container ===== */
 .cases-container {
   padding: 25px;
-  padding-left: 240px; /* sidebar adjust */
+  padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: padding-left 0.3s ease;
 }
 
 .cases-heading {
-  font-size: 26px;
-  margin-bottom: 20px;
-   background: linear-gradient(
-    90deg,
-    #FF4F9A 0%,   /* Pink / Magenta */
-    #FF8A3D 5%,  /* Orange */
-    #FFC83D 10%  /* Yellow / Gold */
-  );
-
+  font-size: 28px;
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* ===== Actions ===== */

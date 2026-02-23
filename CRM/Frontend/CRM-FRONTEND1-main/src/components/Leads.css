@@ -1,20 +1,32 @@
 .leads-container {
   padding: 25px;
+  padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.08), #0f0f0f);
-  margin-left: 220px;
+  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
+  transition: padding-left 0.3s ease;
 }
 
 .leads-heading {
   font-size: 28px;
-  margin-bottom: 20px;
-  background: linear-gradient(90deg, #FF4F9A 2%, #FF8A3D 5%, #FFC83D 10%);
+  margin-bottom: 25px;
+  background: linear-gradient(
+    90deg,
+    #FF4F9A 2%,   /* Pink / Magenta */
+    #FF8A3D 5%,  /* Orange */
+    #FFC83D 10%  /* Yellow / Gold */
+  );
+
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
 /* Alerts */
@@ -55,6 +67,7 @@
   margin-bottom: 25px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
 }
 
 .btn-primary {
@@ -65,14 +78,18 @@
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: all 0.3s ease;
   box-shadow: 0 2px 10px rgba(255, 75, 43, 0.3);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary:hover {
   opacity: 0.9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 75, 43, 0.5);
 }
 
 .search-bar {
@@ -83,13 +100,14 @@
   color: #fff;
   flex: 1;
   min-width: 250px;
-  transition: border 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .search-bar:focus {
   outline: none;
   border: 1px solid #ff4b2b;
   background-color: #222;
+  box-shadow: 0 0 8px rgba(255, 75, 43, 0.2);
 }
 
 .lead-status {
@@ -97,6 +115,7 @@
   gap: 12px;
   margin-bottom: 25px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .status-item {
@@ -107,6 +126,13 @@
   color: #ccc;
   border-left: 4px solid #ff4b2b;
   font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.status-item:hover {
+  background-color: #222;
+  transform: translateY(-2px);
 }
 
 .status-item.hot {
@@ -125,42 +151,45 @@
   overflow-x: auto;
   background-color: #1a1a1a;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  margin-top: 10px;
 }
 
 .leads-table table {
   width: 100%;
   border-collapse: collapse;
+  background-color: #1a1a1a;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.leads-table thead {
-  background-color: #2a2a2a;
+.leads-table th,
+.leads-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ddd;
+  font-size: 14px;
+}
+
+.leads-table th {
+  background-color: #1c1c1c;
+  color: #ff4b2b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.5px;
   border-bottom: 2px solid #ff6a00;
 }
 
-.leads-table thead th {
-  padding: 15px;
-  text-align: left;
-  color: #ff6a00;
-  font-weight: bold;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .leads-table tbody tr {
+  transition: all 0.3s ease;
   border-bottom: 1px solid #333;
-  transition: background-color 0.3s ease;
 }
 
 .leads-table tbody tr:hover {
-  background-color: #252525;
-}
-
-.leads-table tbody td {
-  padding: 12px 15px;
-  color: #e0e0e0;
-  font-size: 14px;
+  background-color: rgba(255, 75, 43, 0.05);
 }
 
 .lead-name {
@@ -410,14 +439,21 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .leads-container {
+    padding-left: calc(25px + 180px);
+  }
+}
+
 @media (max-width: 768px) {
   .leads-container {
-    margin-left: 0;
-    padding: 15px;
+    padding-left: 25px;
+    padding-right: 25px;
   }
 
   .leads-heading {
     font-size: 22px;
+    margin-bottom: 20px;
   }
 
   .leads-actions {
@@ -444,6 +480,48 @@
   .modal-content {
     width: 95%;
     max-height: 95vh;
+  }
+
+  .leads-table th,
+  .leads-table td {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .leads-heading {
+    font-size: 18px;
+    gap: 8px;
+  }
+
+  .leads-actions {
+    gap: 10px;
+  }
+
+  .search-bar {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .btn-primary {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .modal-content {
+    width: 100%;
+  }
+
+  .form-group label {
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 13px;
+    padding: 8px 10px;
   }
 }
 

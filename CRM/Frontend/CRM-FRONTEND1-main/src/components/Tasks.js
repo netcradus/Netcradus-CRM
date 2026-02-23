@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaCheckCircle } from "react-icons/fa";
 import "./Tasks.css";
 
 function Tasks() {
@@ -81,7 +82,7 @@ function Tasks() {
 
   return (
     <div className="tasks-container">
-      <h2 className="tasks-heading">Tasks</h2>
+      <h2 className="tasks-heading"><FaCheckCircle /> Tasks</h2>
 
       {/* Actions Section */}
       <div className="tasks-actions">

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaLightbulb } from "react-icons/fa";
 import "./Solutions.css";
 
 const initialSolutions = [
@@ -48,7 +49,7 @@ function Solutions() {
 
   return (
     <div className="solutions-container">
-      <h2 className="solutions-heading">Client Solutions</h2>
+      <h2 className="solutions-heading"><FaLightbulb /> Client Solutions</h2>
 
       {/* Summary */}
       <div className="solutions-summary">

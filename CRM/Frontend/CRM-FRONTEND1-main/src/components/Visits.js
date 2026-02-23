@@ -1,4 +1,5 @@
 import React from "react";
+import { FaMapMarkerAlt } from "react-icons/fa";
 import "./Visits.css";
 
 const visitsData = [
@@ -36,7 +37,7 @@ function Visits() {
 
   return (
     <div className="visits-container">
-      <h2 className="visits-heading">📍 Client Visits</h2>
+      <h2 className="visits-heading"><FaMapMarkerAlt /> Client Visits</h2>
 
       <div className="visits-summary">
         <div className="summary-card total">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { FaReceipt } from "react-icons/fa";
 import "./Invoices.css";
 import { apiUrl } from "../config/api";
 
@@ -83,7 +84,7 @@ const Invoices = () => {
 
   return (
     <div className="invoices-container">
-      <h2 className="invoices-title">Client Invoices</h2>
+      <h2 className="invoices-title"><FaReceipt /> Client Invoices</h2>
 
       <div className="invoice-table-wrapper">
         <table className="invoice-table">

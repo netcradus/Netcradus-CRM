@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { FaChartLine } from "react-icons/fa";
 import "./Forecasts.css";
 import { apiUrl } from "../config/api";
 import {
@@ -67,7 +68,7 @@ const Forecasts = () => {
 
   return (
     <div className="forecast-container">
-      <h2 className="forecast-title">Forecasts Overview</h2>
+      <h2 className="forecast-title"><FaChartLine /> Forecasts Overview</h2>
 
       {/* Summary Cards */}
       <div className="forecast-cards">

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaCalendarAlt } from "react-icons/fa";
 import "./Meetings.css";
 
 function Meetings() {
@@ -36,7 +37,7 @@ function Meetings() {
 
   return (
     <div className="meetings-container">
-      <h2 className="meetings-heading">Meetings</h2>
+      <h2 className="meetings-heading"><FaCalendarAlt /> Meetings</h2>
 
       <div className="meetings-actions">
         <button className="btn-primary" onClick={() => setShowModal(true)}>Schedule Meeting</button>

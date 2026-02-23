@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FaEnvelope } from "react-icons/fa";
 import "./SalesInbox.css";
 import { apiUrl } from "../config/api";
 
@@ -109,7 +110,7 @@ const SalesInbox = () => {
 
   return (
     <div className="sales-inbox-container">
-      <h2 className="sales-inbox-heading">Sales Inbox</h2>
+      <h2 className="sales-inbox-heading"><FaEnvelope /> Sales Inbox</h2>
 
       {/* Actions */}
       <div className="sales-inbox-actions">

@@ -5,7 +5,7 @@ import "./Reports.css"; // Optional, only if you create the CSS
 function Reports() {
   return (
     <div className="dashboard-container">
-      <Sidebar />
+
       <div className="dashboard">
         <h2>📊 Reports</h2>
         <p>Generate and view detailed reports on sales, support, and more.</p>

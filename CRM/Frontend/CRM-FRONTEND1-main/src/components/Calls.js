@@ -187,6 +187,7 @@
 
 
 import React, { useState } from "react";
+import { FaPhone } from "react-icons/fa";
 import "./Calls.css";
 
 function Calls() {
@@ -198,18 +199,20 @@ function Calls() {
   return (
     <div className="calls-container">
       <div className="calls-header">
-        <h2>Calls</h2>
-        <button className="btn-primary" onClick={openModal}>+ Add Call</button>
+        <h2 className="calls-heading"><FaPhone /> Calls</h2>
       </div>
 
       <div className="calls-actions">
-        <input className="search-bar" type="text" placeholder="Search Calls" />
-        <select className="filter-dropdown">
-          <option value="all">All</option>
-          <option value="completed">Completed</option>
-          <option value="missed">Missed</option>
-          <option value="scheduled">Scheduled</option>
-        </select>
+        <button className="btn-primary" onClick={openModal}>+ Add Call</button>
+        <div className="calls-filters">
+          <input className="search-bar" type="text" placeholder="Search Calls" />
+          <select className="filter-dropdown">
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="missed">Missed</option>
+            <option value="scheduled">Scheduled</option>
+          </select>
+        </div>
       </div>
 
       {/* Calls Table */}

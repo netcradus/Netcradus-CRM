@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./Leads.css";
 import axios from "axios";
 import { apiUrl } from "../config/api";
+import { FaClipboardList } from "react-icons/fa";
 
 function Leads() {
   const [leads, setLeads] = useState([]);
@@ -188,7 +189,7 @@ function Leads() {
 
   return (
     <div className="leads-container">
-      <h2 className="leads-heading">📋 Leads Management</h2>
+      <h2 className="leads-heading"><FaClipboardList /> Leads Management</h2>
 
       {/* Alerts */}
       {error && <div className="alert alert-error">{error}</div>}
