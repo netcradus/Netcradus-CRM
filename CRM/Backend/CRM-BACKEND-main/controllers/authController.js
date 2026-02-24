@@ -8,50 +8,64 @@ const nodemailer = require("nodemailer");
 // Create user (admin only)
 const createUserByAdmin = async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { email, password, role } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        message: "Email, password and role are required"
+      });
     }
 
-    const normalizedUsername = String(username).trim();
-    const normalizedEmail = `${normalizedUsername.toLowerCase()}@netcradus.local`;
+    const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [{ name: normalizedUsername }, { email: normalizedEmail }],
-    });
-
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({ message: "Username already exists" });
+      return res.status(400).json({
+        message: "Email already exists"
+      });
     }
 
-    // Hash password
+    // Extract first name from email
+    const firstName = normalizedEmail.split("@")[0].split(".")[0];
+
+    // Department prefix
+    const department = role.toLowerCase().replace("_", "");
+
+    // Count existing users in same department
+    const count = await User.countDocuments({ role });
+
+    // Generate sequential number (001, 002, 003...)
+    const number = String(count + 1).padStart(3, "0");
+
+    const uniqueId = `${department}_${firstName}_${number}`;
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
     const user = new User({
-      name: normalizedUsername,
+      userId: uniqueId,
+      name: firstName,
       email: normalizedEmail,
       password: hashedPassword,
-      role: role || "sales",
+      role,
     });
+
     await user.save();
 
     res.status(201).json({
       message: "User created successfully",
       user: {
         id: user._id,
-        username: user.name,
+        userId: user.userId,
+        email: user.email,
         role: user.role,
       },
     });
+
   } catch (err) {
     console.error("Create User Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
-
 // Login User
 const login = async (req, res) => {
   try {
@@ -170,11 +184,12 @@ const resetPassword = async (req, res) => {
 // Get all users (for admin to assign leads)
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("_id name email role createdAt");
+    const users = await User.find()
+      .select("_id userId name email role createdAt");
+
     res.json(users);
   } catch (err) {
-    console.error("Get Users Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -188,9 +203,8 @@ const deleteUserByAdmin = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // optional: prevent deleting main admin
     if (user.role === "admin") {
-      return res.status(403).json({ message: "Cannot delete admin user" });
+      return res.status(403).json({ message: "Admin users cannot be deleted" });
     }
 
     await user.deleteOne();
@@ -198,11 +212,9 @@ const deleteUserByAdmin = async (req, res) => {
     res.json({ message: "User deleted successfully" });
 
   } catch (err) {
-    console.error("Delete User Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
-
 // Admin change password of created user
 const adminChangeUserPassword = async (req, res) => {
   try {

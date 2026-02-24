@@ -22,7 +22,7 @@ function Dashboard() {
         return <SupportDashboard />;
       case "hr":
         return <HRDashboard />;
-      case "tech":
+      case "it":
         return <TechDashboard />;
       default:
         return (

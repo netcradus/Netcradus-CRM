@@ -108,6 +108,35 @@ const roleMenus = {
     { label: "Meetings", path: "/meetings", icon: <FaCalendarAlt /> },
     { label: "Reports", path: "/reports", icon: <FaChartBar /> },
   ],
+
+   it: [
+    { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    {
+      label: "IT Management",
+      icon: <FaCogs />,
+      children: [
+        { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
+    { label: "Meetings", path: "/meetings", icon: <FaCalendarAlt /> },
+    { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+      ],
+    },
+  ],
+
+  digitalMedia: [
+    { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    {
+      label: "Campaigns",
+      icon: <FaBullhorn />,
+      children: [
+        { label: "Social Media", path: "/social-media", icon: <FaComments /> },
+        { label: "Email Marketing", path: "/email-marketing", icon: <FaEnvelopeOpenText /> },
+        { label: "SEO", path: "/seo", icon: <FaChartBar /> },
+        { label: "Content", path: "/content", icon: <FaFile /> },
+      ],
+    },
+    { label: "Projects", path: "/dm-projects", icon: <FaProjectDiagram /> },
+    { label: "Reports", path: "/dm-reports", icon: <FaChartBar /> },
+  ],
 };
 
 // ─── NavGroup — dropdown opens BELOW the button ───────────────────────────────
@@ -213,7 +242,8 @@ function Sidebar() {
       {/* LOGO */}
       <div className="sidebar-logo">
         <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
-        {isHovered && <span className="company-name">Netcradus</span>}
+        {isHovered && <span className="company-name">
+          <img src="/netcradus.png" alt="Company Logo"/></span>}
       </div>
 
       {/* SEARCH */}

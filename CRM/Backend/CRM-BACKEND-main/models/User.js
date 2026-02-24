@@ -1,9 +1,12 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    unique: true
+  },
   name: {
     type: String,
-    required: true,
     trim: true
   },
   email: {
@@ -18,15 +21,13 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["admin", "sales", "support"],
+    enum: ["admin", "sales", "support", "hr", "it", "digital_media"],
     default: "sales"
   },
-  resetToken: {
-    type: String
-  },
-  tokenExpiry: {
-    type: Date
-  }
+  
+  resetToken: String,
+  resetTokenExpiry: Date
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

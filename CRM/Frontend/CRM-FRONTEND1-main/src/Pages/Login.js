@@ -356,7 +356,9 @@ function Login() {
     if (user.role === "admin") navigate("/admin-dashboard");
 else if (user.role === "support") navigate("/support-dashboard");
 else if (user.role === "sales") navigate("/sales-dashboard");
-
+else if (user.role === "it") navigate("/tech-dashboard");
+else if (user.role === "hr") navigate("/hr-dashboard");
+else if (user.role === "digital-media") navigate("/digital-media-dashboard");
 else navigate("/dashboard");
     } catch (err) {
       const errorMsg = err.response?.data?.message || "Login failed. Please try again.";
@@ -408,7 +410,7 @@ else navigate("/dashboard");
         <input
           type="text"
           name="email"
-          placeholder="Email or Username"
+          placeholder="Email or UserID"
           onChange={handleChange}
           value={form.email}
           required

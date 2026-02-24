@@ -25,14 +25,16 @@ const chartData = [
 
 const SalesDashboard = () => {
   const [search, setSearch] = useState("");
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "Admin";
   return (
     <div className="sales-dashboard">
       <div className="sales-header-card">
         <h2 className="sales-title">
-          <FaChartLine /> Welcome <span className="highlight">SALES TEAM</span>
+          <FaChartLine /> Welcome <span className="highlight">{userName.toUpperCase()}</span>
         </h2>
         <p className="sales-subtitle">
-          Empowering your sales momentum with actionable insights 🚀
+            Role: <strong>{userRole.toUpperCase()}</strong> — Empowering your sales momentum with actionable insights 🚀
         </p>
       </div>
 

@@ -114,7 +114,7 @@ function App() {
           } />
 
           <Route path="/tech-dashboard" element={
-            <RoleRoute roleNeeded="tech">
+            <RoleRoute roleNeeded="it">
             <Dashboard />
             </RoleRoute>
           } />

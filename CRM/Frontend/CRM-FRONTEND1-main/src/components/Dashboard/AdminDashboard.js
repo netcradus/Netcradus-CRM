@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { FaUserShield } from "react-icons/fa";
 import {
   BarChart,
@@ -10,6 +10,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import "./AdminDashboard.css";
+import axios from "axios";
+import { apiUrl } from "../../config/api";
 
 const chartData = [
   { month: "Jan", users: 12 },
@@ -22,17 +24,43 @@ const chartData = [
 
 const AdminDashboard = () => {
   const [search, setSearch] = useState("");
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "Admin";
+
+
+ const [users, setUsers] = useState([]);
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get(apiUrl("/api/auth/users"), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUsers(res.data);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+
+    fetchUsers();
+  }, [token]);
+
+  const totalUsers = users.length;
+
 
   return (
     <div className="admin-dashboard">
 
       {/* Header */}
-      <div className="admin-header-card">
+       <div className="admin-header-card">
         <h2 className="admin-title">
-          <FaUserShield /> Welcome <span className="highlight">ADMIN</span>
+          <FaUserShield /> Welcome <span className="highlight">{userName.toUpperCase()}</span>
         </h2>
         <p className="admin-subtitle">
-          Control, manage and monitor your organization efficiently ⚡
+         Role: <strong>{userRole.toUpperCase()}</strong>  — Control, manage and monitor your organization efficiently ⚡
         </p>
       </div>
 
@@ -51,13 +79,14 @@ const AdminDashboard = () => {
           type="text"
           placeholder="Search deals or client..."
         >
-          <option value="">All Roles</option>
           <option value="sales">Sales</option>
-          <option value="support">Support</option>
-          <option value="hr">HR</option>
+           <option value="admin">Admin</option>
+              <option value="support">Support</option>
+              <option value="hr">HR</option>
+              <option value="it">IT</option>
+              <option value="digital_media">Digital Media</option>
         </select>
 
-        <button className="btn-primary">+ Add User</button>
         <button className="btn-outline">📊 System Report</button>
       </div>
 
@@ -65,7 +94,7 @@ const AdminDashboard = () => {
       <div className="admin-metrics">
         <div className="metric-card">
           <div className="metric-label">Total Users</div>
-          <div className="metric-value">120</div>
+          <div className="metric-value">{totalUsers}</div>
         </div>
 
         <div className="metric-card">
