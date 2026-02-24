@@ -13,7 +13,7 @@ function Leads() {
   const [showModal, setShowModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [users, setUsers] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -179,6 +179,80 @@ function Leads() {
     setEditingLead(null);
   };
 
+  // Export CSV
+  const handleExportCSV = () => {
+    if (leads.length === 0) return;
+
+    const headers = ["Name", "Email", "Phone", "Company", "Status", "Assigned To", "Notes"];
+    const rows = leads.map(lead => [
+      lead.name,
+      lead.email,
+      lead.phone || "",
+      lead.company || "",
+      lead.status,
+      lead.assignedTo?.name || "",
+      lead.notes || ""
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `leads_${new Date().toISOString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Import CSV
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
+      const headers = headerLine.split(",");
+
+      const importedLeads = lines.map(line => {
+        const values = line.split(",");
+        const obj = {};
+        headers.forEach((header, idx) => {
+          obj[header.trim()] = values[idx]?.trim() || "";
+        });
+        return obj;
+      });
+
+      try {
+        // Send each imported lead to backend
+        for (const leadData of importedLeads) {
+          await axios.post(apiUrl("/api/leads"), {
+            name: leadData["Name"],
+            email: leadData["Email"],
+            phone: leadData["Phone"],
+            company: leadData["Company"],
+            status: leadData["Status"] || "Cold",
+            assignedTo: "", // Admin can assign manually later
+            notes: leadData["Notes"]
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+        fetchLeads();
+        setSuccess("CSV imported successfully!");
+        setTimeout(() => setSuccess(""), 3000);
+      } catch (err) {
+        console.error("Error importing CSV:", err);
+        setError(err.response?.data?.message || "Failed to import CSV");
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   if (loading) {
     return (
       <div className="leads-container">
@@ -194,6 +268,20 @@ function Leads() {
       {/* Alerts */}
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
+
+      <div className="leads-actions">
+        <div className="csv-buttons">
+          <button className="btn-csv" onClick={handleExportCSV}>📤 Export CSV</button>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleImportCSV}
+            style={{ display: "none" }}
+            id="import-csv-input"
+          />
+          <label htmlFor="import-csv-input" className="btn-csv">📥 Import CSV</label>
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="leads-actions">
@@ -355,20 +443,20 @@ function Leads() {
               {userRole === "admin" && (
                 <div className="form-row">
                   <div className="form-group">
-                  <label>Assign To</label>
-                  <select
-                    name="assignedTo"
-                    value={formData.assignedTo}
-                    onChange={handleFormChange}
-                  >
-                    <option value="">-- Unassigned --</option>
-                    {users.map(user => (
-                      <option key={user._id} value={user._id}>
-                        {user.name} ({user.role})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <label>Assign To</label>
+                    <select
+                      name="assignedTo"
+                      value={formData.assignedTo}
+                      onChange={handleFormChange}
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {users.map(user => (
+                        <option key={user._id} value={user._id}>
+                          {user.name} ({user.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 

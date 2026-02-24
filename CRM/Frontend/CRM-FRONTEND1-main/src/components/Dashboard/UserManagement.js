@@ -159,11 +159,11 @@ const UserManagement = () => {
               onChange={onChange}
             >
               <option value="sales">Sales</option>
+              <option value="admin">Admin</option>
               <option value="support">Support</option>
               <option value="hr">HR</option>
               <option value="it">IT</option>
               <option value="digital_media">Digital Media</option>
-              <option value="admin">Admin</option>
             </select>
 
             <button type="submit">Create User</button>
