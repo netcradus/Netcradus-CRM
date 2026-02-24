@@ -408,7 +408,7 @@ else navigate("/dashboard");
         <input
           type="text"
           name="email"
-          placeholder="Email or Username"
+          placeholder="Email or UserID"
           onChange={handleChange}
           value={form.email}
           required

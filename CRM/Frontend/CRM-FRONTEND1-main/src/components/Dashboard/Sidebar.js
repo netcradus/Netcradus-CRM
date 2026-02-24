@@ -213,7 +213,8 @@ function Sidebar() {
       {/* LOGO */}
       <div className="sidebar-logo">
         <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
-        {isHovered && <span className="company-name">Netcradus</span>}
+        {isHovered && <span className="company-name">
+          <img src="/netcradus.png" alt="Company Logo"/></span>}
       </div>
 
       {/* SEARCH */}
