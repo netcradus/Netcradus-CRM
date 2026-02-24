@@ -14,6 +14,17 @@ function Leads() {
   const [editingLead, setEditingLead] = useState(null);
   const [users, setUsers] = useState([]);
 
+  // CSV Mapping State
+  const [showMappingModal, setShowMappingModal] = useState(false);
+  const [csvHeaders, setCsvHeaders] = useState([]);
+  const [csvData, setCsvData] = useState([]);
+  const [columnMapping, setColumnMapping] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: ""
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -206,6 +217,44 @@ function Leads() {
     document.body.removeChild(link);
   };
 
+  // Import CSV processing
+  const processImportData = async (dataToImport, mapping) => {
+    try {
+      setLoading(true);
+      setShowMappingModal(false);
+
+      const validData = dataToImport.filter(row => row[mapping.name] && row[mapping.email]);
+
+      if (validData.length === 0) {
+        setError("No valid data found to import (Name and Email are required).");
+        setLoading(false);
+        return;
+      }
+
+      for (const row of validData) {
+        await axios.post(apiUrl("/api/leads"), {
+          name: row[mapping.name],
+          email: row[mapping.email],
+          phone: mapping.phone ? row[mapping.phone] : "",
+          company: mapping.company ? row[mapping.company] : "",
+          status: row["Status"] || row["status"] || "Cold",
+          assignedTo: "",
+          notes: row["Notes"] || row["notes"] || ""
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      await fetchLeads();
+      setSuccess("CSV imported successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Error importing CSV:", err);
+      setError(err.response?.data?.message || "Failed to import CSV");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Import CSV
   const handleImportCSV = (e) => {
     const file = e.target.files[0];
@@ -215,41 +264,45 @@ function Leads() {
     reader.onload = async (event) => {
       const text = event.target.result;
       const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
-      const headers = headerLine.split(",");
+      const headers = headerLine.split(",").map(h => h.trim().replace(/^"|"$/g, ''));
 
-      const importedLeads = lines.map(line => {
-        const values = line.split(",");
+      setCsvHeaders(headers);
+
+      const parsedData = lines.map(line => {
+        // Simple split handling, ignores commas inside quotes for simplicity (assuming basic CSV)
+        const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ''));
         const obj = {};
         headers.forEach((header, idx) => {
-          obj[header.trim()] = values[idx]?.trim() || "";
+          obj[header] = values[idx] || "";
         });
         return obj;
       });
+      setCsvData(parsedData);
 
-      try {
-        // Send each imported lead to backend
-        for (const leadData of importedLeads) {
-          await axios.post(apiUrl("/api/leads"), {
-            name: leadData["Name"],
-            email: leadData["Email"],
-            phone: leadData["Phone"],
-            company: leadData["Company"],
-            status: leadData["Status"] || "Cold",
-            assignedTo: "", // Admin can assign manually later
-            notes: leadData["Notes"]
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
-        fetchLeads();
-        setSuccess("CSV imported successfully!");
-        setTimeout(() => setSuccess(""), 3000);
-      } catch (err) {
-        console.error("Error importing CSV:", err);
-        setError(err.response?.data?.message || "Failed to import CSV");
+      const lowercaseHeaders = headers.map(h => h.toLowerCase());
+      const hasName = lowercaseHeaders.includes('name');
+      const hasEmail = lowercaseHeaders.includes('email');
+      const hasPhone = lowercaseHeaders.includes('phone');
+      const hasCompany = lowercaseHeaders.includes('company');
+
+      if (hasName && hasEmail && hasPhone && hasCompany) {
+        processImportData(parsedData, {
+          name: headers[lowercaseHeaders.indexOf('name')],
+          email: headers[lowercaseHeaders.indexOf('email')],
+          phone: headers[lowercaseHeaders.indexOf('phone')],
+          company: headers[lowercaseHeaders.indexOf('company')]
+        });
+      } else {
+        setColumnMapping({
+          name: headers[lowercaseHeaders.indexOf('name')] || "",
+          email: headers[lowercaseHeaders.indexOf('email')] || "",
+          phone: headers[lowercaseHeaders.indexOf('phone')] || "",
+          company: headers[lowercaseHeaders.indexOf('company')] || ""
+        });
+        setShowMappingModal(true);
       }
+      e.target.value = null; // Reset input
     };
-
     reader.readAsText(file);
   };
 
@@ -480,6 +533,83 @@ function Leads() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* CSV Mapping Modal */}
+      {showMappingModal && (
+        <div className="modal-overlay">
+          <div className="modal-content mapping-modal">
+            <div className="modal-header">
+              <h3>Map CSV Columns</h3>
+              <button className="close-btn" onClick={() => setShowMappingModal(false)}>✕</button>
+            </div>
+            <div className="mapping-form" style={{ padding: '20px' }}>
+              <p style={{ marginBottom: '20px', color: '#666' }}>
+                Please select which column from your CSV corresponds to each field.
+              </p>
+
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label>Name *</label>
+                <select
+                  value={columnMapping.name}
+                  onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value })}
+                  style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">-- Select Column --</option>
+                  {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label>Email *</label>
+                <select
+                  value={columnMapping.email}
+                  onChange={(e) => setColumnMapping({ ...columnMapping, email: e.target.value })}
+                  style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">-- Select Column --</option>
+                  {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label>Phone</label>
+                <select
+                  value={columnMapping.phone}
+                  onChange={(e) => setColumnMapping({ ...columnMapping, phone: e.target.value })}
+                  style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">-- Select Column --</option>
+                  {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>Company</label>
+                <select
+                  value={columnMapping.company}
+                  onChange={(e) => setColumnMapping({ ...columnMapping, company: e.target.value })}
+                  style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
+                >
+                  <option value="">-- Select Column --</option>
+                  {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
+                </select>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn-cancel" onClick={() => setShowMappingModal(false)}>Cancel</button>
+                <button
+                  type="button"
+                  className="btn-submit"
+                  disabled={!columnMapping.name || !columnMapping.email}
+                  onClick={() => processImportData(csvData, columnMapping)}
+                  style={{ opacity: (!columnMapping.name || !columnMapping.email) ? 0.5 : 1 }}
+                >
+                  Import Data
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
