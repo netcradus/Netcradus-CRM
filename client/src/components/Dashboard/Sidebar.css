@@ -35,7 +35,7 @@
   width: 40px;
   height: 30px;
   border-radius: 8px;
-  flex-shrink: 0;
+ object-fit: contain; 
 }
 
 .company-name img{

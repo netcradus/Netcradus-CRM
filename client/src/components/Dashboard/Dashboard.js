@@ -8,6 +8,7 @@ import TechDashboard from "./TechDashboard";
 import NotificationButton from "../NotificationButton";
 
 import "./Dashboard.css";
+import DigitalMediaDashboard from "./DigitalMediaDashboard";
 
 function Dashboard() {
   const userRole = localStorage.getItem("userRole");
@@ -24,6 +25,8 @@ function Dashboard() {
         return <HRDashboard />;
       case "it":
         return <TechDashboard />;
+      case "digital_media":
+        return <DigitalMediaDashboard />;
       default:
         return (
           <div className="role-fallback">
