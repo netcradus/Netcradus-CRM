@@ -1,28 +1,28 @@
 const mongoose = require('mongoose');
 
 const leadSchema = new mongoose.Schema({
-    name: { 
-        type: String, 
-        required: true,
-        trim: true
+    name: {
+        type: String,
+        trim: true,
+        default: ""
     },
-    email: { 
-        type: String, 
-        required: true,
-        match: [/^\S+@\S+\.\S+$/, "Please provide a valid email"]
+    email: {
+        type: String,
+        trim: true,
+        default: ""
     },
-    phone: { 
+    phone: {
         type: String,
         trim: true
     },
-    company: { 
+    company: {
         type: String,
         trim: true
     },
-    status: { 
-        type: String, 
-        enum: ['Hot', 'Warm', 'Cold'],
-        default: 'Cold' 
+    status: {
+        type: String,
+        enum: ['Closed', 'In Progress', 'Not Interested'],
+        default: 'In Progress'
     },
     notes: {
         type: String,

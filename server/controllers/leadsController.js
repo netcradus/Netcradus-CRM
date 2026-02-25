@@ -8,7 +8,7 @@ const getLeads = async (req, res) => {
             .populate('createdBy', 'name email')
             .populate('assignedTo', 'name email')
             .sort({ createdAt: -1 });
-        
+
         // Format response to ensure createdBy has a name even if null
         const formattedLeads = leads.map(lead => {
             const leadObj = lead.toObject();
@@ -17,7 +17,7 @@ const getLeads = async (req, res) => {
             }
             return leadObj;
         });
-        
+
         res.json(formattedLeads);
     } catch (err) {
         console.error(err);
@@ -32,13 +32,13 @@ const getLead = async (req, res) => {
             .populate('createdBy', 'name email')
             .populate('assignedTo', 'name email');
         if (!lead) return res.status(404).json({ message: "Lead not found" });
-        
+
         // Ensure createdBy has a name even if null
         const leadObj = lead.toObject();
         if (!leadObj.createdBy) {
             leadObj.createdBy = { name: 'System', email: 'system@unknown' };
         }
-        
+
         res.json(leadObj);
     } catch (err) {
         console.error(err);
@@ -51,10 +51,7 @@ const createLead = async (req, res) => {
     try {
         const { name, email, phone, company, status, notes, assignedTo } = req.body;
 
-        // Validate required fields
-        if (!name || !email) {
-            return res.status(400).json({ message: "Name and email are required" });
-        }
+        // No required fields validation to allow importing incomplete tabular data
 
         // Create lead with createdBy set to current user
         const lead = new Lead({
@@ -62,14 +59,14 @@ const createLead = async (req, res) => {
             email,
             phone,
             company,
-            status: status || 'Cold',
+            status: status || 'In Progress',
             notes,
             assignedTo: assignedTo && assignedTo.trim() ? assignedTo : null,
             createdBy: req.user._id
         });
 
         const savedLead = await lead.save();
-        
+
         // Populate user details before sending response
         await savedLead.populate([
             { path: 'createdBy', select: 'name email' },
@@ -100,7 +97,7 @@ const updateLead = async (req, res) => {
 
         // Update allowed fields
         const { name, email, phone, company, status, notes, assignedTo } = req.body;
-        
+
         if (name) lead.name = name;
         if (email) lead.email = email;
         if (phone) lead.phone = phone;
@@ -110,7 +107,7 @@ const updateLead = async (req, res) => {
         if (assignedTo !== undefined) lead.assignedTo = assignedTo && assignedTo.trim() ? assignedTo : null;
 
         const updatedLead = await lead.save();
-        
+
         // Populate user details before sending response
         await updatedLead.populate([
             { path: 'createdBy', select: 'name email' },
@@ -128,14 +125,14 @@ const updateLead = async (req, res) => {
 const deleteLead = async (req, res) => {
     try {
         const leadId = req.params.id;
-        
+
         // Check if user is admin
         if (req.user.role !== 'admin') {
             return res.status(403).json({ message: "Only admins can delete leads" });
         }
 
         const deletedLead = await Lead.findByIdAndDelete(leadId);
-        
+
         if (!deletedLead) {
             return res.status(404).json({ message: "Lead not found" });
         }

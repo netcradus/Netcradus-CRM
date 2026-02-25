@@ -3,6 +3,11 @@ import "./Leads.css";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 import { FaClipboardList } from "react-icons/fa";
+import * as mammoth from "mammoth";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Set PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 function Leads() {
   const [leads, setLeads] = useState([]);
@@ -30,7 +35,7 @@ function Leads() {
     email: "",
     phone: "",
     company: "",
-    status: "Cold",
+    status: "In Progress",
     notes: "",
     assignedTo: ""
   });
@@ -38,7 +43,7 @@ function Leads() {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
 
-  const LEAD_STATUSES = ["Hot", "Warm", "Cold"];
+  const LEAD_STATUSES = ["Closed", "In Progress", "Not Interested"];
 
   // Fetch leads
   useEffect(() => {
@@ -128,10 +133,8 @@ function Leads() {
     e.preventDefault();
 
     // Validate
-    if (!formData.name || !formData.email) {
-      setError("Name and email are required");
-      return;
-    }
+    // Note: Name and email are no longer strictly required
+    // But we might still want at least one field to not create completely empty rows if needed
 
     try {
       if (editingLead) {
@@ -223,18 +226,18 @@ function Leads() {
       setLoading(true);
       setShowMappingModal(false);
 
-      const validData = dataToImport.filter(row => row[mapping.name] && row[mapping.email]);
+      const validData = dataToImport; // Allow all rows, even with missing names/emails
 
       if (validData.length === 0) {
-        setError("No valid data found to import (Name and Email are required).");
+        setError("No valid data found to import.");
         setLoading(false);
         return;
       }
 
       for (const row of validData) {
         await axios.post(apiUrl("/api/leads"), {
-          name: row[mapping.name],
-          email: row[mapping.email],
+          name: mapping.name ? row[mapping.name] : "",
+          email: mapping.email ? row[mapping.email] : "",
           phone: mapping.phone ? row[mapping.phone] : "",
           company: mapping.company ? row[mapping.company] : "",
           status: row["Status"] || row["status"] || "Cold",
@@ -255,55 +258,119 @@ function Leads() {
     }
   };
 
-  // Import CSV
-  const handleImportCSV = (e) => {
+  const processExtractedText = (text) => {
+    // Basic CSV or Tabular parsing
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+    if (lines.length < 2) {
+      setError("Unstructured data detected or too few rows. Please ensure your file contains tabular data.");
+      return;
+    }
+
+    // Determine delimiter (comma or tab)
+    const firstLine = lines[0];
+    let delimiter = ",";
+    if (firstLine.includes("\t")) {
+      delimiter = "\t";
+    } else if (!firstLine.includes(",")) {
+      setError("Unstructured data detected. Please ensure your file contains tabular data separated by commas or tabs.");
+      return;
+    }
+
+    const headers = firstLine.split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+    setCsvHeaders(headers);
+
+    const parsedData = lines.slice(1).map(line => {
+      const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+      const obj = {};
+      headers.forEach((header, idx) => {
+        obj[header] = values[idx] || "";
+      });
+      return obj;
+    });
+    setCsvData(parsedData);
+
+    const lowercaseHeaders = headers.map(h => h.toLowerCase());
+    const hasName = lowercaseHeaders.includes('name');
+    const hasEmail = lowercaseHeaders.includes('email');
+    const hasPhone = lowercaseHeaders.includes('phone');
+    const hasCompany = lowercaseHeaders.includes('company');
+
+    if (hasName && hasEmail && hasPhone && hasCompany) {
+      processImportData(parsedData, {
+        name: headers[lowercaseHeaders.indexOf('name')],
+        email: headers[lowercaseHeaders.indexOf('email')],
+        phone: headers[lowercaseHeaders.indexOf('phone')],
+        company: headers[lowercaseHeaders.indexOf('company')]
+      });
+    } else {
+      setColumnMapping({
+        name: lowercaseHeaders.includes('name') ? headers[lowercaseHeaders.indexOf('name')] : "",
+        email: lowercaseHeaders.includes('email') ? headers[lowercaseHeaders.indexOf('email')] : "",
+        phone: lowercaseHeaders.includes('phone') ? headers[lowercaseHeaders.indexOf('phone')] : "",
+        company: lowercaseHeaders.includes('company') ? headers[lowercaseHeaders.indexOf('company')] : ""
+      });
+      setShowMappingModal(true);
+    }
+  };
+
+  // Import File (CSV, TXT, DOCX, PDF)
+  const handleImportCSV = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const [headerLine, ...lines] = text.split(/\r?\n/).filter(Boolean);
-      const headers = headerLine.split(",").map(h => h.trim().replace(/^"|"$/g, ''));
+    const fileType = file.name.split('.').pop().toLowerCase();
 
-      setCsvHeaders(headers);
+    try {
+      if (fileType === 'csv' || fileType === 'txt') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          processExtractedText(event.target.result);
+        };
+        reader.readAsText(file);
+      } else if (fileType === 'docx') {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const arrayBuffer = event.target.result;
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          processExtractedText(result.value);
+        };
+        reader.readAsArrayBuffer(file);
+      } else if (fileType === 'pdf') {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const arrayBuffer = event.target.result;
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let fullText = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
 
-      const parsedData = lines.map(line => {
-        // Simple split handling, ignores commas inside quotes for simplicity (assuming basic CSV)
-        const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ''));
-        const obj = {};
-        headers.forEach((header, idx) => {
-          obj[header] = values[idx] || "";
-        });
-        return obj;
-      });
-      setCsvData(parsedData);
-
-      const lowercaseHeaders = headers.map(h => h.toLowerCase());
-      const hasName = lowercaseHeaders.includes('name');
-      const hasEmail = lowercaseHeaders.includes('email');
-      const hasPhone = lowercaseHeaders.includes('phone');
-      const hasCompany = lowercaseHeaders.includes('company');
-
-      if (hasName && hasEmail && hasPhone && hasCompany) {
-        processImportData(parsedData, {
-          name: headers[lowercaseHeaders.indexOf('name')],
-          email: headers[lowercaseHeaders.indexOf('email')],
-          phone: headers[lowercaseHeaders.indexOf('phone')],
-          company: headers[lowercaseHeaders.indexOf('company')]
-        });
+            // Reconstruct text block
+            let lastY = -1;
+            let text = "";
+            for (const item of textContent.items) {
+              if (lastY !== item.transform[5] && lastY !== -1) {
+                text += "\n";
+              } else if (lastY !== -1) {
+                text += "\t"; // Separator between items on same line
+              }
+              text += item.str;
+              lastY = item.transform[5];
+            }
+            fullText += text + "\n";
+          }
+          processExtractedText(fullText);
+        };
+        reader.readAsArrayBuffer(file);
       } else {
-        setColumnMapping({
-          name: headers[lowercaseHeaders.indexOf('name')] || "",
-          email: headers[lowercaseHeaders.indexOf('email')] || "",
-          phone: headers[lowercaseHeaders.indexOf('phone')] || "",
-          company: headers[lowercaseHeaders.indexOf('company')] || ""
-        });
-        setShowMappingModal(true);
+        setError("Unsupported file format.");
       }
-      e.target.value = null; // Reset input
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      console.error("Parse Error:", err);
+      setError("Error parsing the file.");
+    }
+
+    e.target.value = null; // Reset input
   };
 
   if (loading) {
@@ -327,12 +394,12 @@ function Leads() {
           <button className="btn-csv" onClick={handleExportCSV}>📤 Export CSV</button>
           <input
             type="file"
-            accept=".csv"
+            accept=".csv, .txt, .pdf, .docx, application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain"
             onChange={handleImportCSV}
             style={{ display: "none" }}
             id="import-csv-input"
           />
-          <label htmlFor="import-csv-input" className="btn-csv">📥 Import CSV</label>
+          <label htmlFor="import-csv-input" className="btn-csv">📥 Import File</label>
         </div>
       </div>
 
@@ -352,9 +419,9 @@ function Leads() {
 
       {/* Status Legend */}
       <div className="lead-status">
-        <div className="status-item hot">🔥 Hot</div>
-        <div className="status-item warm">🌤 Warm</div>
-        <div className="status-item cold">❄️ Cold</div>
+        <div className="status-item hot">🔥 Closed</div>
+        <div className="status-item warm">🌤 In Progress</div>
+        <div className="status-item cold">❄️ Not Interested</div>
       </div>
 
       {/* Leads Table */}
@@ -432,25 +499,25 @@ function Leads() {
             <form onSubmit={handleSubmitForm} className="lead-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Name *</label>
+                  <label>Name</label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleFormChange}
                     placeholder="Enter lead name"
-                    required
+
                   />
                 </div>
                 <div className="form-group">
-                  <label>Email *</label>
+                  <label>Email</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleFormChange}
                     placeholder="Enter email"
-                    required
+
                   />
                 </div>
               </div>
@@ -550,25 +617,25 @@ function Leads() {
               </p>
 
               <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Name *</label>
+                <label>Name</label>
                 <select
                   value={columnMapping.name}
                   onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value })}
                   style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                 >
-                  <option value="">-- Select Column --</option>
+                  <option value="">-- Skip/None --</option>
                   {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
                 </select>
               </div>
 
               <div className="form-group" style={{ marginBottom: '15px' }}>
-                <label>Email *</label>
+                <label>Email</label>
                 <select
                   value={columnMapping.email}
                   onChange={(e) => setColumnMapping({ ...columnMapping, email: e.target.value })}
                   style={{ width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                 >
-                  <option value="">-- Select Column --</option>
+                  <option value="">-- Skip/None --</option>
                   {csvHeaders.map(header => <option key={header} value={header}>{header}</option>)}
                 </select>
               </div>
@@ -602,9 +669,7 @@ function Leads() {
                 <button
                   type="button"
                   className="btn-submit"
-                  disabled={!columnMapping.name || !columnMapping.email}
                   onClick={() => processImportData(csvData, columnMapping)}
-                  style={{ opacity: (!columnMapping.name || !columnMapping.email) ? 0.5 : 1 }}
                 >
                   Import Data
                 </button>
