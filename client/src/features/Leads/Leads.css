@@ -135,15 +135,15 @@
   transform: translateY(-2px);
 }
 
-.status-item.hot {
+.status-item.closed {
   border-color: #ff0000;
 }
 
-.status-item.warm {
+.status-item.in-progress {
   border-color: #ffa500;
 }
 
-.status-item.cold {
+.status-item.not-interested {
   border-color: #007bff;
 }
 
@@ -211,17 +211,17 @@
   letter-spacing: 0.5px;
 }
 
-.badge.hot {
+.badge.closed {
   background-color: #ff0000;
   color: white;
 }
 
-.badge.warm {
+.badge.in-progress {
   background-color: #ffa500;
   color: white;
 }
 
-.badge.cold {
+.badge.not-interested {
   background-color: #007bff;
   color: white;
 }
@@ -565,17 +565,17 @@
   text-transform: capitalize;
 }
 
-.badge.hot {
+.badge.closed {
   background-color: #ff0000;
   color: #fff;
 }
 
-.badge.warm {
+.badge.in-progress {
   background-color: #ffa500;
   color: #fff;
 }
 
-.badge.cold {
+.badge.not-interested {
   background-color: #007bff;
   color: #fff;
 }

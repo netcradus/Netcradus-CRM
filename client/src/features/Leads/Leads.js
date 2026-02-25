@@ -106,7 +106,7 @@ function Leads() {
       email: "",
       phone: "",
       company: "",
-      status: "Cold",
+      status: "In Progress",
       notes: "",
       assignedTo: ""
     });
@@ -121,7 +121,7 @@ function Leads() {
       email: lead.email,
       phone: lead.phone || "",
       company: lead.company || "",
-      status: lead.status || "Cold",
+      status: lead.status || "In Progress",
       notes: lead.notes || "",
       assignedTo: lead.assignedTo?._id || ""
     });
@@ -240,7 +240,7 @@ function Leads() {
           email: mapping.email ? row[mapping.email] : "",
           phone: mapping.phone ? row[mapping.phone] : "",
           company: mapping.company ? row[mapping.company] : "",
-          status: row["Status"] || row["status"] || "Cold",
+          status: row["Status"] || row["status"] || "In Progress",
           assignedTo: "",
           notes: row["Notes"] || row["notes"] || ""
         }, {
@@ -419,9 +419,9 @@ function Leads() {
 
       {/* Status Legend */}
       <div className="lead-status">
-        <div className="status-item hot">🔥 Closed</div>
-        <div className="status-item warm">🌤 In Progress</div>
-        <div className="status-item cold">❄️ Not Interested</div>
+        <div className="status-item closed">🔥 Closed</div>
+        <div className="status-item in-progress">🌤 In Progress</div>
+        <div className="status-item not-interested">❄️ Not Interested</div>
       </div>
 
       {/* Leads Table */}
@@ -451,7 +451,7 @@ function Leads() {
                   <td>{lead.phone || "-"}</td>
                   <td>{lead.company || "-"}</td>
                   <td>
-                    <span className={`badge ${lead.status.toLowerCase()}`}>
+                    <span className={`badge ${lead.status.toLowerCase().replace(' ', '-')}`}>
                       {lead.status}
                     </span>
                   </td>
