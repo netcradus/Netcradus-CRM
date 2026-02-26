@@ -30,6 +30,8 @@ function Products() {
         <h2><FaBox /> Products</h2>
       </div>
 
+       <button className="btn-add-product" onClick={() => setShowModal(true)}>+ Add New Product</button>
+
       <div className="products-table-wrapper">
         <table className="products-table">
           <thead>
@@ -46,26 +48,28 @@ function Products() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p, index) => (
-              <tr key={index}>
-                <td>{p.name}</td>
-                <td>{p.category}</td>
-                <td>{p.price}</td>
-                <td>{p.currency}</td>
-                <td>{p.tax}</td>
-                <td>{p.discount}</td>
-                <td>
-                  <span className={`status-badge ${p.status === "Active" ? "active" : "inactive"}`}>{p.status}</span>
-                </td>
-                <td>{p.updated}</td>
-                <td>{p.stock}</td>
-              </tr>
-            ))}
-          </tbody>
+  {products.map((p, index) => (
+    <tr key={index}>
+      <td data-label="Product Name">{p.name}</td>
+      <td data-label="Category">{p.category}</td>
+      <td data-label="Price">{p.price}</td>
+      <td data-label="Currency">{p.currency}</td>
+      <td data-label="Tax Rate (%)">{p.tax}</td>
+      <td data-label="Discount (%)">{p.discount}</td>
+      <td data-label="Status">
+        <span className={`status-badge ${p.status === "Active" ? "active" : "inactive"}`}>
+          {p.status}
+        </span>
+      </td>
+      <td data-label="Updated Date">{p.updated}</td>
+      <td data-label="Stock">{p.stock}</td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
 
-      <button className="btn-add-product" onClick={() => setShowModal(true)}>+ Add New Product</button>
+
 
       {showModal && (
         <div className="modal">

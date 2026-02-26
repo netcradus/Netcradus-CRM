@@ -67,20 +67,22 @@ function Quotes() {
               <th>Date Sent</th>
             </tr>
           </thead>
-          <tbody>
-            {quotes.map((quote) => (
-              <tr key={quote.id}>
-                <td>{quote.client}</td>
-                <td>{quote.amount}</td>
-                <td>
-                  <span className={`badge ${quote.status.toLowerCase().replace(" ", "-")}`}>
-                    {quote.status}
-                  </span>
-                </td>
-                <td>{new Date(quote.date).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
+    <tbody>
+  {quotes.map((quote) => (
+    <tr key={quote.id}>
+      <td data-label="Client">{quote.client}</td>
+      <td data-label="Amount">{quote.amount}</td>
+      <td data-label="Status">
+        <span className={`badge ${quote.status.toLowerCase().replace(" ", "-")}`}>
+          {quote.status}
+        </span>
+      </td>
+      <td data-label="Date Sent">
+        {new Date(quote.date).toLocaleString()}
+      </td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
 

@@ -4,12 +4,13 @@
 .deals-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   transition: padding-left 0.3s ease;
+    width: 90%;
+  margin-left: 40px;
 }
 
 .deals-heading {
@@ -21,10 +22,9 @@
   -webkit-text-fill-color: transparent;
   font-weight: 600;
   display: flex;
+  justify-content: center; /* Center heading */
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  letter-spacing: 0.5px;
 }
 
 /* Actions */
@@ -117,29 +117,26 @@
 }
 
 /* Deals Table */
-.deals-table {
+deals-table {
   overflow-x: auto;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  background-color: #1a1a1a;
   margin-top: 10px;
+  background: #1a1a1a;
+  border-radius: 8px;
 }
 
 .deals-table table {
   width: 100%;
   border-collapse: collapse;
-  background: #1a1a1a;
-  border-radius: 8px;
-  overflow: hidden;
 }
 
-.deals-table th,
-.deals-table td {
-  padding: 14px 15px;
+.deals-table th, .deals-table td {
+  padding: 12px;
   text-align: left;
+  color: #fff;
   border-bottom: 1px solid #2a2a2a;
   white-space: nowrap;
 }
+
 
 .deals-table th {
   background: #1c1c1c;
@@ -334,48 +331,43 @@
   }
 }
 
+/* ===== MOBILE TABLE CARD VIEW ===== */
 @media (max-width: 480px) {
-  .deals-heading {
-    font-size: 18px;
-    gap: 8px;
-  }
-
-  .deals-container {
-    padding: 15px;
-  }
-
-  .deals-actions {
-    gap: 10px;
-  }
-
-  .search-bar {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  .deals-actions .btn-primary {
-    padding: 8px 14px;
-    font-size: 12px;
-  }
-
-  .modal-content {
-    padding: 15px;
+  .deals-table table, 
+  .deals-table thead, 
+  .deals-table tbody, 
+  .deals-table th, 
+  .deals-table td, 
+  .deals-table tr {
+    display: block;
     width: 100%;
   }
 
-  .deals-table th,
+  .deals-table thead {
+    display: none; /* Hide table headers */
+  }
+
+  .deals-table tbody tr {
+    margin-bottom: 15px;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
   .deals-table td {
-    font-size: 12px;
-    padding: 8px;
+    padding: 6px;
+    text-align: right;
+    position: relative;
+    border: none;
+    white-space: normal;
   }
 
-  .badge {
-    padding: 4px 8px;
-    font-size: 10px;
-  }
-
-  .pipeline-stages .stage {
-    font-size: 12px;
-    padding: 6px 10px;
+  .deals-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
   }
 }

@@ -70,6 +70,7 @@ const roleMenus = {
         { label: "Projects", path: "/projects", icon: <FaProjectDiagram /> },
         { label: "CT", path: "/ct", icon: <FaTools /> },
         { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> },
+        { label: "Reports", path: "/reports", icon: <FaChartBar /> },
       ],
     },
   ],

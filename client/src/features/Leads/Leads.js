@@ -106,7 +106,7 @@ function Leads() {
       email: "",
       phone: "",
       company: "",
-      status: "Cold",
+      status: "In Progress",
       notes: "",
       assignedTo: ""
     });
@@ -121,7 +121,7 @@ function Leads() {
       email: lead.email,
       phone: lead.phone || "",
       company: lead.company || "",
-      status: lead.status || "Cold",
+      status: lead.status || "In Progress",
       notes: lead.notes || "",
       assignedTo: lead.assignedTo?._id || ""
     });
@@ -240,7 +240,7 @@ function Leads() {
           email: mapping.email ? row[mapping.email] : "",
           phone: mapping.phone ? row[mapping.phone] : "",
           company: mapping.company ? row[mapping.company] : "",
-          status: row["Status"] || row["status"] || "Cold",
+          status: row["Status"] || row["status"] || "In Progress",
           assignedTo: "",
           notes: row["Notes"] || row["notes"] || ""
         }, {
@@ -419,9 +419,9 @@ function Leads() {
 
       {/* Status Legend */}
       <div className="lead-status">
-        <div className="status-item hot">🔥 Closed</div>
-        <div className="status-item warm">🌤 In Progress</div>
-        <div className="status-item cold">❄️ Not Interested</div>
+        <div className="status-item closed">🔥 Closed</div>
+        <div className="status-item in-progress">🌤 In Progress</div>
+        <div className="status-item not-interested">❄️ Not Interested</div>
       </div>
 
       {/* Leads Table */}
@@ -442,43 +442,65 @@ function Leads() {
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredLeads.map((lead, index) => (
-                <tr key={lead._id}>
-                  <td>{index + 1}</td>
-                  <td className="lead-name">{lead.name}</td>
-                  <td className="lead-email">{lead.email}</td>
-                  <td>{lead.phone || "-"}</td>
-                  <td>{lead.company || "-"}</td>
-                  <td>
-                    <span className={`badge ${lead.status.toLowerCase()}`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td>{lead.assignedTo?.name || "-"}</td>
-                  <td>{lead.createdBy?.name || "Unknown"}</td>
-                  <td>{new Date(lead.createdAt).toLocaleDateString()}</td>
-                  <td className="actions-cell">
-                    <button
-                      className="btn-edit"
-                      onClick={() => handleEditLead(lead)}
-                      title="Edit lead"
-                    >
-                      ✏️ Edit
-                    </button>
-                    {userRole === "admin" && (
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDeleteLead(lead._id)}
-                        title="Delete lead"
-                      >
-                        🗑 Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+          <tbody>
+  {filteredLeads.map((lead, index) => (
+    <tr key={lead._id}>
+      <td data-label="#"> {index + 1} </td>
+
+      <td data-label="Name" className="lead-name">
+        {lead.name || "-"}
+      </td>
+
+      <td data-label="Email" className="lead-email">
+        {lead.email || "-"}
+      </td>
+
+      <td data-label="Phone">
+        {lead.phone || "-"}
+      </td>
+
+      <td data-label="Company">
+        {lead.company || "-"}
+      </td>
+
+      <td data-label="Status">
+        <span className={`badge ${lead.status.toLowerCase().replace(" ", "-")}`}>
+          {lead.status}
+        </span>
+      </td>
+
+      <td data-label="Assigned To">
+        {lead.assignedTo?.name || "-"}
+      </td>
+
+      <td data-label="Created By">
+        {lead.createdBy?.name || "Unknown"}
+      </td>
+
+      <td data-label="Created At">
+        {new Date(lead.createdAt).toLocaleDateString()}
+      </td>
+
+      <td data-label="Actions" className="actions-cell">
+        <button
+          className="btn-edit"
+          onClick={() => handleEditLead(lead)}
+        >
+          ✏️ Edit
+        </button>
+
+        {userRole === "admin" && (
+          <button
+            className="btn-delete"
+            onClick={() => handleDeleteLead(lead._id)}
+          >
+            🗑 Delete
+          </button>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         ) : (
           <div className="no-leads">
