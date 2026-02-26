@@ -4,11 +4,12 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   transition: padding-left 0.3s ease;
+  width: 90%;
+  margin-left: 40px;
 }
 
 .contacts-heading {
@@ -355,4 +356,62 @@
     padding: 8px 10px;
     font-size: 13px;
   }
+}
+/* ================================= */
+/* MOBILE RESPONSIVE TABLE (CRM STYLE) */
+/* ================================= */
+
+@media (max-width: 768px) {
+
+ 
+  .contacts-table table,
+  .contacts-table thead,
+  .contacts-table tbody,
+  .contacts-table th,
+  .contacts-table td,
+  .contacts-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .contacts-table thead {
+    display: none;
+  }
+
+  .contacts-table tr {
+    background: #141428;
+    margin-bottom: 18px;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #2a2d3a;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  }
+
+  .contacts-table td {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 13px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .contacts-table td:last-child {
+    border-bottom: none;
+  }
+
+  .contacts-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #ff6a00;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  /* Fix long email wrap */
+  .contact-email {
+    word-break: break-all;
+  }
+
 }

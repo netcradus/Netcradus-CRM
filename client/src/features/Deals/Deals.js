@@ -3,9 +3,7 @@ import "./Deals.css";
 import { FaHandshake } from "react-icons/fa";
 
 function Deals() {
-  const [deals, setDeals] = useState([
-  
-  ]);
+  const [deals, setDeals] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [newDeal, setNewDeal] = useState({
     name: "",
@@ -14,16 +12,13 @@ function Deals() {
     assignedTo: ""
   });
 
-  // Open/Close Modal
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
 
-  // Handle form input changes
   const handleChange = (e) => {
     setNewDeal({ ...newDeal, [e.target.name]: e.target.value });
   };
 
-  // Handle form submit
   const handleSubmit = (e) => {
     e.preventDefault();
     const dealToAdd = { ...newDeal, id: Date.now() };
@@ -59,19 +54,28 @@ function Deals() {
             </tr>
           </thead>
           <tbody>
-            {deals.map((deal) => (
-              <tr key={deal.id}>
-                <td>{deal.name}</td>
-                <td><span className={`badge ${deal.status.toLowerCase().replace(" ", "-")}`}>{deal.status}</span></td>
-                <td>{deal.value}</td>
-                <td>{deal.assignedTo}</td>
+            {deals.length === 0 ? (
+              <tr>
+                <td colSpan="4" style={{ textAlign: "center" }}>No deals found.</td>
               </tr>
-            ))}
+            ) : (
+              deals.map((deal) => (
+                <tr key={deal.id}>
+                  <td data-label="Deal Name">{deal.name}</td>
+                  <td data-label="Status">
+                    <span className={`badge ${deal.status.toLowerCase().replace(" ", "-")}`}>
+                      {deal.status}
+                    </span>
+                  </td>
+                  <td data-label="Value">{deal.value}</td>
+                  <td data-label="Assigned To">{deal.assignedTo}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal">
           <div className="modal-content">

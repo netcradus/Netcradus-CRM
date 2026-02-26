@@ -361,52 +361,44 @@ function Accounts() {
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredAccounts.length > 0 ? (
-              filteredAccounts.map((account) => (
-                <tr key={account._id}>
-                  <td>{account.accountName}</td>
-                  <td>{account.accountOwner}</td>
-                  <td>{account.industry}</td>
-                  <td>{account.email || "N/A"}</td>
-                  <td>{account.phone || "N/A"}</td>
-                  <td>
-                    {account.updatedAt
-                      ? new Date(account.updatedAt).toLocaleDateString()
-                      : "N/A"}
-                  </td>
-                  <td>
-                    <button
-                      className="btn-primary"
-                      style={{ marginRight: "5px" }}
-                      onClick={() => handleEditClick(account)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      style={{
-                        padding: "5px 10px",
-                        backgroundColor: "#ff3333",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => handleDelete(account._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ textAlign: "center" }}>
-                  No accounts found.
-                </td>
-              </tr>
-            )}
-          </tbody>
+         <tbody>
+  {filteredAccounts.length > 0 ? (
+    filteredAccounts.map((account) => (
+      <tr key={account._id}>
+        <td data-label="Account Name">{account.accountName}</td>
+        <td data-label="Owner">{account.accountOwner}</td>
+        <td data-label="Industry">{account.industry}</td>
+        <td data-label="Email">{account.email || "N/A"}</td>
+        <td data-label="Phone">{account.phone || "N/A"}</td>
+        <td data-label="Last Updated">
+          {account.updatedAt
+            ? new Date(account.updatedAt).toLocaleDateString()
+            : "N/A"}
+        </td>
+       <td data-label="Actions">
+  <button
+    className="btn-edit"
+    onClick={() => handleEditClick(account)}
+  >
+    Edit
+  </button>
+  <button
+    className="btn-delete"
+    onClick={() => handleDelete(account._id)}
+  >
+    Delete
+  </button>
+</td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="7" style={{ textAlign: "center" }}>
+        No accounts found.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 

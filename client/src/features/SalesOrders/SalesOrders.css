@@ -2,11 +2,12 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
+  width: 90%;
+  margin-left: 40px;
 }
 
 .salesorders-heading {
@@ -211,4 +212,81 @@
 
 .btn-secondary:hover {
   background-color: #555;
+}
+
+/* ================================= */
+/* MOBILE TABLE → CARD CONVERSION */
+/* ================================= */
+
+@media (max-width: 768px) {
+
+  .salesorders-container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .salesorders-table table,
+  .salesorders-table thead,
+  .salesorders-table tbody,
+  .salesorders-table th,
+  .salesorders-table td,
+  .salesorders-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .salesorders-table thead {
+    display: none;
+  }
+
+  .salesorders-table tr {
+    background: #1a1a1a;
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #2a2a2a;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  }
+
+  .salesorders-table td {
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 0;
+    padding-left: 50%;
+    position: relative;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .salesorders-table td:last-child {
+    border-bottom: none;
+  }
+
+  .salesorders-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 45%;
+    padding-left: 10px;
+    font-weight: 600;
+    color: #ff4b2b;
+    font-size: 13px;
+  }
+
+  .salesorders-actions {
+    flex-direction: column;
+  }
+
+  .salesorders-actions .search-bar {
+    width: 100%;
+  }
+
+  .salesorders-actions .btn-primary {
+    width: 100%;
+  }
+
+  .order-status {
+    flex-direction: column;
+    gap: 8px;
+  }
 }

@@ -74,22 +74,26 @@ function Meetings() {
               <th>Status</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredMeetings.length > 0 ? (
-              filteredMeetings.map((meeting, i) => (
-                <tr key={i}>
-                  <td>{meeting.title}</td>
-                  <td>{meeting.participants}</td>
-                  <td>{meeting.date}</td>
-                  <td><span className={`badge ${meeting.status.toLowerCase()}`}>{meeting.status}</span></td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" style={{ textAlign: "center" }}>No meetings found</td>
-              </tr>
-            )}
-          </tbody>
+        <tbody>
+  {filteredMeetings.length > 0 ? (
+    filteredMeetings.map((meeting, i) => (
+      <tr key={i}>
+        <td data-label="Meeting Title">{meeting.title}</td>
+        <td data-label="Participants">{meeting.participants}</td>
+        <td data-label="Date">{meeting.date}</td>
+        <td data-label="Status">
+          <span className={`badge ${meeting.status.toLowerCase()}`}>
+            {meeting.status}
+          </span>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="4" style={{ textAlign: "center" }}>No meetings found</td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 
