@@ -3,11 +3,12 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
+  width: 90%;
+  margin-left: 40px;
 }
 
 /* Heading */
@@ -124,10 +125,7 @@
 .accounts-table table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #1a1a1a;
-  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
+  min-width: 700px;
 }
 
 .accounts-table th,
@@ -136,6 +134,7 @@
   text-align: left;
   border-bottom: 1px solid #2a2a2a;
   color: #ddd;
+  white-space: nowrap;
 }
 
 .accounts-table th {
@@ -156,74 +155,40 @@
   background-color: rgba(255, 75, 43, 0.05);
 }
 
-/* Edit and Delete Buttons in Table */
-.accounts-table .btn-primary {
+/* Table buttons */
+.accounts-table .btn-primary,
+.accounts-table .btn-delete {
   padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.accounts-table .btn-primary {
   background: linear-gradient(90deg, #ff4b2b, #ff416c);
   color: #fff;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  font-size: 12px;
 }
 
 .accounts-table .btn-primary:hover {
   background: linear-gradient(90deg, #e03f1c, #e03f3f);
-  transform: translateY(-2px);
 }
 
-/* Delete Button */
 .accounts-table .btn-delete {
-  padding: 6px 12px;
   background: linear-gradient(90deg, #f44336, #d32f2f);
   color: #fff;
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  font-size: 12px;
 }
 
 .accounts-table .btn-delete:hover {
   background: linear-gradient(90deg, #d32f2f, #b71c1c);
-  transform: translateY(-2px);
 }
 
-/* Badges for status */
-.badge {
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
-.badge.active {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-  color: #fff;
-}
-
-.badge.inactive {
-  background: linear-gradient(135deg, #999, #888);
-  color: #fff;
-}
-
-.badge.client {
-  background: linear-gradient(135deg, #ff4b2b, #ff6a00);
-  color: #fff;
-}
-
-.badge.partner {
-  background: linear-gradient(135deg, #3399ff, #2196f3);
-  color: #fff;
-}
-
-/* Modal tweaks */
-.modal {
+/* Modal */
+.modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -235,74 +200,52 @@
   align-items: center;
   z-index: 1000;
   padding: 10px;
-  animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.modal-content {
+.modal {
   background: #1a1a1a;
   padding: 30px;
   border-radius: 10px;
-  width: 500px;
+  width: 400px;
   max-width: 100%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
   animation: slideUp 0.3s ease;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modal-content h3 {
+.modal h3 {
   margin-bottom: 20px;
   color: #ff4b2b;
-  font-size: 20px;
 }
 
-.modal input,
-.modal textarea,
-.modal-content input,
-.modal-content textarea {
-  background-color: #222;
-  color: #f1f1f1;
-  border: 1px solid #333;
+.modal input {
   width: 100%;
   padding: 10px;
   margin-bottom: 15px;
   border-radius: 6px;
+  border: 1px solid #333;
+  background: #222;
+  color: #fff;
   outline: none;
   transition: all 0.3s ease;
 }
 
-.modal input:focus,
-.modal textarea:focus,
-.modal-content input:focus,
-.modal-content textarea:focus {
+.modal input:focus {
   border-color: #ff4b2b;
-  background-color: #2a2a2a;
+  background: #2a2a2a;
   box-shadow: 0 0 8px rgba(255, 75, 43, 0.2);
 }
 
-.modal-buttons button {
-  transition: all 0.3s ease;
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
-/* Responsive for small screens */
+.modal-buttons button {
+  cursor: pointer;
+}
+
+/* Responsive */
 @media (max-width: 1200px) {
   .accounts-container {
     padding-left: calc(25px + 180px);
@@ -317,7 +260,6 @@
 
   .accounts-heading {
     font-size: 22px;
-    margin-bottom: 20px;
   }
 
   .accounts-actions {
@@ -325,17 +267,21 @@
     align-items: stretch;
   }
 
-  .search-bar {
-    width: 100%;
-  }
-
   .btn-primary {
     width: 100%;
     justify-content: center;
   }
 
+  .search-bar {
+    width: 100%;
+  }
+
   .account-types {
     justify-content: flex-start;
+  }
+
+  .accounts-table table {
+    min-width: 100%;
   }
 
   .accounts-table th,
@@ -344,20 +290,15 @@
     font-size: 13px;
   }
 
-  .modal-content {
-    padding: 20px;
+  .modal {
     width: 90%;
+    padding: 20px;
   }
 }
 
 @media (max-width: 480px) {
   .accounts-heading {
     font-size: 18px;
-    gap: 8px;
-  }
-
-  .accounts-container {
-    padding: 15px;
   }
 
   .accounts-actions {
@@ -374,19 +315,59 @@
     font-size: 12px;
   }
 
-  .modal-content {
-    padding: 15px;
-    width: 100%;
-  }
-
   .accounts-table th,
   .accounts-table td {
     font-size: 12px;
     padding: 8px;
   }
 
-  .badge {
-    padding: 4px 8px;
-    font-size: 10px;
+  .modal {
+    padding: 15px;
+    width: 100%;
+  }
+}
+/* Mobile table as cards */
+@media (max-width: 768px) {
+  .accounts-table table,
+  .accounts-table thead,
+  .accounts-table tbody,
+  .accounts-table th,
+  .accounts-table td,
+  .accounts-table tr {
+    display: block;
+  }
+
+  .accounts-table thead tr {
+    display: none; /* hide header row */
+  }
+
+  .accounts-table tbody tr {
+    margin-bottom: 20px;
+    background-color: #1c1c1c;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .accounts-table tbody td {
+    padding: 8px 0;
+    text-align: right;
+    position: relative;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .accounts-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #ff4b2b;
+    flex: 1;
+    text-align: left;
+  }
+
+  .accounts-table tbody td:last-child {
+    text-align: center;
   }
 }

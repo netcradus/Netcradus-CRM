@@ -35,7 +35,7 @@
   width: 40px;
   height: 30px;
   border-radius: 8px;
-  flex-shrink: 0;
+ object-fit: contain; 
 }
 
 .company-name img{
@@ -297,4 +297,40 @@ height: auto;
 .logout-btn:hover {
   background: rgba(255, 106, 61, 0.12);
   color: #ff6a3d;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 1024px) {
+  .sidebar.expanded {
+    width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .sidebar {
+    position: fixed;
+    left: -100%;
+    width: 220px;
+    transition: left 0.3s ease;
+  }
+
+  .sidebar.mobile-open {
+    left: 0;
+  }
+
+  .sidebar.collapsed {
+    width: 70px; /* disable collapse on mobile */
+  }
+
+  .logo-img {
+    width: 30px;
+    height: 22px;
+  }
+
+  .nav-icon svg {
+    font-size: 15px;
+  }
+
 }

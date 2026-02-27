@@ -70,6 +70,7 @@ const roleMenus = {
         { label: "Projects", path: "/projects", icon: <FaProjectDiagram /> },
         { label: "CT", path: "/ct", icon: <FaTools /> },
         { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> },
+        { label: "Reports", path: "/reports", icon: <FaChartBar /> },
       ],
     },
   ],
@@ -109,33 +110,32 @@ const roleMenus = {
     { label: "Reports", path: "/reports", icon: <FaChartBar /> },
   ],
 
-   it: [
+  it: [
     { label: "Home", path: "/dashboard", icon: <FaHome /> },
     {
       label: "IT Management",
       icon: <FaCogs />,
       children: [
-        { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
-    { label: "Meetings", path: "/meetings", icon: <FaCalendarAlt /> },
-    { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+        { label: "Projects", path: "/projects", icon: <FaProjectDiagram /> },
+        { label: "CT", path: "/ct", icon: <FaTools /> },
+        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> },
       ],
     },
   ],
 
-  digitalMedia: [
+  digital_media: [
     { label: "Home", path: "/dashboard", icon: <FaHome /> },
     {
       label: "Campaigns",
       icon: <FaBullhorn />,
       children: [
-        { label: "Social Media", path: "/social-media", icon: <FaComments /> },
-        { label: "Email Marketing", path: "/email-marketing", icon: <FaEnvelopeOpenText /> },
-        { label: "SEO", path: "/seo", icon: <FaChartBar /> },
-        { label: "Content", path: "/content", icon: <FaFile /> },
+        { label: "Home", path: "/dashboard", icon: <FaHome /> },
+        { label: "Campaigns", path: "/campaigns", icon: <FaBullhorn /> },
+        { label: "Social", path: "/social", icon: <FaComments /> },
+        { label: "Visits", path: "/visits", icon: <FaMapMarkerAlt /> },
+        { label: "Reports", path: "/reports", icon: <FaChartBar /> },
       ],
     },
-    { label: "Projects", path: "/dm-projects", icon: <FaProjectDiagram /> },
-    { label: "Reports", path: "/dm-reports", icon: <FaChartBar /> },
   ],
 };
 
@@ -224,8 +224,8 @@ function Sidebar() {
 
   const filteredMenu = searchTerm
     ? allItems.filter(item =>
-        item.label.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      item.label.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : null;
 
   const handleLogout = () => {
@@ -243,7 +243,7 @@ function Sidebar() {
       <div className="sidebar-logo">
         <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
         {isHovered && <span className="company-name">
-          <img src="/netcradus.png" alt="Company Logo"/></span>}
+          <img src="/netcradus.png" alt="Company Logo" /></span>}
       </div>
 
       {/* SEARCH */}
@@ -266,37 +266,37 @@ function Sidebar() {
         <ul>
           {filteredMenu
             ? filteredMenu.map((item, i) => (
+              <li key={i}>
+                <Link
+                  to={item.path}
+                  className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {isHovered && <span>{item.label}</span>}
+                </Link>
+              </li>
+            ))
+            : menuItems.map((item, i) =>
+              item.children ? (
+                <NavGroup
+                  key={i}
+                  item={item}
+                  isHovered={isHovered}
+                  location={location}
+                />
+              ) : (
                 <li key={i}>
                   <Link
                     to={item.path}
                     className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
+                    title={!isHovered ? item.label : undefined}
                   >
                     <span className="nav-icon">{item.icon}</span>
                     {isHovered && <span>{item.label}</span>}
                   </Link>
                 </li>
-              ))
-            : menuItems.map((item, i) =>
-                item.children ? (
-                  <NavGroup
-                    key={i}
-                    item={item}
-                    isHovered={isHovered}
-                    location={location}
-                  />
-                ) : (
-                  <li key={i}>
-                    <Link
-                      to={item.path}
-                      className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                      title={!isHovered ? item.label : undefined}
-                    >
-                      <span className="nav-icon">{item.icon}</span>
-                      {isHovered && <span>{item.label}</span>}
-                    </Link>
-                  </li>
-                )
-              )}
+              )
+            )}
         </ul>
       </nav>
 

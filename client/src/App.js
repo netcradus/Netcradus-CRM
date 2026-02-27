@@ -123,6 +123,12 @@ function App() {
             </RoleRoute>
           } />
 
+          <Route path="/digital-media-dashboard" element={
+            <RoleRoute roleNeeded="digital_media">
+              <Dashboard />
+            </RoleRoute>
+          } />
+
           {/* ---- All Other Modules ---- */}
           <Route path="/leads" element={<Leads />} />
           <Route path="/accounts" element={<Accounts />} />

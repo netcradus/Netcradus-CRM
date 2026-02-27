@@ -189,86 +189,81 @@ const UserManagement = () => {
                   </tr>
                 </thead>
 
-                <tbody>
-                  {users.length > 0 ? (
-                    users.map((user) => (
-                      <tr key={user._id}>
-                        <td>{user.userId || "-"}</td>
-                        <td>{user.email}</td>
-                        <td>
-                          <span className={`role-badge role-${user.role}`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td>
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString()
-                            : "-"}
-                        </td>
+               <tbody>
+  {users.length > 0 ? (
+    users.map((user) => (
+      <tr key={user._id}>
+        <td data-label="User ID">{user.userId || "-"}</td>
 
-                        <td>
-                          {/* DELETE BUTTON (NOT FOR ADMIN) */}
-                          {user.role !== "admin" && (
-                            <button
-                              className="btn-delete"
-                              onClick={() => onDeleteUser(user._id)}
-                            >
-                              🗑 Delete
-                            </button>
-                          )}
+        <td data-label="Email">{user.email}</td>
 
-                          {/* CHANGE PASSWORD */}
-                          {pwdUserId === user._id ? (
-                            <>
-                              <input
-                                type="password"
-                                placeholder="New password"
-                                value={newPassword}
-                                onChange={(e) =>
-                                  setNewPassword(e.target.value)
-                                }
-                              />
+        <td data-label="Role">
+          <span className={`role-badge role-${user.role}`}>
+            {user.role}
+          </span>
+        </td>
 
-                              <button
-                                className="btn-save"
-                                onClick={() =>
-                                  onChangePassword(user._id)
-                                }
-                              >
-                                Save
-                              </button>
+        <td data-label="Created">
+          {user.createdAt
+            ? new Date(user.createdAt).toLocaleDateString()
+            : "-"}
+        </td>
 
-                              <button
-                                className="btn-cancel"
-                                onClick={() => {
-                                  setPwdUserId(null);
-                                  setNewPassword("");
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className="btn-edit"
-                              onClick={() =>
-                                setPwdUserId(user._id)
-                              }
-                            >
-                              Change Password
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="admin-muted">
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+        <td data-label="Actions">
+          {user.role !== "admin" && (
+            <button
+              className="btn-delete"
+              onClick={() => onDeleteUser(user._id)}
+            >
+              Delete
+            </button>
+          )}
+
+          {pwdUserId === user._id ? (
+            <>
+              <input
+                type="password"
+                placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+
+              <button
+                className="btn-save"
+                onClick={() => onChangePassword(user._id)}
+              >
+                Save
+              </button>
+
+              <button
+                className="btn-cancel"
+                onClick={() => {
+                  setPwdUserId(null);
+                  setNewPassword("");
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn-edit"
+              onClick={() => setPwdUserId(user._id)}
+            >
+              Change Password
+            </button>
+          )}
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" className="admin-muted">
+        No users found.
+      </td>
+    </tr>
+  )}
+</tbody>
 
               </table>
             </div>

@@ -78,27 +78,29 @@ function SalesOrders() {
               <th>Ordered On</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
-                <tr key={order.id}>
-                  <td>{order.id}</td>
-                  <td>{order.customer}</td>
-                  <td>{order.amount}</td>
-                  <td>
-                    <span className={`badge ${order.status.toLowerCase()}`}>{order.status}</span>
-                  </td>
-                  <td>{order.date}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                  No orders found.
-                </td>
-              </tr>
-            )}
-          </tbody>
+         <tbody>
+  {filteredOrders.length > 0 ? (
+    filteredOrders.map((order) => (
+      <tr key={order.id}>
+        <td data-label="Order ID">{order.id}</td>
+        <td data-label="Customer">{order.customer}</td>
+        <td data-label="Amount">{order.amount}</td>
+        <td data-label="Status">
+          <span className={`badge ${order.status.toLowerCase()}`}>
+            {order.status}
+          </span>
+        </td>
+        <td data-label="Ordered On">{order.date}</td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+        No orders found.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 

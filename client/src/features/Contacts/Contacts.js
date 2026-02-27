@@ -148,38 +148,50 @@ function Contacts() {
         <table>
           <thead>
             <tr>
+               <th>#</th>
               <th>Name</th>
               <th>Email</th>
               <th>Status</th>
               <th>Last Interaction</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredContacts.length > 0 ? (
-              filteredContacts.map((contact) => (
-                <tr key={contact._id}>
-                  <td>{contact.name}</td>
-                  <td>{contact.email}</td>
-                  <td>
-                    <span className={`badge ${contact.status.toLowerCase()}`}>
-                      {contact.status}
-                    </span>
-                  </td>
-                  <td>
-                    {contact.lastInteraction
-                      ? new Date(contact.lastInteraction).toLocaleDateString()
-                      : "N/A"}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" style={{ textAlign: "center" }}>
-                  No contacts found.
-                </td>
-              </tr>
-            )}
-          </tbody>
+     <tbody>
+  {filteredContacts.length > 0 ? (
+    filteredContacts.map((contact, index) => (
+      <tr key={contact._id}>
+        <td data-label="#">
+          {index + 1}
+        </td>
+
+        <td data-label="Name" className="contact-name">
+          {contact.name}
+        </td>
+
+        <td data-label="Email" className="contact-email">
+          {contact.email}
+        </td>
+
+        <td data-label="Status">
+          <span className={`badge ${contact.status.toLowerCase()}`}>
+            {contact.status}
+          </span>
+        </td>
+
+        <td data-label="Last Interaction">
+          {contact.lastInteraction
+            ? new Date(contact.lastInteraction).toLocaleDateString()
+            : "N/A"}
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" style={{ textAlign: "center" }}>
+        No contacts found.
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 

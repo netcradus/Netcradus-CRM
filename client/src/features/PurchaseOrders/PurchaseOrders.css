@@ -1,12 +1,13 @@
 .po-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   color: #e0e0e0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   transition: padding-left 0.3s ease;
+   width: 90%;
+  margin-left: 40px;
 }
 
 .po-heading {
@@ -204,4 +205,118 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================================= */
+/* MOBILE TABLE → CARD CONVERSION */
+/* ================================= */
+
+@media (max-width: 768px) {
+
+  .po-container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .po-table,
+  .po-table thead,
+  .po-table tbody,
+  .po-table th,
+  .po-table td,
+  .po-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .po-table thead {
+    display: none;
+  }
+
+  .po-table tr {
+    background: #1a1a1f;
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #2b2b2b;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  }
+
+  .po-table td {
+    border: none;
+    border-bottom: 1px solid #2b2b2b;
+    padding: 10px 0;
+    padding-left: 50%;
+    position: relative;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .po-table td:last-child {
+    border-bottom: none;
+  }
+
+  .po-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 45%;
+    padding-left: 10px;
+    font-weight: 600;
+    color: #ff6a3d;
+    font-size: 13px;
+  }
+
+  /* Actions buttons full width inside card */
+ .po-table td.po-actions-cell {
+    display: block;        /* Break the flex/grid flow */
+    padding: 15px 0 10px;  /* Reset padding: remove the 50% left offset */
+    text-align: left;
+    border-bottom: none;
+    position: relative;
+  }
+
+  /* Reset the "Actions" label to sit naturally at the top */
+  .po-table td.po-actions-cell::before {
+    content: attr(data-label);
+    position: static;      /* Crucial: takes it out of absolute positioning */
+    display: block;
+    width: 100%;
+    margin-bottom: 12px;   /* Space between label and buttons */
+    padding-left: 0;
+    font-weight: 600;
+    color: #ff6a3d;
+  }
+
+  /* Container for the buttons to sit side-by-side */
+  .po-button-group {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .po-button-group .po-action-btn {
+    flex: 1;               /* Buttons take up equal width */
+    margin: 0;             /* Remove desktop margins */
+    padding: 10px;         /* Better for thumb-tapping */
+    justify-content: center;
+    display: flex;
+    align-items: center;
+  }
+
+  .po-actions-cell::before {
+    position: static;
+    width: 100%;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .po-action-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .po-add-btn {
+    width: 100%;
+  }
+
 }

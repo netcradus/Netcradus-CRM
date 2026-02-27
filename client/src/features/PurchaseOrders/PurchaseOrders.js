@@ -50,24 +50,36 @@ const PurchaseOrders = () => {
           </tr>
         </thead>
         <tbody>
-          {orders.map((order, index) => (
-            <tr key={index}>
-              <td>{order.id}</td>
-              <td>{order.vendor}</td>
-              <td>{order.amount}</td>
-              <td>
-                <span className={`po-status ${order.status}`}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </span>
-              </td>
-              <td>{order.date}</td>
-              <td>
-                <button className="po-action-btn view" onClick={() => handleView(order.id)}>View</button>
-                <button className="po-action-btn delete" onClick={() => handleDelete(order.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+  {orders.map((order, index) => (
+    <tr key={index}>
+      <td data-label="Order ID">{order.id}</td>
+      <td data-label="Vendor">{order.vendor}</td>
+      <td data-label="Amount">{order.amount}</td>
+      <td data-label="Status">
+        <span className={`po-status ${order.status}`}>
+          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+        </span>
+      </td>
+      <td data-label="Date">{order.date}</td>
+     <td data-label="Actions" className="po-actions-cell">
+  <div className="po-button-group"> {/* Added this wrapper */}
+    <button
+      className="po-action-btn view"
+      onClick={() => handleView(order.id)}
+    >
+      View
+    </button>
+    <button
+      className="po-action-btn delete"
+      onClick={() => handleDelete(order.id)}
+    >
+      Delete
+    </button>
+  </div>
+</td>
+    </tr>
+  ))}
+</tbody>
       </table>
 
       {/* Modal */}

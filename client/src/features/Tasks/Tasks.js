@@ -4,7 +4,7 @@ import "./Tasks.css";
 
 function Tasks() {
   const [tasks, setTasks] = useState([
- 
+
   ]);
 
   const [filter, setFilter] = useState("All");
@@ -124,15 +124,11 @@ function Tasks() {
             {filteredTasks.length > 0 ? (
               filteredTasks.map((task) => (
                 <tr key={task.id}>
-                  <td>{task.name}</td>
-                  <td>{task.assignedTo}</td>
-                  <td>
-                    <span className={`badge ${task.status.toLowerCase().replace(" ", "-")}`}>
-                      {task.status}
-                    </span>
-                  </td>
-                  <td>{task.dueDate}</td>
-                  <td>
+                  <td data-label="Task Name"><span className="value">{task.name}</span></td>
+                  <td data-label="Assigned To"><span className="value">{task.assignedTo}</span></td>
+                  <td data-label="Status"><span className="value">{task.status}</span></td>
+                  <td data-label="Due Date"><span className="value">{task.dueDate}</span></td>
+                  <td data-label="Actions">
                     <button className="btn-edit" onClick={() => editTask(task)}>✏ Edit</button>
                     <button className="btn-delete" onClick={() => deleteTask(task.id)}>🗑 Delete</button>
                   </td>
