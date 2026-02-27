@@ -320,7 +320,7 @@
 
 
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -330,45 +330,116 @@ function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Security Modal States
+  const [securityAction, setSecurityAction] = useState(null); // 'REQUIRE_SECURITY_OTP' or 'FORCE_PASSWORD_CHANGE'
+  const [userId, setUserId] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Timer State
+  const [timeLeft, setTimeLeft] = useState(300); // 5 mins in seconds
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let timer;
+    if (securityAction && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && securityAction) {
+      setError("OTP expired. Please log in again to request a new one.");
+      setSecurityAction(null);
+    }
+    return () => clearInterval(timer);
+  }, [securityAction, timeLeft]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setError(""); // Clear error when user starts typing
+    setError("");
+    setSuccessMsg("");
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
     setLoading(true);
 
     try {
       const res = await axios.post(apiUrl("/api/auth/login"), form);
-      const { token, user } = res.data;
-      console.log("User object from backend:", user);
+      const { token, user, passwordExpiryWarning } = res.data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
       localStorage.setItem("userName", user.name);
 
-      // Always show welcome animation first
+      if (passwordExpiryWarning) {
+        // We could use a toast library here, but for now we'll pass state to dashboard or show briefly
+        sessionStorage.setItem("passwordExpiryWarning", "true");
+      }
+
       navigate("/welcome");
 
     } catch (err) {
-      const errorMsg = err.response?.data?.message || "Login failed. Please try again.";
-      setError(errorMsg);
-      console.log(err);
+      if (err.response && err.response.status === 403 && err.response.data.action) {
+        // Blocked by Security Policies
+        setSecurityAction(err.response.data.action);
+        setUserId(err.response.data.userId);
+        setTimeLeft(300); // reset 5 mins
+        setError(""); // clear normal errors, modal handles it
+      } else {
+        const errorMsg = err.response?.data?.message || "Login failed. Please try again.";
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const submitOTP = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      let res;
+      if (securityAction === "REQUIRE_SECURITY_OTP") {
+        res = await axios.post(apiUrl("/api/auth/otp/verify-security"), { userId, otp });
+      } else if (securityAction === "FORCE_PASSWORD_CHANGE") {
+        res = await axios.post(apiUrl("/api/auth/otp/verify-password"), { userId, otp, newPassword });
+      }
+
+      const { token, user } = res.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("userRole", user.role);
+      localStorage.setItem("userName", user.name);
+
+      setSecurityAction(null);
+      navigate("/welcome");
+
+    } catch (err) {
+      setError(err.response?.data?.message || "Verification failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   return (
     <div style={containerStyle}>
       <form onSubmit={handleLogin} style={formStyle}>
         <img src="/logo2.png" alt="Netcradus Logo" style={{ height: "100px", marginBottom: "20px" }} />
-        {/* <h2 style={{ color: "#ff5e00", marginBottom: "20px" }}>Login</h2> */}
         <h2 style={{ marginBottom: "20px" }}>
           <span
             style={{
@@ -386,91 +457,170 @@ function Login() {
           </span>
         </h2>
 
-        {/* Error Message Display */}
-        {error && (
-          <div style={{
-            background: "#fee2e2",
-            border: "1px solid #fca5a5",
-            borderRadius: "6px",
-            padding: "12px",
-            marginBottom: "20px",
-            color: "#991b1b",
-            fontSize: "14px"
-          }}>
+        {/* Error/Success Banners (Replaces native alerts) */}
+        {error && !securityAction && (
+          <div style={errorBannerStyle}>
             <p style={{ margin: "0", fontWeight: "600" }}>Error</p>
             <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{error}</p>
           </div>
         )}
 
-        <input
-          type="text"
-          name="email"
-          placeholder="Email or UserID"
-          onChange={handleChange}
-          value={form.email}
-          required
-          disabled={loading}
-          style={inputStyle}
-        />
+        {successMsg && (
+          <div style={successBannerStyle}>
+            <p style={{ margin: "0", fontWeight: "600" }}>Success</p>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{successMsg}</p>
+          </div>
+        )}
 
-        {/* <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          onChange={handleChange}
-          required
-          style={inputStyle}
-        /> */}
+        {/* Main Login Form Fields - Hidden if Modal Active */}
+        {!securityAction && (
+          <>
+            <input
+              type="text"
+              name="email"
+              placeholder="Email or UserID"
+              onChange={handleChange}
+              value={form.email}
+              required
+              disabled={loading}
+              style={inputStyle}
+            />
 
-        <div style={{ position: "relative" }}>
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            value={form.password}
-            required
-            disabled={loading}
-            style={{ ...inputStyle, paddingRight: "42px" }}
-          />
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                onChange={handleChange}
+                value={form.password}
+                required
+                disabled={loading}
+                style={{ ...inputStyle, paddingRight: "42px" }}
+              />
 
-          <span
-            onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: "absolute",
-              right: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              cursor: "pointer",
-              color: "gray",
-              fontSize: "18px",
-            }}
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </span>
-        </div>
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                  color: "gray",
+                  fontSize: "18px",
+                }}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </span>
+            </div>
 
-        {/* Forgot Password Link */}
-        <p
-          style={{
-            color: "#aaa",
-            fontSize: "14px",
-            marginBottom: "15px",
-            cursor: "pointer",
-            textAlign: "right",
-            opacity: loading ? 0.5 : 1,
-            pointerEvents: loading ? "none" : "auto"
-          }}
-          onClick={() => navigate("/forgot-password")}
-        >
-          Forgot your password?
-        </p>
+            <p
+              style={{
+                color: "#aaa",
+                fontSize: "14px",
+                marginBottom: "15px",
+                cursor: "pointer",
+                textAlign: "right",
+                opacity: loading ? 0.5 : 1,
+                pointerEvents: loading ? "none" : "auto"
+              }}
+              onClick={() => navigate("/forgot-password")}
+            >
+              Forgot your password?
+            </p>
 
-        <button type="submit" style={buttonStyle} disabled={loading}>
-          {loading ? "Logging in..." : "Log in"}
-        </button>
-
+            <button type="submit" style={buttonStyle} disabled={loading}>
+              {loading ? "Logging in..." : "Log in"}
+            </button>
+          </>
+        )}
       </form>
+
+      {/* Security Modals Overlay */}
+      {securityAction && (
+        <div style={modalOverlayStyle}>
+          <div style={modalContentStyle}>
+            <h3 style={{ color: "#ff6a00", marginTop: 0 }}>
+              {securityAction === "REQUIRE_SECURITY_OTP" ? "Security Verification" : "Mandatory Password Update"}
+            </h3>
+
+            <p style={{ fontSize: "14px", color: "#ccc", marginBottom: "20px" }}>
+              {securityAction === "REQUIRE_SECURITY_OTP"
+                ? "Your weekly security check is due. An OTP has been sent to your IT Administrator."
+                : "Your password has expired (30 days). An OTP has been sent to your IT Administrator to authorize this change."}
+            </p>
+
+            {error && (
+              <div style={errorBannerStyle}>
+                <p style={{ margin: "0", fontSize: "13px" }}>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={submitOTP}>
+              {securityAction === "FORCE_PASSWORD_CHANGE" && (
+                <div style={{ marginBottom: "15px", textAlign: "left" }}>
+                  <label style={labelStyle}>New Password</label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                      style={{ ...inputStyle, marginBottom: "5px", paddingRight: "42px" }}
+                    />
+                    <span
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "gray" }}
+                    >
+                      {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+                    </span>
+                  </div>
+                  <small style={{ color: "#888", fontSize: "11px" }}>Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char.</small>
+                </div>
+              )}
+
+              <div style={{ marginBottom: "20px", textAlign: "left" }}>
+                <label style={labelStyle}>6-Digit OTP Code</label>
+                <input
+                  type="text"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  maxLength={6}
+                  required
+                  disabled={loading}
+                  style={{ ...inputStyle, textAlign: "center", fontSize: "20px", letterSpacing: "5px" }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#aaa", marginTop: "5px" }}>
+                  <span>Code sent via SMTP</span>
+                  <span style={{ color: timeLeft <= 60 ? "#ff4444" : "#inherit" }}>
+                    Expires in: {formatTime(timeLeft)}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSecurityAction(null);
+                    setError("");
+                  }}
+                  disabled={loading}
+                  style={{ ...buttonStyle, background: "#333", flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" style={{ ...buttonStyle, flex: 1 }} disabled={loading}>
+                  {loading ? "Verifying..." : "Verify & Continue"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -489,6 +639,8 @@ const formStyle = {
   borderRadius: "10px",
   textAlign: "center",
   width: "320px",
+  position: "relative",
+  zIndex: 1
 };
 
 const inputStyle = {
@@ -499,20 +651,70 @@ const inputStyle = {
   color: "#fff",
   border: "1px solid #444",
   borderRadius: "6px",
-  opacity: 1,
-  cursor: "inherit"
+  boxSizing: "border-box", // Ensure padding doesn't widen the input
 };
 
 const buttonStyle = {
   width: "100%",
   padding: "12px",
-  background: "linear-gradient(to right, #ff6a00, #ff007a)",
+  background: "linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 50%, #FFC83D 100%)",
   border: "none",
   color: "#fff",
   fontWeight: "bold",
   borderRadius: "6px",
   cursor: "pointer",
   transition: "opacity 0.2s",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "5px",
+  color: "#ccc",
+  fontSize: "13px",
+  fontWeight: "bold"
+};
+
+const errorBannerStyle = {
+  background: "#fee2e2",
+  border: "1px solid #fca5a5",
+  borderRadius: "6px",
+  padding: "12px",
+  marginBottom: "20px",
+  color: "#991b1b",
+  fontSize: "14px",
+  textAlign: "left"
+};
+
+const successBannerStyle = {
+  background: "#dcfce7",
+  border: "1px solid #86efac",
+  borderRadius: "6px",
+  padding: "12px",
+  marginBottom: "20px",
+  color: "#166534",
+  fontSize: "14px",
+  textAlign: "left"
+};
+
+const modalOverlayStyle = {
+  position: "fixed",
+  top: 0, left: 0, right: 0, bottom: 0,
+  background: "rgba(0,0,0,0.8)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 1000,
+};
+
+const modalContentStyle = {
+  background: "#1c1c1c",
+  padding: "30px",
+  borderRadius: "8px",
+  width: "90%",
+  maxWidth: "400px",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+  textAlign: "center",
+  border: "1px solid #333"
 };
 
 export default Login;

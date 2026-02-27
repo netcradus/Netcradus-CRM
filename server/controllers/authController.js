@@ -71,6 +71,8 @@ const login = async (req, res) => {
   try {
     const { email, username, password } = req.body;
     const identifier = String(email || username || "").trim();
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
     if (!identifier || !password) {
       return res.status(400).json({ message: "Username/email and password are required" });
@@ -80,23 +82,75 @@ const login = async (req, res) => {
     const user = await User.findOne({
       $or: [{ email: identifier.toLowerCase() }, { name: identifier }],
     });
+
+    let isMatch = false;
+
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      // 0. Timing Attack Mitigation
+      // Run a dummy bcrypt compare against a realistic hash to consume standard compute time
+      const dummyHash = "$2a$10$x.XpK8x2S3zX8xXpK8x2S3zX8xXpK8x2S3zX8xXpK8x2S3zX8xXpK";
+      await bcrypt.compare(password, dummyHash);
+    } else {
+      isMatch = await bcrypt.compare(password, user.password);
     }
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!user || !isMatch) {
+      if (user) {
+        await require('../services/securityService').logAuthEvent(user._id, "LOGIN_ATTEMPT", ipAddress, userAgent, "Invalid password");
+      }
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Create JWT
+    // 2. Check Lock
+    if (user.accountLockedUntil && user.accountLockedUntil > Date.now()) {
+      return res.status(403).json({ message: `Account locked until ${user.accountLockedUntil.toLocaleTimeString()}` });
+    }
+
+    let passwordExpiryWarning = false;
+
+    // 3. Priority Checks for non-admin
+    if (user.role !== "admin") {
+      const now = Date.now();
+      const msPerDay = 1000 * 60 * 60 * 24;
+
+      const daysSincePasswordChange = (now - user.lastPasswordChange.getTime()) / msPerDay;
+      const daysSinceWeeklyAuth = (now - user.lastWeeklyVerification.getTime()) / msPerDay;
+
+      // A. Password Expiry Policy (Priority 1)
+      if (daysSincePasswordChange >= 30) {
+        // Force password change immediately
+        await require('../services/otpService').generateAndSendOTP(user._id, user.email, "PASSWORD_CHANGE", ipAddress, userAgent);
+        return res.status(403).json({
+          action: "FORCE_PASSWORD_CHANGE",
+          userId: user._id,
+          message: "You must change your password. An OTP has been sent to your IT Administrator."
+        });
+      }
+
+      // B. Weekly OTP Policy (Priority 2)
+      if (daysSinceWeeklyAuth >= 7) {
+        await require('../services/otpService').generateAndSendOTP(user._id, user.email, "SECURITY_CHECK", ipAddress, userAgent);
+        return res.status(403).json({
+          action: "REQUIRE_SECURITY_OTP",
+          userId: user._id,
+          message: "Weekly security verification required. An OTP has been sent to your IT Administrator."
+        });
+      }
+
+      // C. Password Expiry Warning
+      if (daysSincePasswordChange >= 25) {
+        passwordExpiryWarning = true;
+      }
+    }
+
+    // If all checks pass, Create JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
 
     res.status(200).json({
       token,
+      passwordExpiryWarning,
       user: {
         id: user._id,
         name: user.name,
@@ -106,6 +160,9 @@ const login = async (req, res) => {
     });
   } catch (err) {
     console.error("Login Error:", err);
+    if (err.message === "ACCOUNT_LOCKED_TOO_MANY_REQUESTS" || err.message === "SMTP_FAILURE") {
+      return res.status(500).json({ message: "Security threshold reached or mail service error. Please try again later.", error: err.message });
+    }
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
@@ -244,7 +301,131 @@ const adminChangeUserPassword = async (req, res) => {
   }
 };
 
+const requestOTP = async (req, res) => {
+  try {
+    const { userId, type } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await require('../services/otpService').generateAndSendOTP(userId, user.email, type, ipAddress, userAgent);
+    res.json({ message: "OTP sent successfully" });
+  } catch (err) {
+    if (err.message === "ACCOUNT_LOCKED_TOO_MANY_REQUESTS" || err.message === "SMTP_FAILURE") {
+      return res.status(500).json({ message: "Security threshold reached or mail service error.", error: err.message });
+    }
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const verifySecurityOTP = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Verify OTP
+    await require('../services/otpService').verifyOTP(userId, "SECURITY_CHECK", otp, ipAddress, userAgent);
+
+    // Reset weekly verification
+    user.lastWeeklyVerification = Date.now();
+    await user.save();
+
+    // Create JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    if (err.message === "EXPIRED_OR_NOT_FOUND" || err.message === "INVALID_OTP" || err.message === "MAX_ATTEMPTS_REACHED") {
+      return res.status(400).json({ message: "Invalid or expired OTP", error: err.message });
+    }
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const verifyPasswordChange = async (req, res) => {
+  try {
+    const { userId, otp, newPassword } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    // Password Policy Check
+    const strengthCheck = require('../services/passwordPolicyService').validateStrength(newPassword);
+    if (!strengthCheck.valid) {
+      return res.status(400).json({ message: strengthCheck.message });
+    }
+
+    const historyCheck = await require('../services/passwordPolicyService').checkHistory(userId, newPassword);
+    if (!historyCheck.valid) {
+      return res.status(400).json({ message: historyCheck.message });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Verify OTP
+    await require('../services/otpService').verifyOTP(userId, "PASSWORD_CHANGE", otp, ipAddress, userAgent);
+
+    // Update Password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    user.lastPasswordChange = Date.now();
+    user.lastWeeklyVerification = Date.now();
+
+    // Keep only last 3 passwords
+    user.previousPasswords.unshift(hashedPassword);
+    if (user.previousPasswords.length > 3) {
+      user.previousPasswords.pop();
+    }
+
+    await user.save();
+
+    // Log success
+    await require('../services/securityService').logAuthEvent(userId, "PASSWORD_CHANGED", ipAddress, userAgent);
+
+    // Cleanup Any other active OTPs
+    await require('../services/otpService').cleanupOrphanedOTPs(userId);
+
+    // Issue new Token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
+
+    res.json({
+      message: "Password changed successfully",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    });
+  } catch (err) {
+    if (err.message === "EXPIRED_OR_NOT_FOUND" || err.message === "INVALID_OTP" || err.message === "MAX_ATTEMPTS_REACHED") {
+      return res.status(400).json({ message: "Invalid or expired OTP", error: err.message });
+    }
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 
 module.exports = {
   createUserByAdmin,
@@ -254,4 +435,7 @@ module.exports = {
   getUsers,
   deleteUserByAdmin,
   adminChangeUserPassword,
+  requestOTP,
+  verifySecurityOTP,
+  verifyPasswordChange
 };

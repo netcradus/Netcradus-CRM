@@ -24,10 +24,31 @@ const userSchema = new mongoose.Schema({
     enum: ["admin", "sales", "support", "hr", "it", "digital_media"],
     default: "sales"
   },
-  
+
+  lastPasswordChange: {
+    type: Date,
+    default: Date.now
+  },
+  lastWeeklyVerification: {
+    type: Date,
+    default: Date.now
+  },
+  previousPasswords: {
+    type: [String],
+    default: []
+  },
+  accountLockedUntil: {
+    type: Date
+  },
+
   resetToken: String,
   resetTokenExpiry: Date
 
 }, { timestamps: true });
+
+// Optional: if user is locked out, we can check virtual
+userSchema.virtual('isLocked').get(function () {
+  return !!(this.accountLockedUntil && this.accountLockedUntil > Date.now());
+});
 
 module.exports = mongoose.model("User", userSchema);

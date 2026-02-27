@@ -1,23 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const { createUserByAdmin, login, getUsers, deleteUserByAdmin, adminChangeUserPassword} = require("../controllers/authController");
+const { createUserByAdmin, login, getUsers, deleteUserByAdmin, adminChangeUserPassword, requestOTP, verifySecurityOTP, verifyPasswordChange } = require("../controllers/authController");
 const { seedAdmin } = require("../controllers/adminSeedController");
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");
+const { loginLimiter, otpRequestLimiter } = require("../middleware/rateLimiter");
 
 // Seed first admin
 router.post("/seed-admin", seedAdmin);
 
-// Login Route
-router.post("/login", login);
+// Login Route + Limiter
+router.post("/login", loginLimiter, login);
+
+// OTP Routes + Limiter
+router.post("/otp/request", otpRequestLimiter, requestOTP);
+router.post("/otp/verify-security", loginLimiter, verifySecurityOTP);
+router.post("/otp/verify-password", loginLimiter, verifyPasswordChange);
 
 // Admin-only user management
 router.get("/users", authMiddleware, adminMiddleware, getUsers);
 router.post("/users", authMiddleware, adminMiddleware, createUserByAdmin);
 
-router.delete("/users/:id",authMiddleware,adminMiddleware, deleteUserByAdmin);
+router.delete("/users/:id", authMiddleware, adminMiddleware, deleteUserByAdmin);
 
-router.put( "/users/:id/password",authMiddleware,adminMiddleware,adminChangeUserPassword);
+router.put("/users/:id/password", authMiddleware, adminMiddleware, adminChangeUserPassword);
 
 
 module.exports = router;
