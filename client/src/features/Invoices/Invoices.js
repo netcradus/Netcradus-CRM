@@ -98,23 +98,34 @@ const Invoices = () => {
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {invoices.map((invoice, index) => (
-              <tr key={invoice._id}>
-                <td>{index + 1}</td>
-                <td>{invoice.customer}</td>
-                <td>{invoice.amount}</td>
-                <td>{new Date(invoice.dueDate).toLocaleDateString()}</td>
-                <td className={invoice.status === "Paid" ? "paid" : "unpaid"}>
-                  {invoice.status}
-                </td>
-                <td>
-                  <button className="edit-btn" onClick={() => toggleModal(invoice)}>Edit</button>
-                  <button className="delete-btn" onClick={() => handleDeleteInvoice(invoice._id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+     <tbody>
+  {invoices.map((invoice, index) => (
+    <tr key={invoice._id}>
+      <td data-label="ID">{index + 1}</td>
+      <td data-label="Customer">{invoice.customer}</td>
+      <td data-label="Amount">₹{invoice.amount}</td>
+      <td data-label="Due Date">
+        {new Date(invoice.dueDate).toLocaleDateString()}
+      </td>
+     <td data-label="Status">
+  <span className={invoice.status === "Paid" ? "paid" : "unpaid"}>
+    {invoice.status}
+  </span>
+</td>
+      <td data-label="Actions" className="action-buttons">
+        <button className="edit-btn" onClick={() => toggleModal(invoice)}>
+          Edit
+        </button>
+        <button
+          className="delete-btn"
+          onClick={() => handleDeleteInvoice(invoice._id)}
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
 

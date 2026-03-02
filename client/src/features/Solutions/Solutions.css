@@ -2,7 +2,6 @@
 .solutions-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -241,4 +240,98 @@
 @keyframes scaleUp {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* ================================= */
+/* 📱 RESPONSIVE MOBILE CARD VIEW */
+/* ================================= */
+
+@media (max-width: 992px) {
+  .solutions-container {
+    padding-left: 25px; /* remove sidebar spacing */
+  }
+}
+
+@media (max-width: 768px) {
+
+  .solutions-container {
+    padding: 20px;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  /* Stack summary cards */
+  .solutions-summary {
+    flex-direction: column;
+  }
+
+  /* Hide table header */
+  .solutions-table thead {
+    display: none;
+  }
+
+  /* Make table behave like cards */
+  .solutions-table,
+  .solutions-table tbody,
+  .solutions-table tr,
+  .solutions-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Each row becomes a card */
+  .solutions-table tr {
+    background: #1c1c1c;
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(255, 75, 43, 0.1);
+  }
+
+  /* Each cell inside card */
+  .solutions-table td {
+    border: none;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  /* Add labels */
+  .solutions-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #ff6a00;
+    font-size: 13px;
+  }
+
+  /* Improve badge alignment */
+  .status-badge {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  /* Floating button responsive */
+  .add-btn {
+    right: 15px;
+    bottom: 15px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  /* Modal full width */
+  .modal {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
 }

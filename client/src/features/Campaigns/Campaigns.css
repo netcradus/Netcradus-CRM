@@ -2,7 +2,6 @@
 .campaigns-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -203,4 +202,118 @@
 
 .modal-actions button:hover {
   opacity: 0.9;
+}
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+
+  .campaigns-container {
+    padding-left: 25px;
+  }
+
+  .campaigns-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .add-campaign-btn {
+    width: 100%;
+  }
+
+  .campaign-status-tabs {
+    justify-content: center;
+  }
+}
+
+
+/* =========================
+   MOBILE CARD LAYOUT
+========================= */
+@media (max-width: 768px) {
+
+  .campaigns-container {
+  padding: 20px;
+  width: 90%;
+  margin-left: 40px;
+  }
+
+  .delete-btn {
+    padding: 5px;
+  }
+  .campaigns-table table,
+  .campaigns-table thead,
+  .campaigns-table tbody,
+  .campaigns-table th,
+  .campaigns-table td,
+  .campaigns-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .campaigns-table thead {
+    display: none;
+  }
+
+  .campaigns-table tr {
+    background: #1a1a1a;
+    margin-bottom: 18px;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(255, 75, 43, 0.08);
+  }
+
+  .campaigns-table td {
+    border: none;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  .campaigns-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #ff4b2b;
+  }
+
+  .campaigns-table td:last-child {
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .campaigns-heading {
+    font-size: 22px;
+    text-align: center;
+  }
+}
+
+
+/* Small Mobile */
+@media (max-width: 480px) {
+
+  .campaigns-container {
+    padding: 15px;
+  }
+
+  .campaigns-table tr {
+    padding: 12px;
+  }
+
+  .campaigns-table td {
+    font-size: 13px;
+  }
+
+  .badge {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+
+  .tab {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
 }

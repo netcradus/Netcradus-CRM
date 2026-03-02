@@ -60,12 +60,17 @@ function Vendors() {
               <th>Last Interaction</th>
             </tr>
           </thead>
-          <tbody>
-           
-            <tr>
-             
-            </tr>
-          </tbody>
+         <tbody>
+  <tr>
+    <td data-label="Vendor Name">ABC Suppliers</td>
+    <td data-label="Email">abc@email.com</td>
+    <td data-label="Category">Supplier</td>
+    <td data-label="Status">
+      <span className="badge active">Active</span>
+    </td>
+    <td data-label="Last Interaction">Mar 2, 2026</td>
+  </tr>
+</tbody>
         </table>
       </div>
 

@@ -1,7 +1,6 @@
 .forecast-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -188,4 +187,112 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
+}
+
+/* ===================================== */
+/* Responsive Design */
+/* ===================================== */
+
+@media (max-width: 992px) {
+  .forecast-container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .forecast-cards {
+    flex-direction: column;
+  }
+
+  .forecast-card {
+    width: 100%;
+  }
+}
+
+/* ===== Table → Card Layout (Mobile) ===== */
+
+@media (max-width: 768px) {
+  .forecast-container {
+  padding: 20px;
+  width: 90%;
+  margin-left: 40px;
+  }
+
+  .forecast-table-wrapper {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .forecast-table thead {
+    display: none; /* Hide table header */
+  }
+
+  .forecast-table,
+  .forecast-table tbody,
+  .forecast-table tr,
+  .forecast-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .forecast-table tr {
+    margin-bottom: 18px;
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(255, 75, 43, 0.15);
+  }
+
+  .forecast-table td {
+    text-align: right;
+    padding: 10px;
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    position: relative;
+  }
+
+  .forecast-table td:last-child {
+    border-bottom: none;
+  }
+
+  .forecast-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    width: 50%;
+    text-align: left;
+    font-weight: 600;
+    color: #ff4b2b;
+  }
+
+  /* Chart height adjustment */
+  .forecast-charts {
+    padding: 20px;
+  }
+
+  .forecast-charts .recharts-responsive-container {
+    height: 250px !important;
+  }
+
+  /* Move add button slightly */
+  .forecast-add-btn {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+
+  .forecast-title {
+    font-size: 22px;
+  }
+
+  .modal-content {
+    width: 95%;
+  }
+
+  .forecast-charts .recharts-responsive-container {
+    height: 220px !important;
+  }
 }

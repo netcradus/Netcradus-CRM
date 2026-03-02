@@ -122,24 +122,28 @@ const Campaigns = () => {
             {filteredCampaigns.length > 0 ? (
               filteredCampaigns.map((c) => (
                 <tr key={c._id}>
-                  <td>{c.name}</td>
-                  <td>{c.channel}</td>
-                  <td>
-                    <span className={`badge ${c.status.toLowerCase()}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td>{new Date(c.startDate).toLocaleDateString()}</td>
-                  <td>{new Date(c.endDate).toLocaleDateString()}</td>
-                  <td>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleDelete(c._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+  <td data-label="Campaign Name">{c.name}</td>
+  <td data-label="Channel">{c.channel}</td>
+  <td data-label="Status">
+    <span className={`badge ${c.status.toLowerCase()}`}>
+      {c.status}
+    </span>
+  </td>
+  <td data-label="Start Date">
+    {new Date(c.startDate).toLocaleDateString()}
+  </td>
+  <td data-label="End Date">
+    {new Date(c.endDate).toLocaleDateString()}
+  </td>
+  <td data-label="Actions">
+    <button
+      className="delete-btn"
+      onClick={() => handleDelete(c._id)}
+    >
+      Delete
+    </button>
+  </td>
+</tr>
               ))
             ) : (
               <tr>

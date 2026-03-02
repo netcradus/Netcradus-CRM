@@ -347,42 +347,42 @@ const PriceBooks = () => {
           <tbody>
             {priceBooks.length > 0 ? (
               priceBooks.map((book) => (
-                <tr key={book.id}>
-                  <td>{book.name}</td>
-                  <td>{book.currency}</td>
-                  <td>{book.type}</td>
-                  <td>{book.products}</td>
-                  <td>{formatDate(book.effectiveDate)}</td>
-                  <td>{formatDate(book.expiryDate)}</td>
-                  <td>
-                    <span
-                      className={`status-badge ${
-                        book.status.toLowerCase() === "active"
-                          ? "active"
-                          : "inactive"
-                      }`}
-                    >
-                      {book.status}
-                    </span>
-                  </td>
-                  <td>{book.version}</td>
-                  <td className="actions">
-                    <button
-                      className="edit-btn"
-                      onClick={() => handleEdit(book.id)}
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleDelete(book.id)}
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
+               <tr key={book.id}>
+  <td data-label="Name">{book.name}</td>
+  <td data-label="Currency">{book.currency}</td>
+  <td data-label="Type">{book.type}</td>
+  <td data-label="Associated Products">{book.products}</td>
+  <td data-label="Effective Date">{formatDate(book.effectiveDate)}</td>
+  <td data-label="Expiry Date">{formatDate(book.expiryDate)}</td>
+  <td data-label="Status">
+    <span
+      className={`status-badge ${
+        book.status.toLowerCase() === "active"
+          ? "active"
+          : "inactive"
+      }`}
+    >
+      {book.status}
+    </span>
+  </td>
+  <td data-label="Version">{book.version}</td>
+  <td data-label="Actions" className="actions">
+    <button
+      className="edit-btn"
+      onClick={() => handleEdit(book.id)}
+      title="Edit"
+    >
+      ✏️
+    </button>
+    <button
+      className="delete-btn"
+      onClick={() => handleDelete(book.id)}
+      title="Delete"
+    >
+      🗑️
+    </button>
+  </td>
+</tr>
               ))
             ) : (
               <tr>
