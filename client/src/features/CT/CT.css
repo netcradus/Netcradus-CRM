@@ -1,7 +1,6 @@
 .ct-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -155,4 +154,70 @@
   background: #8b0000;
   box-shadow: 0 0 15px #8b0000;
   transform: scale(1.1);
+}
+/* ========================= */
+/* MOBILE CARD VIEW         */
+/* ========================= */
+
+@media (max-width: 768px) {
+
+  .ct-container {
+    padding: 20px;
+   width: 90%;
+   margin-left: 40px;
+  }
+
+  .ct-table-wrapper {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .ct-table,
+  .ct-table thead,
+  .ct-table tbody,
+  .ct-table th,
+  .ct-table td,
+  .ct-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .ct-table thead {
+    display: none; /* hide header */
+  }
+
+  .ct-table tr {
+    background: #1c1c1c;
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(255, 75, 43, 0.2);
+  }
+
+  .ct-table td {
+    position: relative;
+    padding: 10px 0;
+    border: none;
+    text-align: right;
+  }
+
+  .ct-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+    color: #ff4b2b;
+    text-align: left;
+  }
+
+  .actions-cell {
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .btn {
+    font-size: 16px;
+    padding: 6px 10px;
+  }
 }

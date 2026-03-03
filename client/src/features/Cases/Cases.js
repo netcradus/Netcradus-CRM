@@ -73,31 +73,31 @@ function Cases() {
               <th>Created</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredCases.length > 0 ? (
-              filteredCases.map((c, index) => (
-                <tr key={index}>
-                  <td>{c.id}</td>
-                  <td>{c.title}</td>
-                  <td>{c.assignedTo}</td>
-                  <td>
-                    <span
-                      className={`badge ${c.status.toLowerCase().replace(" ", "-")}`}
-                    >
-                      {c.status}
-                    </span>
-                  </td>
-                  <td>{c.created}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                  ❌ No cases found
-                </td>
-              </tr>
-            )}
-          </tbody>
+        <tbody>
+  {filteredCases.length > 0 ? (
+    filteredCases.map((c, index) => (
+      <tr key={index}>
+        <td data-label="Case ID">{c.id}</td>
+        <td data-label="Title">{c.title}</td>
+        <td data-label="Assigned To">{c.assignedTo}</td>
+        <td data-label="Status">
+          <span
+            className={`badge ${c.status.toLowerCase().replace(" ", "-")}`}
+          >
+            {c.status}
+          </span>
+        </td>
+        <td data-label="Created">{c.created}</td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+        ❌ No cases found
+      </td>
+    </tr>
+  )}
+</tbody>
         </table>
       </div>
 

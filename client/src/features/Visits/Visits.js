@@ -4,14 +4,6 @@ import "./Visits.css";
 
 const visitsData = [
   {
-    id: "2001",
-    client: "Nandini Gupta",
-    date: "2025-07-29",
-    time: "10:30 AM",
-    status: "Completed",
-    notes: "Discussed project requirements and timeline.",
-  },
-  {
     id: "2002",
     client: "Ankit Verma",
     date: "2025-07-30",
@@ -58,7 +50,8 @@ function Visits() {
         </div>
       </div>
 
-      <table className="visits-table">
+     <div className="visits-table-wrapper">
+  <table className="visits-table">
         <thead>
           <tr>
             <th>Visit ID</th>
@@ -70,27 +63,28 @@ function Visits() {
             <th>Action</th>
           </tr>
         </thead>
-        <tbody>
-          {visitsData.map((visit) => (
-            <tr key={visit.id}>
-              <td>{visit.id}</td>
-              <td>{visit.client}</td>
-              <td>{visit.date}</td>
-              <td>{visit.time}</td>
-              <td>
-                <span className={`status-badge ${visit.status.toLowerCase()}`}>
-                  {visit.status}
-                </span>
-              </td>
-              <td>{visit.notes}</td>
-              <td>
-                <button className="btn-primary">View</button>
-                <button className="btn-secondary">Reschedule</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+       <tbody>
+  {visitsData.map((visit) => (
+    <tr key={visit.id}>
+      <td data-label="Visit ID">{visit.id}</td>
+      <td data-label="Client">{visit.client}</td>
+      <td data-label="Date">{visit.date}</td>
+      <td data-label="Time">{visit.time}</td>
+      <td data-label="Status">
+        <span className={`status-badge ${visit.status.toLowerCase()}`}>
+          {visit.status}
+        </span>
+      </td>
+      <td data-label="Notes">{visit.notes}</td>
+      <td data-label="Action">
+        <button className="btn-primary">View</button>
+        <button className="btn-secondary">Reschedule</button>
+      </td>
+    </tr>
+  ))}
+</tbody>
       </table>
+      </div>
     </div>
   );
 }

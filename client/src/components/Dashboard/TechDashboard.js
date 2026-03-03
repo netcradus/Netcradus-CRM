@@ -34,6 +34,7 @@ function TechDashboard() {
 
   return (
     <div className="dashboard-wrapper">
+       <h1 className='tech-title'>Tech Dashboard</h1>
       <div className="add-project">
         <input
           type="text"

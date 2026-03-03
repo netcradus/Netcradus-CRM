@@ -49,26 +49,26 @@ const Documents = () => {
               <th>Status</th>
             </tr>
           </thead>
-          <tbody>
-            {documents.map((doc, index) => (
-              <tr key={index}>
-                <td>{doc.name}</td>
-                <td>{doc.category}</td>
-                <td>{doc.created}</td>
-                <td>{doc.modified}</td>
-                <td>{doc.owner}</td>
-                <td>
-                  <span
-                    className={`status-badge ${
-                      doc.status === "Active" ? "active" : "inactive"
-                    }`}
-                  >
-                    {doc.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+         <tbody>
+  {documents.map((doc, index) => (
+    <tr key={index}>
+      <td data-label="Document Name">{doc.name}</td>
+      <td data-label="Category">{doc.category}</td>
+      <td data-label="Created Date">{doc.created}</td>
+      <td data-label="Last Modified">{doc.modified}</td>
+      <td data-label="Owner">{doc.owner}</td>
+      <td data-label="Status">
+        <span
+          className={`status-badge ${
+            doc.status === "Active" ? "active" : "inactive"
+          }`}
+        >
+          {doc.status}
+        </span>
+      </td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
 

@@ -1,7 +1,6 @@
 .visits-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -149,4 +148,89 @@
   background-color: rgba(255, 107, 107, 0.2);
   color: #ff6b6b;
   border: 1px solid #ff6b6b;
+}
+/* TABLE WRAPPER */
+.visits-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+/* DESKTOP TABLE */
+.visits-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1a1a1a;
+}
+
+/* ========================= */
+/* 📱 MOBILE CARD VIEW */
+/* ========================= */
+
+@media (max-width: 768px) {
+
+  /* Remove sidebar spacing */
+  .visits-container {
+    padding: 20px;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  /* Hide table header */
+  .visits-table thead {
+    display: none;
+  }
+
+  /* Make table, tbody, tr behave like block */
+  .visits-table,
+  .visits-table tbody,
+  .visits-table tr,
+  .visits-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Each row becomes card */
+  .visits-table tr {
+    background: #1c1c1c;
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(255, 75, 43, 0.1);
+  }
+
+  /* Each cell becomes row inside card */
+  .visits-table td {
+    padding: 8px 0;
+    font-size: 14px;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Add labels before data */
+  .visits-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #ff6a00;
+    font-size: 13px;
+  }
+
+  /* Fix action buttons layout */
+  .visits-table td:last-child {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
+  /* Summary cards stack */
+  .visits-summary {
+    flex-direction: column;
+    gap: 15px;
+  }
 }

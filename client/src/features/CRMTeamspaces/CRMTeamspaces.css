@@ -193,3 +193,75 @@
   background: linear-gradient(90deg, #ff416c, #ff4b2b);
   box-shadow: 0 6px 24px rgba(255, 65, 108, 0.8);
 }
+
+/* ============================= */
+/* RESPONSIVE DESIGN */
+/* ============================= */
+
+@media (max-width: 992px) {
+  .crm-content-section {
+    padding: 25px;
+  }
+}
+
+/* 🔥 Tablet & Mobile */
+@media (max-width: 768px) {
+
+  .crm-teamspaces-container {
+    flex-direction: column;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  /* Hide fixed sidebar */
+ 
+
+  .crm-main-content {
+    margin-left: 0;
+    border-radius: 0;
+    padding: 20px;
+  }
+
+  .crm-content-section {
+    padding: 20px;
+  }
+
+  /* Make lists vertical */
+  .crm-content-section ul {
+    flex-direction: column;
+  }
+
+  .crm-content-section ul li {
+    min-width: 100%;
+  }
+
+  /* Collaboration input stack */
+  .collaboration-input {
+    flex-direction: column;
+  }
+
+  .collaboration-input button {
+    width: 100%;
+  }
+}
+
+/* 🔥 Small Phones */
+@media (max-width: 480px) {
+
+  .crm-teamspaces-heading {
+    font-size: 22px;
+    text-align: center;
+  }
+
+  .crm-content-section {
+    padding: 16px;
+  }
+
+  .crm-content-section h2 {
+    font-size: 1.4rem;
+  }
+
+  .collaboration-messages {
+    max-height: 150px;
+  }
+}

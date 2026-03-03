@@ -102,26 +102,26 @@ function Solutions() {
               <th>Notes</th>
             </tr>
           </thead>
-          <tbody>
-            {filteredSolutions.map((sol, index) => (
-              <tr key={index}>
-                <td>{sol.id}</td>
-                <td>{sol.title}</td>
-                <td>{sol.client}</td>
-                <td>{sol.date}</td>
-                <td>
-                  <span
-                    className={`status-badge ${sol.status
-                      .toLowerCase()
-                      .replace(" ", "-")}`}
-                  >
-                    {sol.status}
-                  </span>
-                </td>
-                <td>{sol.notes}</td>
-              </tr>
-            ))}
-          </tbody>
+         <tbody>
+  {filteredSolutions.map((sol, index) => (
+    <tr key={index}>
+      <td data-label="ID">{sol.id}</td>
+      <td data-label="Title">{sol.title}</td>
+      <td data-label="Client">{sol.client}</td>
+      <td data-label="Date">{sol.date}</td>
+      <td data-label="Status">
+        <span
+          className={`status-badge ${sol.status
+            .toLowerCase()
+            .replace(" ", "-")}`}
+        >
+          {sol.status}
+        </span>
+      </td>
+      <td data-label="Notes">{sol.notes}</td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
 

@@ -43,54 +43,53 @@ function CT() {
               <th className="actions-header">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {calls.map((call) => (
-              <tr key={call.id}>
-                <td>{call.caller}</td>
-                <td>{call.phone}</td>
-                <td>{call.date}</td>
-                <td>
-                  <span
-                    className={`status-tag ${
-                      call.status.toLowerCase() === "completed"
-                        ? "connected"
-                        : call.status.toLowerCase() === "follow-up"
-                        ? "voicemail"
-                        : "missed"
-                    }`}
-                  >
-                    {call.status}
-                  </span>
-                </td>
-                <td>{call.notes}</td>
-                <td className="actions-cell">
-                  <button
-                    className="btn btn-call"
-                    onClick={() => handleCallBack(call.phone)}
-                    title="Call Back"
-                  >
-                    📞
-                  </button>
-                  {call.status !== "Completed" && (
-                    <button
-                      className="btn btn-complete"
-                      onClick={() => handleMarkCompleted(call.id)}
-                      title="Mark Completed"
-                    >
-                      ✔️
-                    </button>
-                  )}
-                  <button
-                    className="btn btn-delete"
-                    onClick={() => handleDelete(call.id)}
-                    title="Delete"
-                  >
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+         <tbody>
+  {calls.map((call) => (
+    <tr key={call.id}>
+      <td data-label="Caller">{call.caller}</td>
+      <td data-label="Phone">{call.phone}</td>
+      <td data-label="Date & Time">{call.date}</td>
+      <td data-label="Status">
+        <span
+          className={`status-tag ${
+            call.status.toLowerCase() === "completed"
+              ? "connected"
+              : call.status.toLowerCase() === "follow-up"
+              ? "voicemail"
+              : "missed"
+          }`}
+        >
+          {call.status}
+        </span>
+      </td>
+      <td data-label="Notes">{call.notes}</td>
+      <td data-label="Actions" className="actions-cell">
+        <button
+          className="btn btn-call"
+          onClick={() => handleCallBack(call.phone)}
+        >
+          📞
+        </button>
+
+        {call.status !== "Completed" && (
+          <button
+            className="btn btn-complete"
+            onClick={() => handleMarkCompleted(call.id)}
+          >
+            ✔️
+          </button>
+        )}
+
+        <button
+          className="btn btn-delete"
+          onClick={() => handleDelete(call.id)}
+        >
+          🗑️
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
         </table>
       </div>
     </div>

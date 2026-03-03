@@ -1,14 +1,12 @@
 .social-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   color: #f1f1f1;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
 }
-
 .social-title {
   font-size: 28px;
   font-weight: 600;
@@ -87,4 +85,70 @@
 
 .social-btn:hover {
   transform: scale(1.05);
+}
+
+/* ========== DEFAULT (DESKTOP) ========== */
+
+
+/* ========== TABLET ========== */
+@media (max-width: 992px) {
+  .social-container {
+    padding-left: 25px; /* remove sidebar spacing */
+
+  }
+
+  .platforms-wrapper {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+/* ========== MOBILE ========== */
+@media (max-width: 768px) {
+  .social-container {
+    padding: 20px;
+       width: 90%;
+    margin-left: 40px;
+  }
+
+  .social-title {
+    font-size: 20px;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .platforms-wrapper {
+    grid-template-columns: 1fr; /* one card per row */
+    gap: 16px;
+  }
+
+  .social-card {
+    padding: 16px;
+  }
+
+  .platform-name {
+    font-size: 18px;
+  }
+
+  .platform-status {
+    font-size: 13px;
+    padding: 5px 10px;
+  }
+
+  .social-btn {
+    width: 100%; /* full width button */
+    text-align: center;
+    align-self: stretch;
+  }
+}
+
+/* ========== SMALL MOBILE ========== */
+@media (max-width: 480px) {
+  .social-title {
+    font-size: 20px;
+  }
+
+  .social-card {
+    border-radius: 8px;
+  }
 }

@@ -1,8 +1,7 @@
 .vendors-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
-  color: #e0e0e0;
+    color: #e0e0e0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   min-height: 100vh;
@@ -182,4 +181,110 @@
   border: 1px solid #333;
   background: #2a2a2a;
   color: #f1f1f1;
+}
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .vendors-container {
+    padding-left: 25px;
+  }
+
+  .vendors-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .vendor-types {
+    flex-wrap: wrap;
+  }
+}
+
+/* Mobile Card Layout */
+@media (max-width: 768px) {
+  .vendors-container {
+  padding: 250x;
+  width: 90%;
+  margin-left: 40px;
+  }
+  .vendors-table table,
+  .vendors-table thead,
+  .vendors-table tbody,
+  .vendors-table th,
+  .vendors-table td,
+  .vendors-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .vendors-table thead {
+    display: none;
+  }
+
+  .vendors-table tr {
+    background: #1f1f2f;
+    margin-bottom: 18px;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+  }
+
+  .vendors-table td {
+    border: none;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  .vendors-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #a6d785;
+  }
+
+  .badge {
+    min-width: auto;
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .vendors-heading {
+    font-size: 22px;
+    text-align: center;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+
+  .vendors-container {
+    padding: 15px;
+  }
+
+  .vendors-table tr {
+    padding: 12px;
+  }
+
+  .vendors-table td {
+    font-size: 13px;
+  }
+
+  .vendor-types {
+    gap: 10px;
+  }
+
+  .vendor-types .type {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
 }

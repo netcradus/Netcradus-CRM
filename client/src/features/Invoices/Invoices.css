@@ -2,7 +2,6 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -47,8 +46,9 @@
   background-color: #1a1a1a;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
-  padding: 16px;
+  padding: 20px;
 }
+
 
 /* Table Styling */
 .invoice-table {
@@ -128,4 +128,112 @@
 
 .delete-btn:hover {
   background-color: #d32f2f;
+}
+/* ============================= */
+/* PREMIUM MOBILE CARD DESIGN */
+/* ============================= */
+
+@media (max-width: 768px) {
+
+  .invoices-container {
+    padding: 20px;
+     margin-left: 40px; /* Adjust for mobile sidebar */
+    width: 90%;
+  }
+
+  .invoice-table thead {
+    display: none;
+  }
+
+  .invoice-table,
+  .invoice-table tbody,
+  .invoice-table tr,
+  .invoice-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .invoice-table tr {
+    background: linear-gradient(145deg, #1c1c1c, #181818);
+    margin-bottom: 20px;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(255, 75, 43, 0.15);
+    border: 1px solid rgba(255, 75, 43, 0.15);
+    transition: transform 0.2s ease;
+  }
+
+  .invoice-table tr:hover {
+    transform: translateY(-3px);
+  }
+
+  .invoice-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 14px;
+  }
+
+  .invoice-table td:last-child {
+    border-bottom: none;
+    padding-top: 15px;
+  }
+
+  .invoice-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #ff6b3d;
+    flex: 1;
+  }
+
+  .invoice-table td span,
+  .invoice-table td button {
+    flex: 1;
+    text-align: right;
+  }
+
+  /* Status badge improvement */
+  .paid {
+    background: linear-gradient(90deg, #00c853, #00e676);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+
+  .unpaid {
+    background: linear-gradient(90deg, #ff1744, #ff5252);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+  }
+
+  /* Action buttons */
+  .action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+
+  .edit-btn,
+  .delete-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .edit-btn {
+    background: linear-gradient(90deg, #2196f3, #42a5f5);
+  }
+
+  .delete-btn {
+    background: linear-gradient(90deg, #f44336, #ff6b6b);
+  }
+
+  .add-invoice-btn {
+    width: 100%;
+    margin-top: 10px;
+  }
 }

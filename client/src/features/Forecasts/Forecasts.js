@@ -93,24 +93,33 @@ const Forecasts = () => {
             </tr>
           </thead>
           <tbody>
-            {forecastData.map((item, index) => {
-              const gap = item.target - item.achieved;
-              const percent = item.target
-                ? ((item.achieved / item.target) * 100).toFixed(1) + "%"
-                : "0%";
-              return (
-                <tr key={index}>
-                  <td>{item.period}</td>
-                  <td>{item.owner}</td>
-                  <td>₹{Number(item.target).toLocaleString("en-IN")}</td>
-                  <td>₹{Number(item.forecast).toLocaleString("en-IN")}</td>
-                  <td>₹{Number(item.achieved).toLocaleString("en-IN")}</td>
-                  <td>{percent}</td>
-                  <td>₹{gap.toLocaleString("en-IN")}</td>
-                </tr>
-              );
-            })}
-          </tbody>
+  {forecastData.map((item, index) => {
+    const gap = item.target - item.achieved;
+    const percent = item.target
+      ? ((item.achieved / item.target) * 100).toFixed(1) + "%"
+      : "0%";
+
+    return (
+      <tr key={index}>
+        <td data-label="Period">{item.period}</td>
+        <td data-label="Owner">{item.owner}</td>
+        <td data-label="Target">
+          ₹{Number(item.target).toLocaleString("en-IN")}
+        </td>
+        <td data-label="Forecast">
+          ₹{Number(item.forecast).toLocaleString("en-IN")}
+        </td>
+        <td data-label="Achieved">
+          ₹{Number(item.achieved).toLocaleString("en-IN")}
+        </td>
+        <td data-label="% to Target">{percent}</td>
+        <td data-label="Gap">
+          ₹{gap.toLocaleString("en-IN")}
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
         </table>
       </div>
 

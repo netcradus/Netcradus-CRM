@@ -62,7 +62,7 @@ function DigitalMediaDashboard() {
       </div>
 
       {/* Recent Campaigns */}
-      <div className="campaign-section">
+     <div className="table-wrapper">
         <h2>Recent Campaigns</h2>
         <table>
           <thead>
@@ -74,12 +74,6 @@ function DigitalMediaDashboard() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Summer Sale</td>
-              <td>Instagram</td>
-              <td>$3,000</td>
-              <td className="active">Active</td>
-            </tr>
             <tr>
               <td>Product Launch</td>
               <td>Facebook</td>

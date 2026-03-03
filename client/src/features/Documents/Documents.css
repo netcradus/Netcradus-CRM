@@ -2,8 +2,7 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
-  min-height: 100vh;
+    min-height: 100vh;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
@@ -184,4 +183,79 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+/* ============================= */
+/* Responsive Mobile Card View */
+/* ============================= */
+
+@media (max-width: 768px) {
+
+  .documents-container {
+    padding: 20px;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  .document-table-wrapper {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .document-table {
+    border: 0;
+  }
+
+  .document-table thead {
+    display: none; /* Hide table header */
+  }
+
+  .document-table,
+  .document-table tbody,
+  .document-table tr,
+  .document-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .document-table tr {
+    margin-bottom: 18px;
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
+  }
+
+  .document-table td {
+    text-align: right;
+    padding: 10px 10px;
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    position: relative;
+  }
+
+  .document-table td:last-child {
+    border-bottom: none;
+  }
+
+  .document-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    width: 50%;
+    text-align: left;
+    font-weight: 600;
+    color: #ff4b2b;
+  }
+
+  /* Fix Status Alignment */
+  .document-table td .status-badge {
+    float: right;
+  }
+
+  /* Move Add Button Slightly Up */
+  .bottom-right-button {
+    bottom: 20px;
+    right: 20px;
+  }
 }

@@ -129,7 +129,6 @@ const roleMenus = {
       label: "Campaigns",
       icon: <FaBullhorn />,
       children: [
-        { label: "Home", path: "/dashboard", icon: <FaHome /> },
         { label: "Campaigns", path: "/campaigns", icon: <FaBullhorn /> },
         { label: "Social", path: "/social", icon: <FaComments /> },
         { label: "Visits", path: "/visits", icon: <FaMapMarkerAlt /> },

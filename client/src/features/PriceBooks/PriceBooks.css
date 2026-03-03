@@ -1,7 +1,6 @@
 .pricebooks-container {
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
@@ -108,4 +107,104 @@
 
 .actions button:hover {
   transform: scale(1.2);
+}
+
+/* ===========================
+   RESPONSIVE DESIGN
+=========================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .pricebooks-container {
+    padding-left: 25px;
+  }
+
+  .pricebooks-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .btn-add {
+    width: 100%;
+  }
+}
+
+/* Mobile Card Layout */
+@media (max-width: 768px) {
+  .pricebooks-container {
+  padding: 20px;
+  width: 90%;
+  margin-left: 40px;
+  }
+
+  .pricebooks-table,
+  .pricebooks-table thead,
+  .pricebooks-table tbody,
+  .pricebooks-table th,
+  .pricebooks-table td,
+  .pricebooks-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .pricebooks-table thead {
+    display: none;
+  }
+
+  .pricebooks-table tr {
+    background: #1a1a1a;
+    margin-bottom: 18px;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(255, 75, 43, 0.08);
+  }
+
+  .pricebooks-table td {
+    border: none;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  .pricebooks-table td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #ff4b2b;
+  }
+
+  .actions {
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .actions button {
+    font-size: 18px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+
+  .pricebooks-container {
+    padding: 15px;
+  }
+
+  .pricebooks-heading {
+    font-size: 22px;
+  }
+
+  .pricebooks-table tr {
+    padding: 12px;
+  }
+
+  .pricebooks-table td {
+    font-size: 13px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
 }

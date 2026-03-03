@@ -144,29 +144,31 @@ const SalesInbox = () => {
             {filteredInbox.length > 0 ? (
               filteredInbox.map((msg) => (
                 <tr key={msg._id}>
-                  <td>{msg.subject}</td>
-                  <td>{msg.sender}</td>
-                  <td>{msg.recipient}</td>
-                  <td>{new Date(msg.date).toLocaleDateString()}</td>
-                  <td>
-                    <span
-                      className={`badge ${msg.status.toLowerCase()}`}
-                      onClick={() => toggleStatus(msg._id)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      {msg.status}
-                    </span>
-                  </td>
-                  <td>{msg.category}</td>
-                  <td>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleDelete(msg._id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+  <td data-label="Subject">{msg.subject}</td>
+  <td data-label="From">{msg.sender}</td>
+  <td data-label="To">{msg.recipient}</td>
+  <td data-label="Date">
+    {new Date(msg.date).toLocaleDateString()}
+  </td>
+  <td data-label="Status">
+    <span
+      className={`badge ${msg.status.toLowerCase()}`}
+      onClick={() => toggleStatus(msg._id)}
+      style={{ cursor: "pointer" }}
+    >
+      {msg.status}
+    </span>
+  </td>
+  <td data-label="Category">{msg.category}</td>
+  <td data-label="Actions">
+    <button
+      className="delete-btn"
+      onClick={() => handleDelete(msg._id)}
+    >
+      Delete
+    </button>
+  </td>
+</tr>
               ))
             ) : (
               <tr>
