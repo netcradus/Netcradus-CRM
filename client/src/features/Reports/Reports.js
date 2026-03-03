@@ -1,16 +1,16 @@
 import React from "react";
-import Sidebar from "../../components/Dashboard/Sidebar"; // Adjust if your Sidebar is in another path
-import "./Reports.css"; // Optional, only if you create the CSS
+import Sidebar from "../../components/Dashboard/Sidebar";
+import "./Reports.css";
 
 function Reports() {
   return (
     <div className="dashboard-container">
+  
 
-      <div className="dashboard">
+      <main className="dashboard">
         <h2>📊 Reports</h2>
         <p>Generate and view detailed reports on sales, support, and more.</p>
 
-        {/* Placeholder for future charts or filters */}
         <div className="report-box">
           <h4>Coming Soon:</h4>
           <ul>
@@ -19,7 +19,7 @@ function Reports() {
             <li>Customer engagement</li>
           </ul>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

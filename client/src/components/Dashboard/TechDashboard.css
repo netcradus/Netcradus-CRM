@@ -1,29 +1,45 @@
-/* Dashboard Wrapper */
+/* ============================= */
+/* DASHBOARD LAYOUT */
+/* ============================= */
+
 .dashboard-wrapper {
-  width: 80%;
-margin-left: 15%;
+  margin-left: 250px; /* same as sidebar */
+  width: calc(100% - 250px);
+  min-height: 100vh;
+  padding: 30px;
+  box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #0f0f14;
+  color: #f0f0f0;
+  transition: all 0.3s ease;
 }
 
-/* Add Project Section */
+
+/* ============================= */
+/* ADD PROJECT SECTION */
+/* ============================= */
+
 .add-project {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
 }
 
 .add-project input {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  width: 250px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  width: 280px;
+  background: #1f1f28;
+  color: #fff;
   outline: none;
 }
 
 .add-project button {
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
   border: none;
   background: #03a9f4;
   color: #fff;
@@ -35,70 +51,87 @@ margin-left: 15%;
   background: #0288d1;
 }
 
-/* Board Container */
+/* ============================= */
+/* BOARD CONTAINER */
+/* ============================= */
+
 .board-container {
   display: flex;
-  gap: 15px;
+  gap: 20px;
   overflow-x: auto;
-  padding-bottom: 10px;
+  padding-bottom: 15px;
 }
 
-/* Column Styling */
+/* ============================= */
+/* COLUMN */
+/* ============================= */
+
 .board-column {
   background: #1f1f28;
   padding: 15px;
-  border-radius: 10px;
-  min-width: 280px;
+  border-radius: 12px;
+  min-width: 300px;
   flex-shrink: 0;
-  color: #f0f0f0;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 0 12px rgba(0,0,0,0.4);
 }
 
 .board-column h2 {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
   border-bottom: 1px solid #444;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
+  font-size: 18px;
 }
 
-/* Cards Grid - 3 per row */
+/* ============================= */
+/* CARDS GRID */
+/* ============================= */
+
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
 .card {
   background: #2a2a36;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
   cursor: grab;
   text-align: center;
   transition: 0.2s;
+  font-size: 14px;
 }
 
 .card:hover {
   background: #3b3b50;
+  transform: scale(1.03);
 }
 
-/* Add Card Section */
+/* ============================= */
+/* ADD CARD */
+/* ============================= */
+
 .add-card {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
 .add-card input {
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-radius: 6px;
   border: none;
+  background: #2a2a36;
+  color: #fff;
   outline: none;
 }
 
 .add-card button {
-  padding: 6px 0;
+  padding: 8px 0;
   border-radius: 6px;
   border: none;
   background: #9c27b0;
@@ -111,7 +144,10 @@ margin-left: 15%;
   background: #7b1fa2;
 }
 
-/* Scrollbar Styling */
+/* ============================= */
+/* SCROLLBAR */
+/* ============================= */
+
 .board-container::-webkit-scrollbar {
   height: 8px;
 }
@@ -123,4 +159,60 @@ margin-left: 15%;
 
 .board-container::-webkit-scrollbar-track {
   background: #1f1f28;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .dashboard-wrapper {
+    padding: 25px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .dashboard-wrapper {
+    margin-left: 0;
+    width: 100%;
+    padding: 20px;
+  }
+
+  .tech-title{
+  font-size: 20px;
+  padding: 20px;
+}
+  .board-container {
+    gap: 15px;
+  }
+
+  .board-column {
+    min-width: 260px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .add-project input {
+    width: 100%;
+  }
+
+  .add-project {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .board-column {
+    min-width: 220px;
+  }
+
+  .card {
+    font-size: 13px;
+  }
 }

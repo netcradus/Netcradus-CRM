@@ -2,7 +2,6 @@
   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
-  background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;
   min-height: 100vh;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -163,7 +162,7 @@
 
 /* Progress Bar */
 progress {
-  width: 100%;
+  width: 50%;
   height: 14px;
   border-radius: 6px;
   appearance: none;
@@ -181,4 +180,62 @@ progress::-webkit-progress-value {
 
 progress::-moz-progress-bar {
   background-color: #ff4b2b;
+}
+/* ========================= */
+/* MOBILE RESPONSIVE TABLE   */
+/* ========================= */
+
+@media (max-width: 768px) {
+
+  .projects-container {
+    padding: 20px;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  .projects-table table,
+  .projects-table thead,
+  .projects-table tbody,
+  .projects-table th,
+  .projects-table td,
+  .projects-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .projects-table thead {
+    display: none; /* hide table header */
+  }
+
+  .projects-table tr {
+    background-color: #1c1c1c;
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(255, 75, 43, 0.15);
+  }
+
+  .projects-table td {
+    padding: 10px 0;
+    text-align: right;
+    position: relative;
+    border: none;
+  }
+
+  .projects-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+    color: #ff4b2b;
+    text-align: left;
+  }
+
+  .projects-actions {
+    flex-direction: column;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
 }

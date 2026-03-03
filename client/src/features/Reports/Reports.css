@@ -1,36 +1,109 @@
+/* ============================= */
+/* LAYOUT */
+/* ============================= */
+
 .dashboard-container {
   display: flex;
+  min-height: 100vh;
 }
 
+/* Main content */
 .dashboard {
-  flex-grow: 1;
-  padding: 20px;
-  background-color: #f9f9f9;
+  flex: 1;
+  margin-left: 220px; /* match sidebar width */
+  padding: 30px;
+  color: #f1f1f1;
+  transition: margin-left 0.3s ease;
+  box-sizing: border-box;
 }
 
-.dashboard h2{
-      background: linear-gradient(
+/* ============================= */
+/* HEADING */
+/* ============================= */
+
+.dashboard h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  background: linear-gradient(
     90deg,
-    #FF4F9A 0%,   /* Pink / Magenta */
-    #FF8A3D 10%,  /* Orange */
-    #FFC83D 100%  /* Yellow / Gold */
+    #FF4F9A 0%,
+    #FF8A3D 40%,
+    #FFC83D 100%
   );
-
-  -webkit-background-clip: text;
   background-clip: text;
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  
 }
+
+.dashboard p {
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+/* ============================= */
+/* REPORT BOX */
+/* ============================= */
 
 .report-box {
-  background: #fff;
-  padding: 15px;
-  border-radius: 10px;
+  background: #1c1c1c;
+  padding: 20px;
+  border-radius: 12px;
   margin-top: 20px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(255, 75, 43, 0.2);
 }
 
 .report-box h4 {
-  margin-bottom: 10px;
-  color: #333;
+  margin-bottom: 12px;
+  color: #ff6b4b;
+}
+
+.report-box ul {
+  padding-left: 18px;
+}
+
+.report-box li {
+  margin-bottom: 8px;
+  color: #ddd;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+/* Tablet */
+@media (max-width: 992px) {
+  .dashboard {
+    padding: 25px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+
+  .dashboard-container {
+    flex-direction: column;
+    width: 90%;
+    margin-left: 40px;
+  }
+
+  .dashboard {
+    margin-left: 0; /* remove sidebar spacing */
+    padding: 20px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+
+  .dashboard h2 {
+    font-size: 22px;
+  }
+
+  .dashboard {
+    padding: 16px;
+  }
+
+  .report-box {
+    padding: 16px;
+  }
 }

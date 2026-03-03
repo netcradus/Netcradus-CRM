@@ -1,38 +1,18 @@
 import React from "react";
 import { FaHeadset } from "react-icons/fa";
-import Sidebar from "./Sidebar";
 import "./SupportDashboard.css";
 
 function SupportDashboard() {
   return (
     <div className="dashboard-container">
-      <Sidebar />
       <div className="dashboard">
-        <h2><FaHeadset /> Welcome, Support Agent 🎧</h2>
+        <h2><FaHeadset />Support Agent</h2>
 
-        {/* Action buttons and filters */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              type="text"
-              placeholder="Search tickets..."
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #555",
-                backgroundColor: "#1c1c1c",
-                color: "#fff"
-              }}
-            />
-            <select
-              style={{
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #555",
-                backgroundColor: "#1c1c1c",
-                color: "#fff"
-              }}
-            >
+        {/* Actions */}
+        <div className="dashboard-actions">
+          <div className="actions-left">
+            <input type="text" placeholder="Search tickets..." />
+            <select>
               <option>All</option>
               <option>Open</option>
               <option>Resolved</option>
@@ -40,27 +20,9 @@ function SupportDashboard() {
             </select>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button style={{
-              padding: "8px 12px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "#007bff",
-              color: "#fff",
-              cursor: "pointer"
-            }}>
-              Raise Ticket
-            </button>
-            <button style={{
-              padding: "8px 12px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "#28a745",
-              color: "#fff",
-              cursor: "pointer"
-            }}>
-              Export
-            </button>
+          <div className="actions-right">
+            <button className="btn primary">Raise Ticket</button>
+            <button className="btn success">Export</button>
           </div>
         </div>
 
@@ -80,7 +42,7 @@ function SupportDashboard() {
           </div>
         </div>
 
-        {/* Lists Section */}
+        {/* Bottom Section */}
         <div className="bottom-section">
           <div className="card">
             <p><strong>Recent Issues</strong></p>
@@ -90,6 +52,7 @@ function SupportDashboard() {
               <li>Account suspended - Emma</li>
             </ul>
           </div>
+
           <div className="card">
             <p><strong>Pending Follow-ups</strong></p>
             <ul>

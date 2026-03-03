@@ -2,21 +2,29 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    padding: 20px;
     background-color: #000;
     overflow: hidden;
+    text-align: center;
 }
 
+/* Responsive Fluid Font */
 .welcome-text {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 3.5rem;
+
+    /* Makes font responsive automatically */
+    font-size: clamp(1.8rem, 5vw, 3.5rem);
+
     font-weight: 500;
     color: #fff;
     opacity: 0;
     transform: scale(0.95);
     animation: appleWelcome 2.8s ease-in-out forwards;
+    word-break: break-word;
 }
 
+/* Animation */
 @keyframes appleWelcome {
     0% {
         opacity: 0;
@@ -40,5 +48,22 @@
         opacity: 0;
         transform: scale(1.05);
         filter: blur(10px);
+    }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .welcome-container {
+        padding: 16px;
+        margin-left: 40px;
+        width: 90%;
+    }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+    .welcome-text {
+        font-size: 1.8rem;
+        line-height: 1.3;
     }
 }

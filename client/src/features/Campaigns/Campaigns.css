@@ -1,12 +1,12 @@
 /* ================= Campaigns Container ================= */
 .campaigns-container {
-  padding: 25px;
+   padding: 25px;
   padding-left: calc(max(25px, 220px + 25px));
   color: #f1f1f1;
   min-height: 100vh;
   box-sizing: border-box;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
+ 
 }
 
 /* Header */
@@ -82,9 +82,12 @@
   background-color: #1a1a1a;
   box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
   border-radius: 8px;
-  overflow: hidden;
+  
 }
-
+.campaigns-table {
+  width: 100%;
+  overflow-x: auto;
+}
 .campaigns-table th,
 .campaigns-table td {
   padding: 14px;
@@ -203,17 +206,70 @@
 .modal-actions button:hover {
   opacity: 0.9;
 }
+
 /* =========================
-   RESPONSIVE DESIGN
+   MOBILE CARD LAYOUT FIX
 ========================= */
 
-/* Tablet */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
 
   .campaigns-container {
-    padding-left: 25px;
+  padding: 20px;
+  width: 90%;
+  margin-left: 40px;
+  }
+  .campaigns-table table {
+    border: 0;
+    width: 40%;
   }
 
+  .campaigns-table thead {
+    display: none;
+  }
+
+  .campaigns-table tr {
+    display: block;
+    background: linear-gradient(145deg, #1a1a1a, #202020);
+    margin-bottom: 20px;
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+
+  .campaigns-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border: none;
+    font-size: 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .campaigns-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #ff4b2b;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .campaigns-table td > * {
+    flex: 1;
+    text-align: right;
+  }
+
+  .campaigns-table td:last-child {
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .delete-btn {
+    margin-top: 8px;
+  }
+}
+@media (max-width: 1024px) {
   .campaigns-header {
     flex-direction: column;
     gap: 15px;
@@ -226,94 +282,5 @@
   .campaign-status-tabs {
     justify-content: center;
   }
-}
 
-
-/* =========================
-   MOBILE CARD LAYOUT
-========================= */
-@media (max-width: 768px) {
-
-  .campaigns-container {
-  padding: 20px;
-  width: 90%;
-  margin-left: 40px;
-  }
-
-  .delete-btn {
-    padding: 5px;
-  }
-  .campaigns-table table,
-  .campaigns-table thead,
-  .campaigns-table tbody,
-  .campaigns-table th,
-  .campaigns-table td,
-  .campaigns-table tr {
-    display: block;
-    width: 100%;
-  }
-
-  .campaigns-table thead {
-    display: none;
-  }
-
-  .campaigns-table tr {
-    background: #1a1a1a;
-    margin-bottom: 18px;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(255, 75, 43, 0.08);
-  }
-
-  .campaigns-table td {
-    border: none;
-    padding: 8px 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-  }
-
-  .campaigns-table td::before {
-    content: attr(data-label);
-    font-weight: bold;
-    color: #ff4b2b;
-  }
-
-  .campaigns-table td:last-child {
-    justify-content: flex-end;
-    margin-top: 8px;
-  }
-
-  .campaigns-heading {
-    font-size: 22px;
-    text-align: center;
-  }
-}
-
-
-/* Small Mobile */
-@media (max-width: 480px) {
-
-  .campaigns-container {
-    padding: 15px;
-  }
-
-  .campaigns-table tr {
-    padding: 12px;
-  }
-
-  .campaigns-table td {
-    font-size: 13px;
-  }
-
-  .badge {
-    font-size: 12px;
-    padding: 3px 8px;
-  }
-
-  .tab {
-    font-size: 12px;
-    padding: 6px 10px;
-  }
 }
