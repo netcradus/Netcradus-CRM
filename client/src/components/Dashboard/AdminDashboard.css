@@ -2,12 +2,21 @@
   padding: 30px;
   min-height: 100vh;
   color: #f0f0f0;
-  margin-left: 250px; /* same as sidebar width */
+  margin-left: 250px; /* default sidebar width */
   width: calc(100% - 250px);
   box-sizing: border-box;
   transition: all 0.3s ease;
 }
 
+.sidebar.collapsed ~ .admin-dashboard {
+  margin-left: 75px; /* match collapsed sidebar */
+  width: calc(100% - 75px);
+}
+
+.sidebar.mobile-open ~ .admin-dashboard {
+  margin-left: 220px; /* mobile open width */
+  width: calc(100% - 220px);
+}
 /* Header */
 .admin-header-card {
   text-align: center;
@@ -119,10 +128,11 @@
 }
 
 @media (max-width: 768px) {
-  .admin-dashboard {
-    margin-left: 40px;
-    width: 90%;
+.admin-dashboard {
+    margin-left: 0;
+    width: 100%;
     padding: 20px;
+    transition: all 0.3s ease;
   }
 .admin-title {
   font-size: 20px;

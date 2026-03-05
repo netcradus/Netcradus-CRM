@@ -154,8 +154,10 @@
   margin-top: 10px;
 }
 
-.leads-table table {
-  width: 100%;
+  .leads-table table {
+  width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;     /* allow cells to shrink */
   border-collapse: collapse;
   background-color: #1a1a1a;
   box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
@@ -201,7 +203,11 @@
 }
 
 .badge {
-  display: inline-block;
+  display: inline-block; /* ensures it only takes content width */
+  flex: none;            /* prevent flex container stretching */
+  width: auto;           /* auto width */
+  text-align: center;
+  white-space: nowrap;   /* prevent line break */
   padding: 6px 12px;
   border-radius: 20px;
   font-weight: bold;
@@ -209,7 +215,6 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .badge.closed {
   background-color: #ff0000;
   color: white;
@@ -617,7 +622,7 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
   .leads-container {
     padding: 20px;
     margin-left: 40px; /* Adjust for mobile sidebar */
-    width: 90%;
+    width: 100%;
   }
 
   .leads-table table,
@@ -627,7 +632,7 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
   .leads-table td,
   .leads-table tr {
     display: block;
-    width: 100%;
+    width:100%;
   }
 
   .leads-table thead {
@@ -676,9 +681,13 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
   }
 
   .actions-cell button {
-    width: 100%;
+    width:50%;
     margin-top: 8px;
   }
+  td[data-label="Status"] {
+  width: 100%;           /* shrink to fit content */
+  white-space: nowrap;  /* prevent badge wrapping */
+}
 
 }
 

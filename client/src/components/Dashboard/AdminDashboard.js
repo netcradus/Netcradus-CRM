@@ -113,26 +113,26 @@ const AdminDashboard = () => {
         <h3>User Growth Overview</h3>
 
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey="month" stroke="#888" />
-            <YAxis stroke="#888" />
-            <Tooltip />
+      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="professionalGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4dabf7" stopOpacity={0.8} />
+            <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.5} />
+          </linearGradient>
+        </defs>
 
-            <defs>
-              <linearGradient id="adminGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ff80ab" stopOpacity={0.8} />
-                <stop offset="100%" stopColor="#b388ff" stopOpacity={0.3} />
-              </linearGradient>
-            </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+        <XAxis dataKey="month" stroke="#888" />
+        <YAxis stroke="#888" />
+        <Tooltip cursor={{ fill: "rgba(255,255,255,0.1)" }} />
 
-            <Bar
-              dataKey="users"
-              fill="url(#adminGradient)"
-              radius={[8, 8, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        <Bar
+          dataKey="users"
+          fill="url(#professionalGradient)"
+          radius={[8, 8, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
       </div>
 
 

@@ -8,8 +8,6 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   transition: padding-left 0.3s ease;
-  width: 90%;
-  margin-left: 40px;
 }
 
 .contacts-heading {
@@ -137,7 +135,9 @@
 }
 
 .contacts-table table {
-  width: 100%;
+  width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;   
   border-collapse: collapse;
   background: #1a1a1a;
   border-radius: 8px;
@@ -289,6 +289,8 @@
   .contacts-container {
     padding-left: 25px;
     padding-right: 25px;
+     margin-left: 40px; /* Adjust for mobile sidebar */
+    width: 100%;
   }
 
   .contacts-heading {
