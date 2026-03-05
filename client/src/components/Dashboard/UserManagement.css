@@ -212,6 +212,7 @@ button {
     opacity: 0;
     transform: translateX(400px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -223,6 +224,7 @@ button {
     opacity: 1;
     transform: translateX(0);
   }
+
   to {
     opacity: 0;
     transform: translateX(400px);
@@ -258,8 +260,13 @@ button {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content {
@@ -278,6 +285,7 @@ button {
     transform: scale(0.9);
     opacity: 0;
   }
+
   to {
     transform: scale(1);
     opacity: 1;
@@ -463,16 +471,17 @@ button {
     max-width: none;
   }
 }
+
 /* ============================= */
 /* MOBILE CARD TABLE */
 /* ============================= */
 @media (max-width: 768px) {
   .admin-panel-title {
-  font-size: 20px;
-  
-}
+    font-size: 20px;
 
- .admin-table,
+  }
+
+  .admin-table,
   .admin-table thead,
   .admin-table tbody,
   .admin-table th,
@@ -492,7 +501,7 @@ button {
     border-radius: 12px;
     padding: 14px;
     border: 1px solid #2a2d3a;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
   }
 
   .admin-table td {
@@ -523,5 +532,19 @@ button {
     width: 100%;
     margin-top: 8px;
   }
-  
+
+}
+
+.admin-warning-note {
+  background: rgba(255, 106, 61, 0.1);
+  border-left: 4px solid #ff6a3d;
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #ddd;
+}
+
+.admin-warning-note strong {
+  color: #ff6a3d;
 }

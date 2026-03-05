@@ -9,8 +9,11 @@ const MAX_OTP_REQUESTS_PER_HOUR = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const getTransporter = () => {
+    // For Gmail, sometimes using service: 'gmail' is less reliable than explicit settings
     return nodemailer.createTransport({
-        service: process.env.SMTP_SERVICE || "gmail",
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true, // use SSL
         auth: {
             user: process.env.SMTP_MAIL,
             pass: process.env.SMTP_PASSWORD,
@@ -44,18 +47,18 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
     const plainOtp = crypto.randomInt(100000, 999999).toString();
     const hashedOtp = await bcrypt.hash(plainOtp, 10);
 
-    // 4. Save to DB (5 min expiry)
+    // 4. Save to DB (10 min expiry)
     const session = new OtpSession({
         userId,
         hashedOtp,
         type,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000)
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
     });
     await session.save();
 
-    // 5. Send via SMTP to strictly Admin IT email
-    // The plan specified sending to IT Admin email, so we fetch it from env, falling back to user email if missing strictly for emergency
-    const targetEmail = process.env.ADMIN_IT_EMAIL || userEmail;
+    // 5. Send via SMTP
+    // For regular checks, it goes to IT Admin. For Forgot Password, it goes to the user.
+    const targetEmail = type === "FORGOT_PASSWORD" ? userEmail : (process.env.ADMIN_IT_EMAIL || userEmail);
 
     try {
         const transporter = getTransporter();
@@ -69,26 +72,38 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
         } else if (type === "SECURITY_CHECK") {
             subject = `Weekly Security Verification Code for ${userEmail}`;
             actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
+        } else if (type === "FORGOT_PASSWORD") {
+            subject = "Password Reset Verification Code";
+            actionText = `A password reset was requested for your account (<strong>${userEmail}</strong>).`;
         }
+
+        const timestamp = new Date().toLocaleString();
 
         await transporter.sendMail({
             from: process.env.SMTP_MAIL,
             to: targetEmail,
             subject,
-            text: `${actionText.replace(/<\/?[^>]+(>|$)/g, "")}\n\nThe security verification code is: ${plainOtp}\n\nThis code will expire in 5 minutes.`,
+            text: `${actionText.replace(/<\/?[^>]+(>|$)/g, "")}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nDO NOT share this code with anyone.`,
             html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px;">
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">
           <h2 style="color: #ff4b2b;">Netcradus CRM Security</h2>
           <p>${actionText}</p>
-          <div style="background: #f4f4f4; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
+          <div style="background: #f4f4f4; padding: 20px; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 4px; border: 1px solid #eee;">
             ${plainOtp}
           </div>
-          <p style="color: #666; font-size: 13px;">This code will expire in 5 minutes. DO NOT share this code with anyone.</p>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            <strong>Expires in:</strong> 10 minutes<br>
+            <strong>Requested from IP:</strong> ${ipAddress}<br>
+            <strong>Time:</strong> ${timestamp}
+          </p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #999; font-size: 12px;">This is an automated security notification. If you did not request this, please contact your IT administrator immediately.</p>
         </div>
       `
         });
     } catch (error) {
         // Log Failure but don't lock
+        console.error("CRITICAL SMTP ERROR:", error);
         await session.deleteOne(); // remove the session since email failed
         await logAuthEvent(userId, "SMTP_FAILURE", ipAddress, userAgent, error.message);
         throw new Error("SMTP_FAILURE");

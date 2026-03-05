@@ -16,6 +16,12 @@ const createUserByAdmin = async (req, res) => {
       });
     }
 
+    if (role.toLowerCase() === "admin") {
+      return res.status(403).json({
+        message: "Creation of additional admin users is forbidden"
+      });
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
 
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -95,10 +101,36 @@ const login = async (req, res) => {
     }
 
     if (!user || !isMatch) {
-      if (user) {
-        await require('../services/securityService').logAuthEvent(user._id, "LOGIN_ATTEMPT", ipAddress, userAgent, "Invalid password");
+      if (user && user.role !== 'admin') {
+        const now = new Date();
+        const failWindow = 30 * 60 * 1000; // 30 mins
+
+        // Check if previous fail was long ago, reset if so
+        if (user.lastFailedLogin && (now - user.lastFailedLogin) > failWindow) {
+          user.failedLoginAttempts = 1;
+        } else {
+          user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+        }
+        user.lastFailedLogin = now;
+        await user.save();
+
+        await require('../services/securityService').logAuthEvent(user._id, "LOGIN_FAILED", ipAddress, userAgent, `Attempt ${user.failedLoginAttempts}`);
+
+        if (user.failedLoginAttempts >= 3) {
+          return res.status(400).json({
+            message: "Invalid credentials",
+            action: "SHOW_FORGOT_PASSWORD_LINK"
+          });
+        }
       }
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // On Success: Reset tracker
+    if (user.role !== 'admin') {
+      user.failedLoginAttempts = 0;
+      user.lastFailedLogin = null;
+      await user.save();
     }
 
     // 2. Check Lock
@@ -167,74 +199,78 @@ const login = async (req, res) => {
   }
 };
 
-// Forgot Password
-const forgotPassword = async (req, res) => {
+// Request Forgot Password OTP
+const requestForgotPasswordOTP = async (req, res) => {
   try {
     const { email } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Enumeration Protection: If user doesn't exist, still return 200 to not leak existence
+    // BUT we don't send email.
+    if (!user) {
+      return res.status(200).json({ message: "If an account exists, an OTP has been sent." });
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: "Admin password reset must be handled by system administrator via CLI." });
+    }
+
+    await require('../services/otpService').generateAndSendOTP(user._id, user.email, "FORGOT_PASSWORD", ipAddress, userAgent);
+
+    res.status(200).json({
+      message: "If an account exists, an OTP has been sent.",
+      userId: user._id
+    });
+  } catch (err) {
+    console.error("Forgot Password OTP Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Reset Password with OTP
+const resetPasswordWithOTP = async (req, res) => {
+  try {
+    const { userId, otp, newPassword } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    if (!userId || !otp || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+    // Verify OTP
+    await require('../services/otpService').verifyOTP(user._id, "FORGOT_PASSWORD", otp, ipAddress, userAgent);
 
-    user.resetToken = resetToken;
-    user.resetTokenExpiry = resetTokenExpiry;
-    await user.save();
-
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "your_email@gmail.com", // replace with your email
-        pass: "your_app_password", // replace with your app password
-      },
-    });
-
-    const mailOptions = {
-      from: "your_email@gmail.com",
-      to: user.email,
-      subject: "Password Reset",
-      text: `Click the link to reset your password: http://localhost:3000/reset-password/${resetToken}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.status(200).json({ message: "Password reset email sent" });
-  } catch (err) {
-    console.error("Forgot Password Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
-
-// Reset Password
-const resetPassword = async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-
-    const user = await User.findOne({
-      resetToken: token,
-      resetTokenExpiry: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
+    // Update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
-    user.resetToken = undefined;
-    user.resetTokenExpiry = undefined;
+    user.lastPasswordChange = new Date();
+
+    // Reset failed login tracking
+    user.failedLoginAttempts = 0;
+    user.lastFailedLogin = null;
+
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful" });
+    res.status(200).json({ message: "Password updated successfully. You can now login." });
   } catch (err) {
-    console.error("Reset Password Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Reset Password OTP Error:", err);
+    if (err.message === "EXPIRED_OR_NOT_FOUND" || err.message === "INVALID_OTP" || err.message === "MAX_ATTEMPTS_REACHED") {
+      return res.status(400).json({ message: "Invalid or expired OTP", error: err.message });
+    }
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -430,8 +466,8 @@ const verifyPasswordChange = async (req, res) => {
 module.exports = {
   createUserByAdmin,
   login,
-  forgotPassword,
-  resetPassword,
+  requestForgotPasswordOTP,
+  resetPasswordWithOTP,
   getUsers,
   deleteUserByAdmin,
   adminChangeUserPassword,

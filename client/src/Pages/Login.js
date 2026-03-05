@@ -16,7 +16,10 @@ function Login() {
   const [userId, setUserId] = useState(null);
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [timeLeft, setTimeLeft] = useState(300);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600);
 
   const navigate = useNavigate();
 
@@ -42,18 +45,95 @@ function Login() {
     setError("");
     try {
       const res = await axios.post(apiUrl("/api/auth/login"), form);
-      const { token, user } = res.data;
+      const { token, user, passwordExpiryWarning } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
+      if (passwordExpiryWarning) {
+        localStorage.setItem("passwordExpiryWarning", "true");
+      } else {
+        localStorage.removeItem("passwordExpiryWarning");
+      }
       navigate("/welcome");
     } catch (err) {
       if (err.response?.status === 403 && err.response.data.action) {
         setSecurityAction(err.response.data.action);
         setUserId(err.response.data.userId);
-        setTimeLeft(300);
+        setTimeLeft(600);
+      } else if (err.response?.data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
+        setError(
+          <span>
+            {err.response.data.message}{" "}
+            <button
+              type="button"
+              className="inline-link-btn"
+              onClick={handleRequestForgotPassword}
+            >
+              Need to reset your password?
+            </button>
+          </span>
+        );
       } else {
         setError(err.response?.data?.message || "Login failed.");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestForgotPassword = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await axios.post(apiUrl("/api/auth/password/forgot-request"), { email: form.email });
+      setSecurityAction("FORGOT_PASSWORD");
+      setUserId(res.data.userId);
+      setTimeLeft(600);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to request password reset.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    if (securityAction === "FORCE_PASSWORD_CHANGE" || securityAction === "FORGOT_PASSWORD") {
+      if (newPassword !== confirmPassword) {
+        setError("Passwords do not match.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      let endpoint = "/api/auth/otp/verify-security";
+      const payload = { userId, otp };
+
+      if (securityAction === "FORCE_PASSWORD_CHANGE") {
+        endpoint = "/api/auth/otp/verify-password";
+        payload.newPassword = newPassword;
+      } else if (securityAction === "FORGOT_PASSWORD") {
+        endpoint = "/api/auth/password/forgot-reset";
+        payload.newPassword = newPassword;
+      }
+
+      const res = await axios.post(apiUrl(endpoint), payload);
+
+      if (securityAction === "FORGOT_PASSWORD") {
+        setSecurityAction(null);
+        setError("Password reset successful. Please login with your new password.");
+      } else {
+        const { token, user } = res.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("userRole", user.role);
+        setSecurityAction(null);
+        navigate("/welcome");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Verification failed.");
     } finally {
       setLoading(false);
     }
@@ -63,13 +143,13 @@ function Login() {
     <div className="login-page-container">
       {/* Cosmic Background Layer */}
       <div className="background-glow" />
-      
+
       {/* Right-side Dashboard Illustration */}
       <div className="illustration-container">
-        <img 
-          src="/heroimg2.png" 
-          alt="Dashboard Preview" 
-          className="hero-image" 
+        <img
+          src="/heroimg2.png"
+          alt="Dashboard Preview"
+          className="hero-image"
         />
       </div>
 
@@ -78,7 +158,7 @@ function Login() {
         <div className="header-section">
           <div className="logo-row">
             <img src="/sidebar-logo.jpeg" alt="Netcradus" className="logoimg" />
-            <img src="/netcradus.png" alt="Netcradus Text" className="logo-text" /> 
+            <img src="/netcradus.png" alt="Netcradus Text" className="logo-text" />
           </div>
           <h1 className="main-heading">
             Welcome to <br />
@@ -89,62 +169,153 @@ function Login() {
 
         {/* The "Glass" Login Card */}
         <div className="login-card">
-          <form onSubmit={handleLogin} className="login-form">
-            {error && <div className="error-message">{error}</div>}
+          {!securityAction ? (
+            <form onSubmit={handleLogin} className="login-form">
+              {error && <div className="error-message">{error}</div>}
 
-            <div className="input-group">
-              <label className="input-label">Email Address</label>
-              <div className="input-box">
-                <FaEnvelope className="field-icon" />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email Address"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  className="field-input"
-                />
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label">Password</label>
-              <div className="input-box">
-                <FaLock className="field-icon" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Password"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                  className="field-input"
-                />
-                <div 
-                  onClick={() => setShowPassword(!showPassword)} 
-                  className="eye-toggle"
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+              <div className="input-group">
+                <label className="input-label">Email Address</label>
+                <div className="input-box">
+                  <FaEnvelope className="field-icon" />
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Email Address"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    className="field-input"
+                  />
                 </div>
               </div>
-              <div 
-                className="forgot-link" 
-                onClick={() => navigate("/forgot-password")}
-              >
-                Forgot Password?
+
+              <div className="input-group">
+                <label className="input-label">Password</label>
+                <div className="input-box">
+                  <FaLock className="field-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Password"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    className="field-input"
+                  />
+                  <div
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="eye-toggle"
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </div>
+                </div>
+
               </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="submit-btn"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
+          ) : (
+            <div className="security-flow">
+              <h2 className="security-title">
+                {securityAction === "FORCE_PASSWORD_CHANGE" ? "Update Password" :
+                  securityAction === "FORGOT_PASSWORD" ? "Reset Password" : "Security Verification"}
+              </h2>
+              <p className="security-subtitle">
+                {securityAction === "FORCE_PASSWORD_CHANGE"
+                  ? "Your password has expired. Please verify the OTP sent to your IT admin and set a new password."
+                  : securityAction === "FORGOT_PASSWORD"
+                    ? "Enter the OTP sent to your email to reset your password."
+                    : "Weekly security check required. Please enter the OTP sent to your IT admin."}
+              </p>
+
+              <form onSubmit={handleVerifyOTP} className="login-form">
+                {error && <div className="error-message">{error}</div>}
+
+                <div className="input-group">
+                  <label className="input-label">OTP Code</label>
+                  <div className="input-box">
+                    <FaLock className="field-icon" />
+                    <input
+                      type="text"
+                      placeholder="Enter 6-digit OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required
+                      className="field-input"
+                      maxLength="6"
+                    />
+                  </div>
+                  <div className="timer-display">
+                    Expires in: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                  </div>
+                </div>
+
+                {(securityAction === "FORCE_PASSWORD_CHANGE" || securityAction === "FORGOT_PASSWORD") && (
+                  <>
+                    <div className="input-group">
+                      <label className="input-label">New Password</label>
+                      <div className="input-box">
+                        <FaLock className="field-icon" />
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="New Password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                          className="field-input"
+                        />
+                        <div
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="eye-toggle"
+                        >
+                          {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label className="input-label">Confirm New Password</label>
+                      <div className="input-box">
+                        <FaLock className="field-icon" />
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm Password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className="field-input"
+                        />
+                        <div
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="eye-toggle"
+                        >
+                          {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="submit-btn"
+                >
+                  {loading ? "Verifying..." : "Confirm & Continue"}
+                </button>
+
+                <div className="cancel-security" onClick={() => setSecurityAction(null)}>
+                  Back to Login
+                </div>
+              </form>
             </div>
-
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="submit-btn"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-
-          </form>
+          )}
         </div>
 
         <div className="copyright">

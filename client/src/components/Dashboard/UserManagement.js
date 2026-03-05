@@ -57,6 +57,11 @@ const UserManagement = () => {
   const onCreateUser = async (e) => {
     e.preventDefault();
 
+    if (form.role.toLowerCase() === "admin") {
+      setError("Creation of additional admin users is forbidden");
+      return;
+    }
+
     try {
       const res = await axios.post(
         apiUrl("/api/auth/users"),
@@ -133,6 +138,9 @@ const UserManagement = () => {
         {/* CREATE USER SECTION */}
         <section className="admin-card">
           <h3>Create New User</h3>
+          <p className="admin-warning-note">
+            <strong>Note:</strong> For security, only one primary Admin account is permitted.
+          </p>
 
           <form onSubmit={onCreateUser} className="admin-form">
             <input
@@ -159,7 +167,7 @@ const UserManagement = () => {
               onChange={onChange}
             >
               <option value="sales">Sales</option>
-              <option value="admin">Admin</option>
+              {/* Admin option removed for security - system only supports one admin */}
               <option value="support">Support</option>
               <option value="hr">HR</option>
               <option value="it">IT</option>
@@ -189,81 +197,81 @@ const UserManagement = () => {
                   </tr>
                 </thead>
 
-               <tbody>
-  {users.length > 0 ? (
-    users.map((user) => (
-      <tr key={user._id}>
-        <td data-label="User ID">{user.userId || "-"}</td>
+                <tbody>
+                  {users.length > 0 ? (
+                    users.map((user) => (
+                      <tr key={user._id}>
+                        <td data-label="User ID">{user.userId || "-"}</td>
 
-        <td data-label="Email">{user.email}</td>
+                        <td data-label="Email">{user.email}</td>
 
-        <td data-label="Role">
-          <span className={`role-badge role-${user.role}`}>
-            {user.role}
-          </span>
-        </td>
+                        <td data-label="Role">
+                          <span className={`role-badge role-${user.role}`}>
+                            {user.role}
+                          </span>
+                        </td>
 
-        <td data-label="Created">
-          {user.createdAt
-            ? new Date(user.createdAt).toLocaleDateString()
-            : "-"}
-        </td>
+                        <td data-label="Created">
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString()
+                            : "-"}
+                        </td>
 
-        <td data-label="Actions">
-          {user.role !== "admin" && (
-            <button
-              className="btn-delete"
-              onClick={() => onDeleteUser(user._id)}
-            >
-              Delete
-            </button>
-          )}
+                        <td data-label="Actions">
+                          {user.role !== "admin" && (
+                            <button
+                              className="btn-delete"
+                              onClick={() => onDeleteUser(user._id)}
+                            >
+                              Delete
+                            </button>
+                          )}
 
-          {pwdUserId === user._id ? (
-            <>
-              <input
-                type="password"
-                placeholder="New password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+                          {pwdUserId === user._id ? (
+                            <>
+                              <input
+                                type="password"
+                                placeholder="New password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                              />
 
-              <button
-                className="btn-save"
-                onClick={() => onChangePassword(user._id)}
-              >
-                Save
-              </button>
+                              <button
+                                className="btn-save"
+                                onClick={() => onChangePassword(user._id)}
+                              >
+                                Save
+                              </button>
 
-              <button
-                className="btn-cancel"
-                onClick={() => {
-                  setPwdUserId(null);
-                  setNewPassword("");
-                }}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              className="btn-edit"
-              onClick={() => setPwdUserId(user._id)}
-            >
-              Change Password
-            </button>
-          )}
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="5" className="admin-muted">
-        No users found.
-      </td>
-    </tr>
-  )}
-</tbody>
+                              <button
+                                className="btn-cancel"
+                                onClick={() => {
+                                  setPwdUserId(null);
+                                  setNewPassword("");
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="btn-edit"
+                              onClick={() => setPwdUserId(user._id)}
+                            >
+                              Change Password
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="admin-muted">
+                        No users found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
 
               </table>
             </div>
