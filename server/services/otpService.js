@@ -67,35 +67,51 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
     });
     await session.save();
 
-    // 5. Send via SMTP
-    // For regular checks, it goes to IT Admin. For Forgot Password, it goes to the user.
+    // 5. Send via SMTP or API
     const targetEmail = type === "FORGOT_PASSWORD" ? userEmail : (process.env.ADMIN_IT_EMAIL || userEmail);
+    const subject = getEmailSubject(type, userEmail);
+    const { text, html } = getEmailTemplate(type, userEmail, plainOtp, ipAddress);
 
     try {
-        const transporter = getTransporter();
-
-        let subject = "Security Verification Code";
-        let actionText = "A verification code was requested for this account.";
-
-        if (type === "PASSWORD_CHANGE") {
-            subject = `Mandatory Password Change Verification Code for ${userEmail}`;
-            actionText = `User <strong>${userEmail}</strong> is trying to change their password.`;
-        } else if (type === "SECURITY_CHECK") {
-            subject = `Weekly Security Verification Code for ${userEmail}`;
-            actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
-        } else if (type === "FORGOT_PASSWORD") {
-            subject = "Password Reset Verification Code";
-            actionText = `A password reset was requested for your account (<strong>${userEmail}</strong>).`;
+        // Preference: Use Brevo API if key is present (most reliable for Render)
+        if (process.env.BREVO_API_KEY) {
+            await sendViaBrevoAPI(targetEmail, subject, text, html);
+            return;
         }
 
-        const timestamp = new Date().toLocaleString();
-
+        // Fallback: SMTP (works on localhost)
+        const transporter = getTransporter();
         await transporter.sendMail({
             from: process.env.SMTP_MAIL,
             to: targetEmail,
             subject,
-            text: `${actionText.replace(/<\/?[^>]+(>|$)/g, "")}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nDO NOT share this code with anyone.`,
-            html: `
+            text,
+            html
+        });
+    } catch (error) {
+        console.error("CRITICAL EMAIL FAILURE:", error);
+        await session.deleteOne();
+        await logAuthEvent(userId, "EMAIL_FAILURE", ipAddress, userAgent, error.message);
+        throw new Error("EMAIL_SERVICE_FAILURE");
+    }
+};
+
+const getEmailSubject = (type, userEmail) => {
+    if (type === "PASSWORD_CHANGE") return `Mandatory Password Change Verification Code for ${userEmail}`;
+    if (type === "SECURITY_CHECK") return `Weekly Security Verification Code for ${userEmail}`;
+    if (type === "FORGOT_PASSWORD") return "Password Reset Verification Code";
+    return "Security Verification Code";
+};
+
+const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
+    let actionText = "A verification code was requested for this account.";
+    if (type === "PASSWORD_CHANGE") actionText = `User <strong>${userEmail}</strong> is trying to change their password.`;
+    else if (type === "SECURITY_CHECK") actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
+    else if (type === "FORGOT_PASSWORD") actionText = `A password reset was requested for your account (<strong>${userEmail}</strong>).`;
+
+    const timestamp = new Date().toLocaleString();
+    const text = `${actionText.replace(/<\/?[^>]+(>|$)/g, "")}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nDO NOT share this code with anyone.`;
+    const html = `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">
           <h2 style="color: #ff4b2b;">Netcradus CRM Security</h2>
           <p>${actionText}</p>
@@ -110,15 +126,27 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="color: #999; font-size: 12px;">This is an automated security notification. If you did not request this, please contact your IT administrator immediately.</p>
         </div>
-      `
-        });
-    } catch (error) {
-        // Log Failure but don't lock
-        console.error("CRITICAL SMTP ERROR:", error);
-        await session.deleteOne(); // remove the session since email failed
-        await logAuthEvent(userId, "SMTP_FAILURE", ipAddress, userAgent, error.message);
-        throw new Error("SMTP_FAILURE");
-    }
+      `;
+    return { text, html };
+};
+
+const sendViaBrevoAPI = async (to, subject, textContent, htmlContent) => {
+    const axios = require("axios");
+    const data = {
+        sender: { name: "Netcradus CRM", email: process.env.SMTP_MAIL },
+        to: [{ email: to }],
+        subject: subject,
+        textContent: textContent,
+        htmlContent: htmlContent
+    };
+
+    await axios.post("https://api.brevo.com/v3/smtp/email", data, {
+        headers: {
+            "api-key": process.env.BREVO_API_KEY,
+            "Content-Type": "application/json"
+        }
+    });
+    console.log(`[DEBUG] Email sent via Brevo API to ${to}`);
 };
 
 const verifyOTP = async (userId, type, plainOtp, ipAddress, userAgent) => {
