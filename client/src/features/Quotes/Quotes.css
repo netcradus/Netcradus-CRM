@@ -268,8 +268,8 @@
 @media (max-width: 768px) {
   .quotes-container {
   padding: 25px;
-  width: 90%;
-  margin-left: 40px;
+  width: 100%;
+  margin-left: 0;
 }
 
   .quotes-table table,

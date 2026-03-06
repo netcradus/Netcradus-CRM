@@ -206,8 +206,8 @@
  .calls-container {
     padding-left: 20px; /* remove sidebar offset on mobile */
     padding-right: 20px;
-      width: 95%;
-  margin-left: 40px;
+      width: 100%;
+  margin-left: 0;
   }
   .calls-table, .calls-table thead, .calls-table tbody, .calls-table th, .calls-table td, .calls-table tr {
     display: block;

@@ -139,8 +139,8 @@
 
   .invoices-container {
     padding: 20px;
-     margin-left: 40px; /* Adjust for mobile sidebar */
-    width: 90%;
+     margin-left: 0; /* Adjust for mobile sidebar */
+    width: 100%;
   }
 
   .invoice-table thead {
@@ -200,7 +200,7 @@
   /* Status badge improvement */
   .paid {
     background: linear-gradient(90deg, #00c853, #00e676);
-    padding: 6px 14px;
+    padding: 6px 14spx;
     border-radius: 20px;
     font-size: 12px;
   }

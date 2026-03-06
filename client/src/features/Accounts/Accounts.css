@@ -7,8 +7,7 @@
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
-  width: 90%;
-  margin-left: 40px;
+  
 }
 
 /* Heading */
@@ -256,6 +255,8 @@
   .accounts-container {
     padding-left: 25px;
     padding-right: 25px;
+    width: 100%;
+  margin-left:0;
   }
 
   .accounts-heading {

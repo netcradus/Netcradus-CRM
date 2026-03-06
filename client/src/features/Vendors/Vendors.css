@@ -1,11 +1,14 @@
 .vendors-container {
   padding: 25px;
-  padding-left: calc(max(25px, 220px + 25px));
-    color: #e0e0e0;
+  padding-left: calc(max(25px, 260px + 25px));
+  color: #e0e0e0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
   min-height: 100vh;
   transition: padding-left 0.3s ease;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .vendors-heading {
@@ -29,16 +32,17 @@
   margin-bottom: 20px;
   gap: 15px;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .vendors-table {
   width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 0 10px #000b;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
   background-color: #1f1f2f;
-  margin: 0 auto;
 }
 
 /* Table Headings */
@@ -49,9 +53,9 @@
 .vendors-table thead th {
   padding: 14px 18px;
   color: #a6d785;
-  font-weight: 700;          /* bold */
-  font-size: 15px;           /* bigger */
-  text-transform: uppercase; /* CAPS */
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid #2f3f2d;
   text-align: left;
@@ -64,7 +68,7 @@
 }
 
 .vendors-table tbody tr:nth-child(even) {
-  background-color: #26263a; /* striped rows */
+  background-color: #26263a;
 }
 
 .vendors-table tbody tr:hover {
@@ -90,17 +94,17 @@
   text-align: center;
   user-select: none;
   text-transform: uppercase;
-  box-shadow: 0 0 6px #0007;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
 }
 
 .badge.active {
   background-color: #4caf50;
-  box-shadow: 0 0 8px #4caf50aa;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
 }
 
 .badge.inactive {
   background-color: #f44336;
-  box-shadow: 0 0 8px #f44336aa;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
 }
 
 /* Buttons */
@@ -112,8 +116,8 @@
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  box-shadow: 0 2px 5px #0008;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
   user-select: none;
 }
 
@@ -124,6 +128,7 @@
 
 .btn-primary:hover {
   background-color: #388e3c;
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
@@ -133,6 +138,7 @@
 
 .btn-secondary:hover {
   background-color: #155a9a;
+  transform: translateY(-2px);
 }
 
 /* Vendor types */
@@ -142,6 +148,7 @@
   gap: 15px;
   margin-bottom: 20px;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .vendor-types .type {
@@ -172,15 +179,26 @@
   display: flex;
   justify-content: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Search bar styling */
 .search-bar {
-  padding: 7px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid #333;
   background: #2a2a2a;
   color: #f1f1f1;
+  font-size: 14px;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+
+.search-bar:focus {
+  outline: none;
+  border-color: #4caf50;
+  background: #333;
 }
 
 /* =========================
@@ -190,7 +208,7 @@
 /* Tablet */
 @media (max-width: 1024px) {
   .vendors-container {
-    padding-left: 25px;
+    padding-left: calc(max(20px, 80px + 20px));
   }
 
   .vendors-actions {
@@ -200,7 +218,7 @@
   }
 
   .search-bar {
-    width: 100%;
+    max-width: 100%;
   }
 
   .vendor-types {
@@ -211,11 +229,35 @@
 /* Mobile Card Layout */
 @media (max-width: 768px) {
   .vendors-container {
-  padding: 250x;
-  width: 90%;
-  margin-left: 40px;
+    padding: 20px;
+    padding-left: 20px;
+    padding-top: 80px; /* Space for hamburger button */
+    width: 100%;
+    margin-left: 0;
   }
-  .vendors-table table,
+
+  .vendors-heading {
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .vendors-actions {
+    margin-bottom: 16px;
+  }
+
+  .vendor-types {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .vendor-types .type {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+
+  /* Convert table to cards on mobile */
+  .vendors-table,
   .vendors-table thead,
   .vendors-table tbody,
   .vendors-table th,
@@ -223,52 +265,127 @@
   .vendors-table tr {
     display: block;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .vendors-table thead {
     display: none;
   }
 
+  .vendors-table tbody {
+    width: 100%;
+  }
+
   .vendors-table tr {
     background: #1f1f2f;
-    margin-bottom: 18px;
-    padding: 15px;
+    margin-bottom: 16px;
+    padding: 16px;
     border-radius: 12px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border: 1px solid #3a4a3c;
+    width: 100%;
+  }
+
+  .vendors-table tr:hover {
+    background: #26263a;
   }
 
   .vendors-table td {
     border: none;
-    padding: 8px 0;
+    padding: 10px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 14px;
+    text-align: left;
+    width: 100%;
+    word-wrap: break-word;
   }
 
   .vendors-table td::before {
     content: attr(data-label);
-    font-weight: bold;
+    font-weight: 700;
     color: #a6d785;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    min-width: 100px;
+  }
+
+  /* Fix for actions cell */
+  .vendors-table td:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .vendors-table td:last-child::before {
+    margin-bottom: 8px;
+  }
+
+  .vendors-table td:last-child .btn-primary,
+  .vendors-table td:last-child .btn-secondary {
+    width: 100%;
+    text-align: center;
   }
 
   .badge {
     min-width: auto;
-    font-size: 12px;
-    padding: 4px 10px;
-  }
-
-  .vendors-heading {
-    font-size: 22px;
-    text-align: center;
+    font-size: 11px;
+    padding: 5px 10px;
+    white-space: nowrap;
   }
 }
 
 /* Small Mobile */
 @media (max-width: 480px) {
-
   .vendors-container {
-    padding: 15px;
+    padding: 16px;
+    padding-top: 75px;
+  }
+
+  .vendors-heading {
+    font-size: 20px;
+  }
+
+  .vendors-table tr {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .vendors-table td {
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  .vendors-table td::before {
+    font-size: 11px;
+    min-width: 90px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .search-bar {
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .vendors-container {
+    padding: 12px;
+    padding-top: 70px;
+  }
+
+  .vendors-heading {
+    font-size: 18px;
+    gap: 8px;
   }
 
   .vendors-table tr {
@@ -276,15 +393,19 @@
   }
 
   .vendors-table td {
-    font-size: 13px;
-  }
-
-  .vendor-types {
-    gap: 10px;
-  }
-
-  .vendor-types .type {
     font-size: 12px;
-    padding: 5px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .vendors-table td::before {
+    font-size: 10px;
+    min-width: auto;
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 4px 8px;
   }
 }

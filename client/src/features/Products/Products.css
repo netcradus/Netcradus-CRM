@@ -258,8 +258,8 @@
   .products-container {
     padding-left: 15px;
     padding-right: 15px;
-     margin-left: 40px; /* Adjust for mobile sidebar */
-    width: 90%;
+     margin-left: 0; /* Adjust for mobile sidebar */
+    width: 100%;
   }
 
   .products-table thead {

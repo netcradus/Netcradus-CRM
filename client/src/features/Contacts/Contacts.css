@@ -287,14 +287,13 @@
 
 @media (max-width: 768px) {
   .contacts-container {
-    padding-left: 25px;
-    padding-right: 25px;
-     margin-left: 40px; /* Adjust for mobile sidebar */
+    padding: 25px;
+     margin-left: 0; /* Adjust for mobile sidebar */
     width: 100%;
   }
 
   .contacts-heading {
-    font-size: 22px;
+    font-size: 25px;
     margin-bottom: 20px;
   }
 

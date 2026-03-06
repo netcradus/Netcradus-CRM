@@ -33,7 +33,9 @@
 }
 
 .ct-table {
-  width: 100%;
+   width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;
   border-collapse: separate;
   border-spacing: 0 10px;
   font-size: 16px;
@@ -163,8 +165,9 @@
 
   .ct-container {
     padding: 20px;
-   width: 90%;
-   margin-left: 40px;
+   width: 100%;
+   margin-left: 0;
+   margin-top: 40px;
   }
 
   .ct-table-wrapper {

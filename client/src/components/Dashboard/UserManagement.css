@@ -465,8 +465,8 @@ button {
 /* Mobile Landscape */
 @media (max-width: 768px) {
   .admin-panel {
-     margin-left: 40px;
-    width: 95%;
+     margin-left: 0;
+    width: 100%;
     padding: 20px;
   }
 

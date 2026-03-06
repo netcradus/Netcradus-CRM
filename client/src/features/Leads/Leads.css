@@ -621,7 +621,7 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
 @media (max-width: 768px) {
   .leads-container {
     padding: 20px;
-    margin-left: 40px; /* Adjust for mobile sidebar */
+    margin-left: 0; /* Adjust for mobile sidebar */
     width: 100%;
   }
 
