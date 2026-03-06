@@ -9,11 +9,22 @@ const MAX_OTP_REQUESTS_PER_HOUR = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const getTransporter = () => {
-    // For Gmail, sometimes using service: 'gmail' is less reliable than explicit settings
+    // Determine configuration based on environment or service
+    if (process.env.SMTP_SERVICE === 'gmail' || !process.env.SMTP_SERVICE) {
+        return nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.SMTP_MAIL,
+                pass: process.env.SMTP_PASSWORD,
+            },
+        });
+    }
+
+    // Default to explicit STARTTLS on port 587 which is more reliable than 465 on cloud providers
     return nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true, // use SSL
+        host: process.env.SMTP_SERVICE === 'brevo' ? 'smtp-relay.brevo.com' : 'smtp.gmail.com',
+        port: 587,
+        secure: false, // STARTTLS
         auth: {
             user: process.env.SMTP_MAIL,
             pass: process.env.SMTP_PASSWORD,
