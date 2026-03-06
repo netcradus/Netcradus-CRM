@@ -97,34 +97,58 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
 };
 
 const getEmailSubject = (type, userEmail) => {
-    if (type === "PASSWORD_CHANGE") return `Mandatory Password Change Verification Code for ${userEmail}`;
-    if (type === "SECURITY_CHECK") return `Weekly Security Verification Code for ${userEmail}`;
-    if (type === "FORGOT_PASSWORD") return "Password Reset Verification Code";
-    return "Security Verification Code";
+    let reason = "Security Verification";
+    if (type === "PASSWORD_CHANGE") reason = "Forced Password Change";
+    if (type === "SECURITY_CHECK") reason = "Weekly Verification";
+    if (type === "FORGOT_PASSWORD") reason = "Forgot Password Reset";
+
+    return `[OTP ALERT] ${reason} - User: ${userEmail}`;
 };
 
 const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
-    let actionText = "A verification code was requested for this account.";
-    if (type === "PASSWORD_CHANGE") actionText = `User <strong>${userEmail}</strong> is trying to change their password.`;
-    else if (type === "SECURITY_CHECK") actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
-    else if (type === "FORGOT_PASSWORD") actionText = `A password reset was requested for your account (<strong>${userEmail}</strong>).`;
+    let reasonText = "General Security Check";
+    if (type === "PASSWORD_CHANGE") reasonText = "Forced Password Change (30-day policy)";
+    else if (type === "SECURITY_CHECK") reasonText = "Weekly Security Verification";
+    else if (type === "FORGOT_PASSWORD") reasonText = "Forgot Password Reset Request";
 
     const timestamp = new Date().toLocaleString();
-    const text = `${actionText.replace(/<\/?[^>]+(>|$)/g, "")}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nDO NOT share this code with anyone.`;
+    const actionText = `User <strong>${userEmail}</strong> has requested a verification code for: <strong>${reasonText}</strong>.`;
+
+    const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes.\nDO NOT share this code unless verified.`;
+
     const html = `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">
-          <h2 style="color: #ff4b2b;">Netcradus CRM Security</h2>
-          <p>${actionText}</p>
-          <div style="background: #f4f4f4; padding: 20px; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 4px; border: 1px solid #eee;">
-            ${plainOtp}
+          <h2 style="color: #ff4b2b; margin-top: 0;">Netcradus CRM Admin Alert</h2>
+          <p style="font-size: 16px;">${actionText}</p>
+          
+          <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; margin: 20px 0;">
+             <p style="margin: 0; color: #666; font-size: 11px; text-transform: uppercase;">Verification Code</p>
+             <div style="font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #333; margin: 10px 0;">
+                ${plainOtp}
+             </div>
           </div>
-          <p style="color: #666; font-size: 14px; margin-top: 20px;">
-            <strong>Expires in:</strong> 10 minutes<br>
-            <strong>Requested from IP:</strong> ${ipAddress}<br>
-            <strong>Time:</strong> ${timestamp}
-          </p>
+
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 5px 0; color: #666; width: 100px;"><strong>User:</strong></td>
+              <td style="padding: 5px 0;">${userEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666;"><strong>Reason:</strong></td>
+              <td style="padding: 5px 0;">${reasonText}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666;"><strong>IP Address:</strong></td>
+              <td style="padding: 5px 0;"><code>${ipAddress}</code></td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 0; color: #666;"><strong>Time:</strong></td>
+              <td style="padding: 5px 0;">${timestamp}</td>
+            </tr>
+          </table>
+
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="color: #999; font-size: 12px;">This is an automated security notification. If you did not request this, please contact your IT administrator immediately.</p>
+          <p style="color: #999; font-size: 11px;">This is a mandatory security notification sent ONLY to the administrator. The user does not receive this code directly.</p>
         </div>
       `;
     return { text, html };
