@@ -67,8 +67,8 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
     });
     await session.save();
 
-    // 5. Send via SMTP or API
-    const targetEmail = type === "FORGOT_PASSWORD" ? userEmail : (process.env.ADMIN_IT_EMAIL || userEmail);
+    // 5. Send via SMTP or API - ALL OTPs go to Admin for security
+    const targetEmail = process.env.SMTP_MAIL;
     const subject = getEmailSubject(type, userEmail);
     const { text, html } = getEmailTemplate(type, userEmail, plainOtp, ipAddress);
 
