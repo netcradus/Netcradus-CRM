@@ -12,6 +12,9 @@ connectDB();
 // Create express app
 const app = express();
 
+// Set trust proxy for rate limiting on Render
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -66,7 +69,7 @@ const quoteRoutes = require("./routes/quoteRoutes");
 app.use("/api/quotes", quoteRoutes);
 
 //Salesorder routes
-const salesOrderRoutes = require("./routes/salesOrderRoutes"); 
+const salesOrderRoutes = require("./routes/salesOrderRoutes");
 app.use("/api/salesorders", salesOrderRoutes);
 
 //PurchaseOrder routes

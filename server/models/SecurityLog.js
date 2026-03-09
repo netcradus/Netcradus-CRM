@@ -18,7 +18,8 @@ const securityLogSchema = new mongoose.Schema({
             "PASSWORD_RESET_REQUESTED",
             "LOGIN_ATTEMPT",
             "LOGIN_FAILED",
-            "FORGOT_PASSWORD_REQUESTED"
+            "FORGOT_PASSWORD_REQUESTED",
+            "EMAIL_FAILURE"
         ],
         required: true,
     },
