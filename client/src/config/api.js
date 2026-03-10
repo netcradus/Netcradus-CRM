@@ -6,3 +6,4 @@ const apiUrl = (path = "") => {
 };
 
 export { API_BASE_URL, apiUrl };
+

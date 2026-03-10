@@ -229,7 +229,9 @@ function Login() {
                 </div>
 
               </div>
-
+ <div className="forgot-link" onClick={handleRequestForgotPassword}>
+                  Forgot Password?
+                </div>
               <button
                 type="submit"
                 disabled={loading}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaSearch, FaChevronDown } from "react-icons/fa";
+import { FaSearch, FaChevronDown, FaBars, FaTimes } from "react-icons/fa";
 import { Link, useLocation } from "react-router-dom";
 import {
   FaHome, FaUser, FaPhone, FaFileAlt, FaBuilding,
@@ -140,7 +140,7 @@ const roleMenus = {
 };
 
 // ─── NavGroup — dropdown opens BELOW the button ───────────────────────────────
-function NavGroup({ item, isHovered, location }) {
+function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const isChildActive = item.children?.some(c => location.pathname === c.path);
@@ -158,8 +158,8 @@ function NavGroup({ item, isHovered, location }) {
 
   // Close when sidebar collapses
   useEffect(() => {
-    if (!isHovered) setOpen(false);
-  }, [isHovered]);
+    if (!isHovered && !isMobileOpen) setOpen(false);
+  }, [isHovered, isMobileOpen]);
 
   return (
     <li className="nav-group" ref={ref}>
@@ -167,10 +167,10 @@ function NavGroup({ item, isHovered, location }) {
       <button
         className={`nav-group-btn ${isChildActive ? "group-active" : ""} ${open ? "group-open" : ""}`}
         onClick={() => setOpen(o => !o)}
-        title={!isHovered ? item.label : undefined}
+        title={!isHovered && !isMobileOpen ? item.label : undefined}
       >
         <span className="nav-icon">{item.icon}</span>
-        {isHovered && (
+        {(isHovered || isMobileOpen) && (
           <>
             <span className="nav-label">{item.label}</span>
             <span className={`nav-chevron ${open ? "rotated" : ""}`}>
@@ -192,7 +192,10 @@ function NavGroup({ item, isHovered, location }) {
                   <Link
                     to={child.path}
                     className={`dropdown-link ${isActive ? "active" : ""}`}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      onLinkClick();
+                    }}
                   >
                     <span className="nav-icon">{child.icon}</span>
                     <span>{child.label}</span>
@@ -211,6 +214,7 @@ function NavGroup({ item, isHovered, location }) {
 function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isHovered, setIsHovered] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -233,81 +237,129 @@ function Sidebar() {
     navigate("/login");
   };
 
-  return (
-    <div
-      className={`sidebar ${isHovered ? "expanded" : "collapsed"}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* LOGO */}
-      <div className="sidebar-logo">
-        <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
-        {isHovered && <span className="company-name">
-          <img src="/netcradus.png" alt="Company Logo" /></span>}
-      </div>
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
 
-      {/* SEARCH */}
-      {isHovered && (
-        <div className="sidebar-search">
-          <div className="search-input-wrapper">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isMobileOpen]);
+
+  const handleLinkClick = () => {
+    setIsMobileOpen(false);
+  };
+
+  return (
+    <>
+      {/* Mobile Hamburger Toggle Button */}
+      <button 
+        className={`mobile-hamburger ${isMobileOpen ? 'active' : ''}`}
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        aria-label="Toggle menu"
+      >
+        {isMobileOpen ? <FaTimes /> : <FaBars />}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="mobile-overlay" 
+          onClick={() => setIsMobileOpen(false)} 
+        />
       )}
 
-      {/* NAV */}
-      <nav className="sidebar-nav">
-        <ul>
-          {filteredMenu
-            ? filteredMenu.map((item, i) => (
-              <li key={i}>
-                <Link
-                  to={item.path}
-                  className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  {isHovered && <span>{item.label}</span>}
-                </Link>
-              </li>
-            ))
-            : menuItems.map((item, i) =>
-              item.children ? (
-                <NavGroup
-                  key={i}
-                  item={item}
-                  isHovered={isHovered}
-                  location={location}
-                />
-              ) : (
+      {/* Sidebar */}
+      <div
+        className={`sidebar ${isHovered ? "expanded" : "collapsed"} ${isMobileOpen ? "mobile-open" : ""}`}
+        onMouseEnter={() => window.innerWidth > 768 && setIsHovered(true)}
+        onMouseLeave={() => window.innerWidth > 768 && setIsHovered(false)}
+      >
+        {/* LOGO */}
+        <div className="sidebar-logo">
+          <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
+          {(isHovered || isMobileOpen) && (
+            <span className="company-name">
+              <img src="/netcradus.png" alt="Company Logo" />
+            </span>
+          )}
+        </div>
+
+        {/* SEARCH */}
+        {(isHovered || isMobileOpen) && (
+          <div className="sidebar-search">
+            <div className="search-input-wrapper">
+              <FaSearch />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* NAV */}
+        <nav className="sidebar-nav">
+          <ul>
+            {filteredMenu
+              ? filteredMenu.map((item, i) => (
                 <li key={i}>
                   <Link
                     to={item.path}
                     className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                    title={!isHovered ? item.label : undefined}
+                    onClick={handleLinkClick}
                   >
                     <span className="nav-icon">{item.icon}</span>
-                    {isHovered && <span>{item.label}</span>}
+                    {(isHovered || isMobileOpen) && <span>{item.label}</span>}
                   </Link>
                 </li>
-              )
-            )}
-        </ul>
-      </nav>
+              ))
+              : menuItems.map((item, i) =>
+                item.children ? (
+                  <NavGroup
+                    key={i}
+                    item={item}
+                    isHovered={isHovered}
+                    isMobileOpen={isMobileOpen}
+                    location={location}
+                    onLinkClick={handleLinkClick}
+                  />
+                ) : (
+                  <li key={i}>
+                    <Link
+                      to={item.path}
+                      className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
+                      title={!isHovered && !isMobileOpen ? item.label : undefined}
+                      onClick={handleLinkClick}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      {(isHovered || isMobileOpen) && <span>{item.label}</span>}
+                    </Link>
+                  </li>
+                )
+              )}
+          </ul>
+        </nav>
 
-      {/* LOGOUT */}
-      <div className="sidebar-footer">
-        <button className="logout-btn" onClick={handleLogout}>
-          <FaSignOutAlt className="logout-icon" />
-          {isHovered && <span>Logout</span>}
-        </button>
+        {/* LOGOUT */}
+        <div className="sidebar-footer">
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt className="logout-icon" />
+            {(isHovered || isMobileOpen) && <span>Logout</span>}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

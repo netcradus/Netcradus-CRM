@@ -8,10 +8,9 @@ import {
   PointElement,
   Tooltip,
   Legend,
-  Filler // ✅ Import Filler plugin
+  Filler
 } from "chart.js";
 
-// ✅ Register required components including Filler
 ChartJS.register(
   LineElement,
   CategoryScale,
@@ -29,11 +28,11 @@ function Chart() {
       {
         label: "Sales",
         data: [1200, 1900, 3000, 2500],
-        backgroundColor: "rgba(255, 99, 132, 0.2)",
-        borderColor: "#ff5e57",
-        pointBackgroundColor: "#ff5e57",
+        backgroundColor: "rgba(54, 162, 235, 0.2)", // subtle blue fill
+        borderColor: "rgba(54, 162, 235, 1)", // solid blue line
+        pointBackgroundColor: "rgba(54, 162, 235, 1)",
         borderWidth: 2,
-        fill: true, // ✅ Now this works without warning
+        fill: true,
         tension: 0.4,
       },
     ],
@@ -46,7 +45,7 @@ function Chart() {
         display: true,
         position: "top",
         labels: {
-          color: "#ffffff",
+          color: "#ffffff", // white text for professional dark theme
         },
       },
       tooltip: {
@@ -57,11 +56,11 @@ function Chart() {
     scales: {
       x: {
         ticks: { color: "#ccc" },
-        grid: { color: "#333" },
+        grid: { color: "#444" }, // slightly darker grid
       },
       y: {
         ticks: { color: "#ccc" },
-        grid: { color: "#333" },
+        grid: { color: "#444" },
       },
     },
   };

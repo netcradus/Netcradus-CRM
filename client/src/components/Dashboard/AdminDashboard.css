@@ -2,10 +2,24 @@
   padding: 30px;
   min-height: 100vh;
   color: #f0f0f0;
-  margin-left: 250px; /* same as sidebar width */
-  width: calc(100% - 250px);
+  margin-left: 260px; /* default expanded sidebar width */
+  width: calc(100% - 260px);
   box-sizing: border-box;
-  transition: all 0.3s ease;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+}
+
+/* Desktop: Collapsed sidebar */
+.sidebar.collapsed ~ .admin-dashboard {
+  margin-left: 75px;
+  width: calc(100% - 75px);
+}
+
+/* Desktop: Expanded sidebar */
+.sidebar.expanded ~ .admin-dashboard {
+  margin-left: 260px;
+  width: calc(100% - 260px);
 }
 
 /* Header */
@@ -26,6 +40,7 @@
 .admin-subtitle {
   color: #aaa;
   margin-top: 8px;
+  font-size: 14px;
 }
 
 /* Controls */
@@ -33,6 +48,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
+  margin-bottom: 20px;
 }
 
 .admin-search,
@@ -43,6 +59,14 @@
   color: #fff;
   border-radius: 8px;
   min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.admin-search:focus,
+.admin-select:focus {
+  outline: none;
+  border-color: #ff6a3d;
+  background: #222;
 }
 
 /* Metrics */
@@ -60,16 +84,24 @@
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 0 12px rgba(255, 128, 171, 0.2);
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 128, 171, 0.3);
 }
 
 .metric-label {
   color: #aaa;
   font-size: 14px;
+  margin-bottom: 8px;
 }
 
 .metric-value {
   font-size: 22px;
   font-weight: bold;
+  color: #fff;
 }
 
 /* Chart */
@@ -78,6 +110,7 @@
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 30px;
+  box-shadow: 0 0 12px rgba(255, 128, 171, 0.1);
 }
 
 /* User List */
@@ -85,13 +118,21 @@
   background: #131313;
   padding: 20px;
   border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 128, 171, 0.1);
 }
 
 .user-item {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid #222;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.user-item:last-child {
+  border-bottom: none;
 }
 
 .role-tag {
@@ -100,35 +141,196 @@
   background: rgba(179, 136, 255, 0.2);
   color: #b388ff;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .status.active {
   color: #4caf50;
+  font-weight: 600;
 }
 
 .status.inactive {
   color: #f44336;
+  font-weight: 600;
 }
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
+
+/* Large Tablets */
 @media (max-width: 1024px) {
   .admin-dashboard {
-    margin-left: 300px;
-    width: calc(100% - 200px);
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  .sidebar.collapsed ~ .admin-dashboard {
+    margin-left: 75px;
+    width: calc(100% - 75px);
+  }
+
+  .admin-metrics {
+    gap: 15px;
+  }
+
+  .metric-card {
+    flex: 1 1 180px;
   }
 }
 
+/* Tablets and Mobile */
 @media (max-width: 768px) {
+  /* Mobile: Full width when sidebar is closed */
   .admin-dashboard {
-    margin-left: 40px;
-    width: 90%;
+    margin-left: 0;
+    width: 100%;
     padding: 20px;
+    padding-top: 80px; /* Space for hamburger button */
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-.admin-title {
-  font-size: 20px;
+
+  /* Mobile: Sidebar does NOT push content (overlay mode) */
+  .sidebar.mobile-open ~ .admin-dashboard {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-title {
+    font-size: 24px;
+  }
+
+  .admin-subtitle {
+    font-size: 13px;
+  }
+
+  .admin-controls {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .admin-search,
+  .admin-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .admin-metrics {
+    gap: 12px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    flex: 1 1 100%;
+    padding: 16px;
+  }
+
+  .metric-label {
+    font-size: 13px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+
+  .admin-charts,
+  .admin-list {
+    padding: 16px;
+  }
+
+  .user-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 0;
+    gap: 8px;
+  }
 }
 
-.admin-subtitle {
-  font-size: 12px;
+/* Small Mobile */
+@media (max-width: 480px) {
+  .admin-dashboard {
+    padding: 16px;
+    padding-top: 75px;
+  }
+
+  .admin-title {
+    font-size: 20px;
+  }
+
+  .admin-subtitle {
+    font-size: 12px;
+  }
+
+  .admin-controls {
+    gap: 10px;
+  }
+
+  .admin-search,
+  .admin-select {
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+
+  .admin-metrics {
+    gap: 10px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .admin-charts,
+  .admin-list {
+    padding: 14px;
+    border-radius: 10px;
+  }
 }
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .admin-dashboard {
+    padding: 12px;
+    padding-top: 70px;
+  }
+
+  .admin-title {
+    font-size: 18px;
+  }
+
+  .metric-card {
+    padding: 12px;
+  }
+
+  .metric-value {
+    font-size: 16px;
+  }
+}
+
+/* Prevent content shift when mobile menu is open */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .admin-dashboard {
+    position: relative;
+  }
+
+  /* Optional: Add slight blur when mobile menu is open */
+  .sidebar.mobile-open ~ .admin-dashboard {
+    filter: brightness(0.7);
+    pointer-events: none;
+  }
+
+  .sidebar:not(.mobile-open) ~ .admin-dashboard {
+    filter: brightness(1);
+    pointer-events: auto;
+  }
 }

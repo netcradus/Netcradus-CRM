@@ -81,17 +81,20 @@
 
 /* Table Wrapper */
 .visits-table {
+ width: 100%;
   overflow-x: auto;
-  background-color: #1a1a1a;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Table Styling */
 .visits-table table {
-  width: 100%;
+  width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: #1a1a1a;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
+  border-radius: 8px;
+  
 }
 
 .visits-table thead th {
@@ -168,28 +171,26 @@
 
 @media (max-width: 768px) {
 
-  /* Remove sidebar spacing */
+  /* Remove sidebar spacing properly */
   .visits-container {
     padding: 20px;
-    width: 90%;
-    margin-left: 40px;
+    margin-left: 0;
+    width: 100%;
   }
 
-  /* Hide table header */
+  /* Hide header */
   .visits-table thead {
     display: none;
   }
 
-  /* Make table, tbody, tr behave like block */
+  /* Table into cards */
   .visits-table,
   .visits-table tbody,
-  .visits-table tr,
-  .visits-table td {
+  .visits-table tr {
     display: block;
     width: 100%;
   }
 
-  /* Each row becomes card */
   .visits-table tr {
     background: #1c1c1c;
     margin-bottom: 16px;
@@ -198,17 +199,14 @@
     box-shadow: 0 2px 10px rgba(255, 75, 43, 0.1);
   }
 
-  /* Each cell becomes row inside card */
   .visits-table td {
-    padding: 8px 0;
-    font-size: 14px;
-    border: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 8px 0;
+    border: none;
   }
 
-  /* Add labels before data */
   .visits-table td::before {
     content: attr(data-label);
     font-weight: 600;
@@ -216,16 +214,19 @@
     font-size: 13px;
   }
 
-  /* Fix action buttons layout */
+  /* ✅ FIX BUTTON STRETCHING */
   .visits-table td:last-child {
-    flex-direction: column;
-    gap: 8px;
+    display: flex;
+    justify-content: flex-start; /* keep left */
+    gap: 10px;
     margin-top: 10px;
   }
 
   .btn-primary,
   .btn-secondary {
-    width: 100%;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap;
   }
 
   /* Summary cards stack */

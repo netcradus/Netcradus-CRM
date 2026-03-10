@@ -6,8 +6,7 @@
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: padding-left 0.3s ease;
-  width: 90%;
-  margin-left: 40px;
+
 }
 
 .calls-header {
@@ -111,7 +110,9 @@
 
 /* Table styles */
 .calls-table {
-  width: 100%;
+  width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto; 
   border-collapse: collapse;
   background-color: #1a1a1a;
   border-radius: 8px;
@@ -205,6 +206,8 @@
  .calls-container {
     padding-left: 20px; /* remove sidebar offset on mobile */
     padding-right: 20px;
+      width: 100%;
+  margin-left: 0;
   }
   .calls-table, .calls-table thead, .calls-table tbody, .calls-table th, .calls-table td, .calls-table tr {
     display: block;
@@ -233,5 +236,12 @@
     text-align: left;
   }
   
-  .calls-actions { flex-direction: column; }
+  .calls-actions { 
+    flex-direction: column;
+   }
+
+   .btn-small{
+    font-size: 10px;
+    margin: 2px;
+   }
 }

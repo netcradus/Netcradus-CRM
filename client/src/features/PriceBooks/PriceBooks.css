@@ -46,7 +46,9 @@
 }
 
 .pricebooks-table {
-  width: 100%;
+ width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: #1a1a1a;
   border-radius: 10px;
@@ -94,21 +96,28 @@
 }
 
 .actions button {
-  background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: #ff4b2b;
   transition: transform 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 6px 10px;
 }
 
 .actions button:hover {
   transform: scale(1.2);
 }
 
+.actions .edit-btn {
+ background-color: blue;
+ font-size: 10px;
+ margin-top: 5px;
+}
+.actions .delete-btn {
+ background-color: red;
+ font-size: 10px;
+}
 /* ===========================
    RESPONSIVE DESIGN
 =========================== */
@@ -133,8 +142,8 @@
 @media (max-width: 768px) {
   .pricebooks-container {
   padding: 20px;
-  width: 90%;
-  margin-left: 40px;
+  width: 100%;
+  margin-left:0;
   }
 
   .pricebooks-table,

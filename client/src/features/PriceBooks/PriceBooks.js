@@ -372,14 +372,14 @@ const PriceBooks = () => {
       onClick={() => handleEdit(book.id)}
       title="Edit"
     >
-      ✏️
+      Edit
     </button>
     <button
       className="delete-btn"
       onClick={() => handleDelete(book.id)}
       title="Delete"
     >
-      🗑️
+     Delete
     </button>
   </td>
 </tr>

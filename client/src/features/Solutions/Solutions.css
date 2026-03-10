@@ -82,7 +82,9 @@
 }
 
 .solutions-table {
-  width: 100%;
+   width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: #1a1a1a;
   border-radius: 10px;
@@ -256,8 +258,8 @@
 
   .solutions-container {
     padding: 20px;
-    width: 90%;
-    margin-left: 40px;
+    width: 100%;
+    margin-left: 0;
   }
 
   /* Stack summary cards */

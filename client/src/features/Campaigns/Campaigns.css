@@ -77,7 +77,9 @@
 
 /* Table */
 .campaigns-table table {
-  width: 100%;
+    width: auto;            /* let table size to content */
+  min-width: 100%;        /* keeps it responsive if content is wider than container */
+  table-layout: auto;
   border-collapse: collapse;
   background-color: #1a1a1a;
   box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
@@ -210,17 +212,21 @@
 /* =========================
    MOBILE CARD LAYOUT FIX
 ========================= */
-
 @media (max-width: 768px) {
 
   .campaigns-container {
-  padding: 20px;
-  width: 90%;
-  margin-left: 40px;
+    padding: 20px;
+    margin-left: 0;
+    width: 100%;
   }
+
+  .campaigns-table {
+    width: 90%;
+  }
+
   .campaigns-table table {
+    width: 100%;
     border: 0;
-    width: 40%;
   }
 
   .campaigns-table thead {
@@ -243,29 +249,28 @@
     padding: 8px 0;
     border: none;
     font-size: 14px;
-    gap: 10px;
-    flex-wrap: wrap;
   }
 
   .campaigns-table td::before {
     content: attr(data-label);
     font-weight: 600;
     color: #ff4b2b;
-    flex: 1;
-    min-width: 120px;
   }
 
+  /* ❌ REMOVE flex:1 stretching */
   .campaigns-table td > * {
-    flex: 1;
-    text-align: right;
+    flex: unset;
   }
 
-  .campaigns-table td:last-child {
-    justify-content: flex-end;
-    margin-top: 10px;
+  /* Badge fix */
+  .badge {
+    display: inline-block;
+    width: auto;
   }
 
+  /* Delete button fix */
   .delete-btn {
+    width: auto;
     margin-top: 8px;
   }
 }
