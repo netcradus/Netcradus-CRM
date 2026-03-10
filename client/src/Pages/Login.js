@@ -20,6 +20,7 @@ function Login() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
+  const [deviceId, setDeviceId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -44,7 +45,15 @@ function Login() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post(apiUrl("/api/auth/login"), form);
+      // Collect fingerprint data
+      const fingerprintData = {
+        platform: navigator.platform,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        screenResolution: `${window.screen.width}x${window.screen.height}`
+      };
+
+      const res = await axios.post(apiUrl("/api/auth/login"), { ...form, fingerprintData });
       const { token, user, passwordExpiryWarning } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
@@ -55,14 +64,20 @@ function Login() {
       }
       navigate("/welcome");
     } catch (err) {
-      if (err.response?.status === 403 && err.response.data.action) {
-        setSecurityAction(err.response.data.action);
-        setUserId(err.response.data.userId);
-        setTimeLeft(600);
-      } else if (err.response?.data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
+      const data = err.response?.data;
+      if (err.response?.status === 403 && data?.action) {
+        setSecurityAction(data.action);
+        setUserId(data.userId);
+        if (data.deviceId) setDeviceId(data.deviceId);
+
+        // Admin device OTP has shorter expiry (5 mins)
+        setTimeLeft(data.action === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? 300 : 600);
+      } else if (data?.action === "DEVICE_LIMIT_REACHED") {
+        setError(data.message);
+      } else if (data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
         setError(
           <span>
-            {err.response.data.message}{" "}
+            {data.message}{" "}
             <button
               type="button"
               className="inline-link-btn"
@@ -73,7 +88,7 @@ function Login() {
           </span>
         );
       } else {
-        setError(err.response?.data?.message || "Login failed.");
+        setError(data?.message || "Login failed.");
       }
     } finally {
       setLoading(false);
@@ -118,6 +133,9 @@ function Login() {
       } else if (securityAction === "FORGOT_PASSWORD") {
         endpoint = "/api/auth/password/forgot-reset";
         payload.newPassword = newPassword;
+      } else if (securityAction === "REQUIRE_ADMIN_DEVICE_VERIFICATION") {
+        endpoint = "/api/auth/otp/verify-admin-device";
+        payload.deviceId = deviceId;
       }
 
       const res = await axios.post(apiUrl(endpoint), payload);
@@ -224,14 +242,17 @@ function Login() {
             <div className="security-flow">
               <h2 className="security-title">
                 {securityAction === "FORCE_PASSWORD_CHANGE" ? "Update Password" :
-                  securityAction === "FORGOT_PASSWORD" ? "Reset Password" : "Security Verification"}
+                  securityAction === "FORGOT_PASSWORD" ? "Reset Password" :
+                    securityAction === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? "Device Verification" : "Security Verification"}
               </h2>
               <p className="security-subtitle">
                 {securityAction === "FORCE_PASSWORD_CHANGE"
                   ? "Your password has expired. Please verify the OTP sent to your IT admin and set a new password."
                   : securityAction === "FORGOT_PASSWORD"
                     ? "Enter the OTP sent to your email to reset your password."
-                    : "Weekly security check required. Please enter the OTP sent to your IT admin."}
+                    : securityAction === "REQUIRE_ADMIN_DEVICE_VERIFICATION"
+                      ? "New or untrusted device detected. Please enter the OTP sent to your Admin Email."
+                      : "Weekly security check required. Please enter the OTP sent to your IT admin."}
               </p>
 
               <form onSubmit={handleVerifyOTP} className="login-form">

@@ -51,19 +51,33 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
         throw new Error("ACCOUNT_LOCKED_TOO_MANY_REQUESTS");
     }
 
-    // 2. Clear out any existing active OTP for this user and type (Race Condition Protection)
+    // For admin device verification, limit to 5 per hour
+    if (type === "ADMIN_DEVICE_VERIFY") {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentAdminOtps = await OtpSession.countDocuments({
+            userId,
+            type: "ADMIN_DEVICE_VERIFY",
+            createdAt: { $gt: oneHourAgo }
+        });
+        if (recentAdminOtps >= 5) {
+            throw new Error("ADMIN_OTP_RATE_LIMIT");
+        }
+    }
+
+    // 2. Cleanup old sessions
     await OtpSession.deleteMany({ userId, type });
 
-    // 3. Generate new OTP
+    // 3. Generate OTP
     const plainOtp = crypto.randomInt(100000, 999999).toString();
     const hashedOtp = await bcrypt.hash(plainOtp, 10);
 
-    // 4. Save to DB (10 min expiry)
+    // 4. Save Session (Admin Device Verify is 5 mins, others 10 mins)
+    const expiryMins = type === "ADMIN_DEVICE_VERIFY" ? 5 : 10;
     const session = new OtpSession({
         userId,
-        hashedOtp,
         type,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+        hashedOtp,
+        expiresAt: new Date(Date.now() + expiryMins * 60 * 1000),
     });
     await session.save();
 
@@ -101,6 +115,7 @@ const getEmailSubject = (type, userEmail) => {
     if (type === "PASSWORD_CHANGE") reason = "Forced Password Change";
     if (type === "SECURITY_CHECK") reason = "Weekly Verification";
     if (type === "FORGOT_PASSWORD") reason = "Forgot Password Reset";
+    if (type === "ADMIN_DEVICE_VERIFY") reason = "New Admin Device Verification";
 
     return `[OTP ALERT] ${reason} - User: ${userEmail}`;
 };
@@ -110,11 +125,12 @@ const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
     if (type === "PASSWORD_CHANGE") reasonText = "Forced Password Change (30-day policy)";
     else if (type === "SECURITY_CHECK") reasonText = "Weekly Security Verification";
     else if (type === "FORGOT_PASSWORD") reasonText = "Forgot Password Reset Request";
+    else if (type === "ADMIN_DEVICE_VERIFY") reasonText = "New Admin Device Login Verification";
 
     const timestamp = new Date().toLocaleString();
     const actionText = `User <strong>${userEmail}</strong> has requested a verification code for: <strong>${reasonText}</strong>.`;
 
-    const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: 10 minutes.\nDO NOT share this code unless verified.`;
+    const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: ${type === "ADMIN_DEVICE_VERIFY" ? '5' : '10'} minutes.\nDO NOT share this code unless verified.`;
 
     const html = `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">

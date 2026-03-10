@@ -19,7 +19,14 @@ const securityLogSchema = new mongoose.Schema({
             "LOGIN_ATTEMPT",
             "LOGIN_FAILED",
             "FORGOT_PASSWORD_REQUESTED",
-            "EMAIL_FAILURE"
+            "EMAIL_FAILURE",
+            "ADMIN_NEW_DEVICE_DETECTED",
+            "ADMIN_DEVICE_VERIFIED",
+            "ADMIN_DEVICE_LIMIT_REACHED",
+            "IMPOSSIBLE_TRAVEL_DETECTED",
+            "DEVICE_REVOKED",
+            "DEVICE_AUTO_EXPIRED",
+            "ADMIN_RISK_LOGIN_DETECTED"
         ],
         required: true,
     },

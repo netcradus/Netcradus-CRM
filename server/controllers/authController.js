@@ -1,9 +1,13 @@
-
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
-const nodemailer = require("nodemailer");
+const AdminDevice = require("../models/AdminDevice");
+const { UAParser } = require("ua-parser-js");
+const {
+  logAuthEvent,
+  generateDeviceFingerprint,
+  getIpGeoLocation,
+  calculateDistance
+} = require("../services/securityService");
 
 // Create user (admin only)
 const createUserByAdmin = async (req, res) => {
@@ -136,6 +140,128 @@ const login = async (req, res) => {
     // 2. Check Lock
     if (user.accountLockedUntil && user.accountLockedUntil > Date.now()) {
       return res.status(403).json({ message: `Account locked until ${user.accountLockedUntil.toLocaleTimeString()}` });
+    }
+
+    // 2.5 Admin Device Security Check
+    if (user.role === "admin") {
+      const { fingerprintData } = req.body; // { platform, timezone, screenResolution }
+      if (!fingerprintData) {
+        return res.status(400).json({ message: "Security fingerprint data required" });
+      }
+
+      const deviceId = generateDeviceFingerprint(
+        userAgent,
+        fingerprintData.platform,
+        fingerprintData.timezone,
+        fingerprintData.screenResolution
+      );
+
+      const parser = new UAParser(userAgent);
+      const os = parser.getOS();
+      const browser = parser.getBrowser();
+      const deviceName = `${browser.name || 'Unknown Browser'} on ${os.name || 'Unknown OS'}`;
+
+      let device = await AdminDevice.findOne({ userId: user._id, deviceId });
+
+      // Check for Impossible Travel
+      const currentGeo = await getIpGeoLocation(ipAddress);
+      if (currentGeo && device && device.lastLoginLat && device.lastLoginLong) {
+        const distance = calculateDistance(device.lastLoginLat, device.lastLoginLong, currentGeo.lat, currentGeo.lon);
+        const timeDiffHours = (Date.now() - device.lastUsedAt.getTime()) / (1000 * 60 * 60);
+
+        // Alarming: > 1000km in under 1 hour (as specified in refined requirements)
+        if (distance > 1000 && timeDiffHours < 1) {
+          await logAuthEvent(user._id, "IMPOSSIBLE_TRAVEL_DETECTED", ipAddress, userAgent, `Travelled ${Math.round(distance)}km in ${Math.round(timeDiffHours * 60)} mins`);
+          await logAuthEvent(user._id, "ADMIN_RISK_LOGIN_DETECTED", ipAddress, userAgent, "Risk: Impossible Travel");
+
+          // OTP Flooding Protection: Max 3 active device verification sessions
+          const activeSessions = await require("../models/OtpSession").countDocuments({
+            userId: user._id,
+            type: "ADMIN_DEVICE_VERIFY",
+            expiresAt: { $gt: new Date() }
+          });
+          if (activeSessions >= 3) {
+            return res.status(403).json({ message: "Too many active verification attempts. Please wait." });
+          }
+
+          await require('../services/otpService').generateAndSendOTP(user._id, user.email, "ADMIN_DEVICE_VERIFY", ipAddress, userAgent);
+          return res.status(403).json({
+            action: "REQUIRE_ADMIN_DEVICE_VERIFICATION",
+            userId: user._id,
+            deviceId,
+            message: "Suspicious travel detected. Please verify your identity with OTP."
+          });
+        }
+      }
+
+      if (!device) {
+        // New Device Detection
+        const verifiedCount = await AdminDevice.countDocuments({ userId: user._id, trusted: true });
+        if (verifiedCount >= 3) {
+          await logAuthEvent(user._id, "ADMIN_DEVICE_LIMIT_REACHED", ipAddress, userAgent);
+          await logAuthEvent(user._id, "ADMIN_RISK_LOGIN_DETECTED", ipAddress, userAgent, "Risk: Device Limit Reached");
+          return res.status(403).json({
+            action: "DEVICE_LIMIT_REACHED",
+            message: "Maximum of 3 admin devices allowed. Please revoke an existing device to continue."
+          });
+        }
+
+        device = new AdminDevice({
+          userId: user._id,
+          deviceId,
+          userAgent,
+          deviceName,
+          firstLoginIp: ipAddress,
+          lastLoginIp: ipAddress,
+          lastLoginLat: currentGeo?.lat,
+          lastLoginLong: currentGeo?.lon,
+          lastCity: currentGeo?.city || currentGeo?.country,
+          lastCountry: currentGeo?.country,
+          trusted: false
+        });
+        await device.save();
+        await logAuthEvent(user._id, "ADMIN_NEW_DEVICE_DETECTED", ipAddress, userAgent);
+        await logAuthEvent(user._id, "ADMIN_RISK_LOGIN_DETECTED", ipAddress, userAgent, "Risk: New Device");
+      } else {
+        // Auto-expire check: > 60 days
+        const daysInactive = (Date.now() - device.lastUsedAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysInactive > 60) {
+          device.trusted = false;
+          await device.save();
+          await logAuthEvent(user._id, "DEVICE_AUTO_EXPIRED", ipAddress, userAgent);
+        }
+      }
+
+      if (!device.trusted) {
+        // OTP Flooding Protection
+        const activeSessions = await require("../models/OtpSession").countDocuments({
+          userId: user._id,
+          type: "ADMIN_DEVICE_VERIFY",
+          expiresAt: { $gt: new Date() }
+        });
+        if (activeSessions >= 3) {
+          return res.status(403).json({ message: "Too many active verification attempts. Please wait." });
+        }
+
+        await require('../services/otpService').generateAndSendOTP(user._id, user.email, "ADMIN_DEVICE_VERIFY", ipAddress, userAgent);
+        return res.status(403).json({
+          action: "REQUIRE_ADMIN_DEVICE_VERIFICATION",
+          userId: user._id,
+          deviceId,
+          message: "New or untrusted device detected. Please verify with OTP sent to admin email."
+        });
+      }
+
+      // Update stable device info
+      device.lastLoginIp = ipAddress;
+      device.lastUsedAt = new Date();
+      if (currentGeo) {
+        device.lastLoginLat = currentGeo.lat;
+        device.lastLoginLong = currentGeo.lon;
+        device.lastCity = currentGeo.city || currentGeo.country;
+        device.lastCountry = currentGeo.country;
+      }
+      await device.save();
     }
 
     let passwordExpiryWarning = false;
@@ -463,6 +589,67 @@ const verifyPasswordChange = async (req, res) => {
   }
 };
 
+const verifyAdminDevice = async (req, res) => {
+  try {
+    const { userId, deviceId, otp } = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== "admin") return res.status(403).json({ message: "Unauthorized" });
+
+    // Verify OTP (Strict 5 min expiry handled in service)
+    await require('../services/otpService').verifyOTP(userId, "ADMIN_DEVICE_VERIFY", otp, ipAddress, userAgent);
+
+    // Trust device
+    const device = await AdminDevice.findOne({ userId, deviceId });
+    if (device) {
+      device.trusted = true;
+      device.lastUsedAt = new Date();
+      await device.save();
+      await logAuthEvent(userId, "ADMIN_DEVICE_VERIFIED", ipAddress, userAgent);
+    }
+
+    // Success - Create JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    });
+  } catch (err) {
+    if (err.message === "EXPIRED_OR_NOT_FOUND" || err.message === "INVALID_OTP" || err.message === "MAX_ATTEMPTS_REACHED") {
+      return res.status(400).json({ message: "Invalid or expired OTP", error: err.message });
+    }
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const getAdminDevices = async (req, res) => {
+  try {
+    const devices = await AdminDevice.find({ userId: req.user.id }).sort({ lastUsedAt: -1 });
+    res.json(devices);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const revokeAdminDevice = async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    await AdminDevice.deleteOne({ userId: req.user.id, deviceId });
+    await logAuthEvent(req.user.id, "DEVICE_REVOKED", req.ip, req.get('User-Agent'), `Revoked ${deviceId}`);
+    res.json({ message: "Device revoked successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createUserByAdmin,
   login,
@@ -473,5 +660,8 @@ module.exports = {
   adminChangeUserPassword,
   requestOTP,
   verifySecurityOTP,
-  verifyPasswordChange
+  verifyPasswordChange,
+  verifyAdminDevice,
+  getAdminDevices,
+  revokeAdminDevice
 };

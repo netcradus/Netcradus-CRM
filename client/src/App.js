@@ -6,6 +6,7 @@ import Login from "./Pages/Login";
 import ForgotPassword from "./Pages/ForgotPassword";
 import ResetPassword from "./Pages/ResetPassword";
 import WelcomeAnimation from "./Pages/WelcomeAnimation";
+import AdminDevices from "./Pages/AdminDevices";
 
 /* ========== Layout ========== */
 import MainLayout from "./components/Layout/MainLayout";
@@ -95,6 +96,15 @@ function App() {
             element={
               <RoleRoute roleNeeded="admin">
                 <UserManagement />
+              </RoleRoute>
+            }
+          />
+
+          <Route
+            path="/admin/devices"
+            element={
+              <RoleRoute roleNeeded="admin">
+                <AdminDevices />
               </RoleRoute>
             }
           />

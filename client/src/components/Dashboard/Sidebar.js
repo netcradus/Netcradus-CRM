@@ -16,6 +16,7 @@ const roleMenus = {
   admin: [
     { label: "Home", path: "/dashboard", icon: <FaHome /> },
     { label: "User Management", path: "/user-management", icon: <FaUserFriends /> },
+    { label: "Device Security", path: "/admin/devices", icon: <FaTools /> },
     {
       label: "CRM",
       icon: <FaLayerGroup />,
