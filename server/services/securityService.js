@@ -37,12 +37,13 @@ const getIpGeoLocation = async (ip) => {
             return { lat: 28.6139, lon: 77.2090 }; // Default to New Delhi for local testing
         }
 
-        const response = await axios.get(`http://ip-api.com/json/${ip}?fields=status,lat,lon,country`);
+        const response = await axios.get(`http://ip-api.com/json/${ip}?fields=status,lat,lon,country,city`);
         if (response.data && response.data.status === "success") {
             return {
                 lat: response.data.lat,
                 lon: response.data.lon,
-                country: response.data.country
+                country: response.data.country,
+                city: response.data.city
             };
         }
     } catch (error) {

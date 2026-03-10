@@ -1,4 +1,6 @@
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const AdminDevice = require("../models/AdminDevice");
 const { UAParser } = require("ua-parser-js");

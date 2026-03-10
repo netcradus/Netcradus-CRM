@@ -12,7 +12,7 @@ const otpSessionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["PASSWORD_CHANGE", "SECURITY_CHECK", "FORGOT_PASSWORD"],
+        enum: ["PASSWORD_CHANGE", "SECURITY_CHECK", "FORGOT_PASSWORD", "ADMIN_DEVICE_VERIFY"],
         required: true,
     },
     attempts: {
