@@ -138,7 +138,8 @@ select {
 @media (max-width: 768px) {
   .dashboard {
     padding: 20px;
-    width: 90%;
+    width: 100%;
+    margin-left: 0;
     
   }
 

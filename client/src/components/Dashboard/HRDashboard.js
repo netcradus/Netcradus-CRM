@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { FaSearch, FaUserCircle, FaUsers, FaBriefcase, FaExchangeAlt, FaUmbrellaBeach } from 'react-icons/fa';
+import React, { useState } from "react";
+import {
+  Search,
+  CircleUserRound,
+  Users,
+  BriefcaseBusiness,
+  ArrowRightLeft,
+  PlaneTakeoff,
+  ArrowRight,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -11,34 +19,33 @@ import {
   PieChart,
   Pie,
   Cell,
+  Area,
+  AreaChart,
 } from 'recharts';
 import './HRDashboard.css';
 
-// Employee Headcount Trend Data
 const headcountData = [
-  { month: 'Nov 2022', count: 1150, growth: null },
-  { month: 'Dec 2022', count: 1170, growth: null },
-  { month: 'Jan 2023', count: 1180, growth: null },
-  { month: 'Mar 2023', count: 1190, growth: null },
-  { month: 'Apr 2023', count: 1190, growth: null },
-  { month: 'May 2023', count: 1200, growth: null },
-  { month: 'Jun 2023', count: 1220, growth: '1250', date: 'June 26, 2023' },
-  { month: 'Jul 2023', count: 1200, growth: null },
-  { month: 'Aug 2023', count: 1220, growth: null },
-  { month: 'Sep 2023', count: 1200, growth: null },
-  { month: 'Oct 2023', count: 1250, growth: null },
+  { month: 'Nov 2022', count: 1150 },
+  { month: 'Dec 2022', count: 1170 },
+  { month: 'Jan 2023', count: 1180 },
+  { month: 'Mar 2023', count: 1190 },
+  { month: 'Apr 2023', count: 1190 },
+  { month: 'May 2023', count: 1200 },
+  { month: 'Jun 2023', count: 1220 },
+  { month: 'Jul 2023', count: 1200 },
+  { month: 'Aug 2023', count: 1220 },
+  { month: 'Sep 2023', count: 1200 },
+  { month: 'Oct 2023', count: 1250 },
 ];
 
-// Department Distribution Data
 const departmentData = [
-  { name: 'Sales', value: 28, color: '#4A90E2' },
-  { name: 'Engineering', value: 24, color: '#50C878' },
-  { name: 'Marketing', value: 18, color: '#F39C12' },
-  { name: 'Support', value: 10, color: '#9B59B6' },
-  { name: 'HR', value: 20, color: '#1ABC9C' },
+  { name: 'Sales', value: 28, color: '#ff8a00' },
+  { name: 'Engineering', value: 24, color: '#ff5f3d' },
+  { name: 'Marketing', value: 18, color: '#ff2d8f' },
+  { name: 'Support', value: 10, color: '#ffb347' },
+  { name: 'HR', value: 20, color: '#ff6b57' },
 ];
 
-// Recent Leave Requests Data
 const leaveRequests = [
   {
     id: 1,
@@ -72,13 +79,11 @@ const leaveRequests = [
   },
 ];
 
-// Work Anniversaries
 const anniversaries = [
   { name: 'Sarah Jenkins', date: '06/10/2023', dept: 'Sales' },
   { name: 'Sarah Jenkins', date: '06/10/2023', dept: 'Depts' },
 ];
 
-// Quick Access Tasks
 const quickTasks = [
   { icon: '📋', text: 'Review Candidate Profiles' },
   { icon: '💰', text: 'Complete Payroll' },
@@ -104,34 +109,37 @@ const HRDashboard = () => {
 
   return (
     <div className="hr-dashboard">
-      {/* Header */}
-      <div className="hr-header">
-        <h1 className="hr-title">
-          Human Resources Dashboard 
-        </h1>
-        <div className="header-right">
+      <div className="hr-hero">
+        <div className="hr-hero-left">
+          <div className="hr-badge">NETCRADUS HR COMMAND CENTER</div>
+          <h1 className="hr-title">Human Resources Dashboard</h1>
+          <p className="hr-subtitle">
+            Manage people operations, hiring pipeline, workforce trends and leave activity from one branded control panel.
+          </p>
+        </div>
+
+        <div className="header-right hr-header-actions">
           <span className="header-date">October 26, 2023</span>
-          <div className="search-box">
-            <FaSearch className="search-icon" />
+          <div className="search-box glass-card">
+         <Search size={16} className="search-icon" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search employee, leave, role..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
           </div>
-          <div className="user-profile">
-            <FaUserCircle size={32} />
+          <div className="user-profile glass-card">
+<CircleUserRound size={26} />
           </div>
         </div>
       </div>
 
-      {/* Metrics Cards */}
       <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: '#E3F2FD' }}>
-            <FaUsers style={{ color: '#2196F3' }} />
+        <div className="metric-card net-card gradient-orange">
+          <div className="metric-icon metric-orange">
+<Users size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Total Employees</div>
@@ -141,9 +149,9 @@ const HRDashboard = () => {
           </div>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: '#E8F5E9' }}>
-            <FaBriefcase style={{ color: '#4CAF50' }} />
+        <div className="metric-card net-card gradient-coral">
+          <div className="metric-icon metric-coral">
+           <BriefcaseBusiness size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Open Positions</div>
@@ -153,9 +161,9 @@ const HRDashboard = () => {
           </div>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: '#FFF3E0' }}>
-            <FaExchangeAlt style={{ color: '#FF9800' }} />
+        <div className="metric-card net-card gradient-pink">
+          <div className="metric-icon metric-pink">
+            <ArrowRightLeft size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Employee Turnover</div>
@@ -165,9 +173,9 @@ const HRDashboard = () => {
           </div>
         </div>
 
-        <div className="metric-card">
-          <div className="metric-icon" style={{ backgroundColor: '#F3E5F5' }}>
-            <FaUmbrellaBeach style={{ color: '#9C27B0' }} />
+        <div className="metric-card net-card gradient-gold">
+          <div className="metric-icon metric-gold">
+           <PlaneTakeoff size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Pending Leave Requests</div>
@@ -178,12 +186,10 @@ const HRDashboard = () => {
         </div>
       </div>
 
-      {/* Charts Section */}
       <div className="charts-section">
-        {/* Employee Headcount Trend */}
-        <div className="chart-card large">
+        <div className="chart-card large net-panel">
           <div className="chart-header">
-            <h3>Employee Headcount Trend (Last 12 Months)</h3>
+            <h3>Employee Headcount Trend</h3>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
@@ -194,59 +200,68 @@ const HRDashboard = () => {
               <option>Yearly growth</option>
             </select>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={headcountData}>
+
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={headcountData}>
               <defs>
                 <linearGradient id="headcountGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4A90E2" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#4A90E2" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#ff8a00" stopOpacity={0.35} />
+                  <stop offset="55%" stopColor="#ff5f3d" stopOpacity={0.18} />
+                  <stop offset="100%" stopColor="#ff2d8f" stopOpacity={0.03} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-              <XAxis dataKey="month" stroke="#666" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#666" style={{ fontSize: '12px' }} domain={[1100, 1300]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="month" stroke="#b7b7b7" style={{ fontSize: '12px' }} />
+              <YAxis stroke="#b7b7b7" style={{ fontSize: '12px' }} domain={[1100, 1300]} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#2C3E50',
-                  border: 'none',
-                  borderRadius: '8px',
+                  background: '#111116',
+                  border: '1px solid rgba(255, 138, 0, 0.18)',
+                  borderRadius: '12px',
                   color: '#fff',
                 }}
               />
+              <Area type="monotone" dataKey="count" stroke="none" fill="url(#headcountGradient)" />
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#4A90E2"
+                stroke="#ff7a18"
                 strokeWidth={3}
-                dot={{ fill: '#4A90E2', r: 5 }}
-                activeDot={{ r: 8 }}
-                fill="url(#headcountGradient)"
+                dot={{ fill: '#ff5f3d', r: 4 }}
+                activeDot={{ r: 7, fill: '#ff2d8f' }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Department Distribution */}
-        <div className="chart-card">
+        <div className="chart-card net-panel">
           <div className="chart-header">
             <h3>Department Distribution</h3>
+            <span className="mini-chip">Live Split</span>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
                 data={departmentData}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
+                innerRadius={62}
+                outerRadius={96}
+                paddingAngle={3}
                 dataKey="value"
               >
                 {departmentData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                contentStyle={{
+                  background: '#111116',
+                  border: '1px solid rgba(255, 138, 0, 0.18)',
+                  borderRadius: '12px',
+                  color: '#fff',
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="pie-legend">
@@ -261,11 +276,13 @@ const HRDashboard = () => {
         </div>
       </div>
 
-      {/* Bottom Section */}
       <div className="bottom-section">
-        {/* Recent Leave Requests */}
-        <div className="table-card">
-          <h3 className="table-title">Recent Leave Requests</h3>
+        <div className="table-card net-panel">
+          <div className="section-header-row">
+            <h3 className="table-title">Recent Leave Requests</h3>
+            <button className="section-action-btn">Manage Requests</button>
+          </div>
+
           <div className="table-wrapper">
             <table className="hr-table">
               <thead>
@@ -297,7 +314,9 @@ const HRDashboard = () => {
                       </span>
                     </td>
                     <td data-label="Actions">
-                      <button className="action-btn">View/Approve</button>
+                      <button className="action-btn">
+                        View <ArrowRight size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -306,10 +325,8 @@ const HRDashboard = () => {
           </div>
         </div>
 
-        {/* Right Sidebar */}
         <div className="sidebar-cards">
-          {/* Work Anniversaries */}
-          <div className="sidebar-card">
+          <div className="sidebar-card net-panel">
             <h3 className="sidebar-title">Upcoming Work Anniversaries</h3>
             <div className="anniversary-list">
               <div className="anniversary-header">
@@ -327,8 +344,7 @@ const HRDashboard = () => {
             </div>
           </div>
 
-          {/* Quick Access Tasks */}
-          <div className="sidebar-card">
+          <div className="sidebar-card net-panel">
             <h3 className="sidebar-title">Quick Access Tasks</h3>
             <div className="quick-tasks">
               {quickTasks.map((task, index) => (
