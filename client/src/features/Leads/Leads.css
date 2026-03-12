@@ -91,22 +91,153 @@
   box-shadow: 0 4px 16px rgba(255, 75, 43, 0.5);
 }
 
-.search-bar {
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #1e1e1e;
-  color: #fff;
-  flex: 1;
-  min-width: 250px;
-  transition: all 0.3s ease;
+/* Filter Bar Layout Refinement */
+.leads-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  align-items: flex-end; /* Align inputs to labels properly */
+  background: #1e1e1e;
+  padding: 18px 20px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  justify-content: flex-start; /* Prevent stretching across the row */
 }
 
-.search-bar:focus {
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto; /* Don't stretch by default */
+}
+
+/* Specific elastic search behavior */
+.filter-group.search-group {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.filter-group label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #888;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  margin-left: 2px;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #444;
+  background-color: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  height: 38px; /* Consistent height */
+  box-sizing: border-box;
+}
+
+/* Compact widths for secondary filters */
+.filter-group select.filter-input {
+  width: 140px;
+}
+
+.filter-group input[type="date"].filter-input {
+  width: 145px;
+}
+
+.filter-input:focus {
   outline: none;
-  border: 1px solid #ff4b2b;
-  background-color: #222;
-  box-shadow: 0 0 8px rgba(255, 75, 43, 0.2);
+  border-color: #ff4b2b;
+  background: #222;
+  box-shadow: 0 0 8px rgba(255, 75, 43, 0.15);
+}
+
+/* Filter Reset Button */
+.btn-reset {
+  background: #2a2a2a;
+  color: #888;
+  padding: 8px 14px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-reset:hover {
+  background: #333;
+  color: #fff;
+  border-color: #666;
+}
+
+/* Import Progress Overlay */
+.import-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+.import-progress-container {
+  width: 80%;
+  max-width: 500px;
+  background: #1e1e1e;
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.import-progress-container h3 {
+  color: #ff4b2b;
+  margin-bottom: 20px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background: #111;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  border: 1px solid #222;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4b2b, #ff416c);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 75, 43, 0.5);
+}
+
+.progress-text {
+  color: #888;
+  font-size: 14px;
+}
+
+/* Removed redundant filter-group/input styles as they are consolidated above */
+
+.date-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .lead-status {
@@ -609,9 +740,25 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
   transition: all 0.3s ease;
 }
 
-.btn-csv:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+/* Mobile Filter Toggle Button */
+.btn-filter-toggle {
+  display: none; /* Hidden on desktop */
+  background: #2a2a2a;
+  color: #fff;
+  padding: 10px 18px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-filter-toggle:hover {
+  background: #333;
+  border-color: #ff4b2b;
 }
 
 /* ================================= */
@@ -619,6 +766,49 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
 /* ================================= */
 
 @media (max-width: 768px) {
+  .btn-filter-toggle {
+    display: flex; /* Show only on mobile */
+    width: 100%;
+    justify-content: center;
+  }
+
+  .leads-filters {
+    display: none; /* Hide filters by default on mobile */
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+    padding: 20px;
+    gap: 15px;
+    animation: slideDownFade 0.3s ease-out;
+  }
+
+  .leads-filters.show-mobile {
+    display: flex; /* Show when toggled */
+  }
+
+  .filter-group, 
+  .filter-group.search-group {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .filter-input, 
+  .filter-group select.filter-input, 
+  .filter-group input[type="date"].filter-input {
+    width: 100%; /* Full width on mobile */
+  }
+
+  @keyframes slideDownFade {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .leads-container {
     padding: 20px;
     margin-left: 0; /* Adjust for mobile sidebar */
@@ -690,4 +880,287 @@ background: linear-gradient(90deg, #ff4b2b, #ff416c);;
 }
 
 }
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+  padding: 15px 10px;
+  border-top: 1px solid #333;
+  flex-wrap: wrap;
+  gap: 15px;
+}
 
+.pagination-info {
+  font-size: 14px;
+  color: #888;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-page {
+  padding: 6px 12px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #ff4b2b;
+  color: #fff;
+}
+
+.btn-page.active {
+  background: linear-gradient(90deg, #ff4b2b, #ff416c);
+  border: none;
+  color: #fff;
+}
+
+.btn-page:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Skeleton Loader Animation */
+.skeleton-row td {
+  padding: 15px;
+}
+
+.skeleton-box {
+  height: 14px;
+  background: linear-gradient(90deg, #222 25%, #333 50%, #222 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite linear;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.results-summary {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #888;
+  font-size: 14px;
+  background: #1c1c1c;
+  padding: 8px 15px;
+  border-radius: 20px;
+  border: 1px solid #333;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 1px dashed #444;
+  margin: 20px 0;
+}
+
+.empty-state h3 {
+  color: #ff4b2b;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  color: #888;
+}
+
+.results-summary strong {
+  color: #ff4b2b;
+}
+
+/* ─── Bulk Delete Styles ──────────────────────────────────────── */
+
+/* Checkbox column */
+.col-checkbox {
+  width: 36px;
+  text-align: center;
+  padding: 0 8px !important;
+}
+
+.lead-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #ff4b2b;
+}
+
+/* Selected row highlight */
+.leads-table tbody tr.row-selected {
+  background-color: rgba(255, 75, 43, 0.12) !important;
+  border-left: 3px solid #ff4b2b;
+}
+
+/* Floating selection bar */
+.selection-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #1a1a1a;
+  border: 1px solid #ff4b2b;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 20px rgba(255, 75, 43, 0.25);
+  animation: slideIn 0.2s ease-out;
+}
+
+.selection-count {
+  color: #fff;
+  font-size: 14px;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-clear-select {
+  background: #2a2a2a;
+  color: #aaa;
+  padding: 7px 14px;
+  border: 1px solid #444;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-select:hover {
+  color: #fff;
+  border-color: #666;
+}
+
+.btn-delete-selected {
+  background: #c0392b;
+  color: #fff;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-selected:hover {
+  background: #e74c3c;
+  transform: translateY(-1px);
+}
+
+/* Bulk action bar (below results summary) */
+.bulk-action-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-delete-page {
+  background: #2a2a2a;
+  color: #e74c3c;
+  padding: 8px 14px;
+  border: 1px solid #c0392b;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-delete-page:hover {
+  background: #3a1a1a;
+  border-color: #e74c3c;
+}
+
+.btn-delete-all {
+  background: #c0392b;
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-delete-all:hover {
+  background: #e74c3c;
+  transform: translateY(-1px);
+}
+
+/* Danger confirmation modal */
+.danger-modal {
+  border: 1px solid #c0392b !important;
+  max-width: 500px;
+}
+
+.danger-modal .modal-header h3 {
+  color: #e74c3c;
+}
+
+.danger-body {
+  padding: 20px 24px;
+}
+
+.danger-body p {
+  color: #ccc;
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.danger-warning {
+  color: #e67e22 !important;
+  font-weight: 600;
+}
+
+.danger-critical {
+  color: #e74c3c !important;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid #c0392b;
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin: 10px 0 !important;
+}
+
+.btn-danger-confirm {
+  background: linear-gradient(90deg, #c0392b, #e74c3c);
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(231, 76, 60, 0.4);
+}
+
+.btn-danger-confirm:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}

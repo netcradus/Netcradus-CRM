@@ -39,4 +39,16 @@ const leadSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+// Basic indexes for filtering and sorting
+leadSchema.index({ status: 1 });
+leadSchema.index({ createdAt: -1 });
+
+// Text index for search functionality
+leadSchema.index({ 
+    name: 'text', 
+    email: 'text', 
+    company: 'text',
+    phone: 'text'
+});
+
 module.exports = mongoose.model('Lead', leadSchema);

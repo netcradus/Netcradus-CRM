@@ -11,7 +11,9 @@ router.get('/:id', authMiddleware, leadsController.getLead);                    
 router.post('/', authMiddleware, leadsController.createLead);                   // Create new lead
 router.put('/:id', authMiddleware, leadsController.updateLead);                 // Update lead
 
-// Admin only: Delete lead
-router.delete('/:id', authMiddleware, leadsController.deleteLead);              // Delete lead
+// Admin only: Delete operations
+router.delete('/bulk', authMiddleware, leadsController.bulkDeleteLeads);        // Delete selected IDs
+router.delete('/all', authMiddleware, leadsController.deleteAllLeads);          // Delete all matching filters
+router.delete('/:id', authMiddleware, leadsController.deleteLead);              // Delete single lead
 
 module.exports = router;

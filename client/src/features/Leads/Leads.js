@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import "./Leads.css";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
-import { FaClipboardList } from "react-icons/fa";
+import { FaClipboardList, FaFilter } from "react-icons/fa";
 import * as mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
 
@@ -10,14 +11,30 @@ import * as pdfjsLib from "pdfjs-dist";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 function Leads() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
+  const [pagination, setPagination] = useState({
+    totalLeads: 0,
+    totalPages: 0,
+    currentPage: 1,
+    limit: 10
+  });
   const [users, setUsers] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+
+  // Selection state for bulk delete
+  const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(null); // { type, count, action }
+
+  // Local state for debounced search
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // CSV Mapping State
   const [showMappingModal, setShowMappingModal] = useState(false);
@@ -43,21 +60,53 @@ function Leads() {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
 
+  const handleClearFilters = () => {
+    setSearchInput("");
+    setSearchParams({});
+  };
+
   const LEAD_STATUSES = ["Closed", "In Progress", "Not Interested"];
 
-  // Fetch leads
-  useEffect(() => {
-    fetchLeads();
-    if (userRole === "admin") {
-      fetchUsers();
-    }
-  }, []);
+  const updateFilter = useCallback((paramsToUpdate, value) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      
+      if (typeof paramsToUpdate === "string") {
+        if (value) next.set(paramsToUpdate, value);
+        else next.delete(paramsToUpdate);
+      } else {
+        // Handle multiple updates
+        Object.keys(paramsToUpdate).forEach(key => {
+          if (paramsToUpdate[key]) next.set(key, paramsToUpdate[key]);
+          else next.delete(key);
+        });
+      }
 
-  const fetchLeads = async () => {
+      // Always reset to page 1 when filters change (unless updating page itself)
+      if (typeof paramsToUpdate === "string" && paramsToUpdate !== "page") {
+        next.set("page", "1");
+      } else if (typeof paramsToUpdate === "object" && !paramsToUpdate.page) {
+        next.set("page", "1");
+      }
+
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(apiUrl("/api/leads"));
-      setLeads(response.data);
+      // Read directly from the URL (window.location) to always get the freshest params
+      const urlParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlParams.entries());
+      const response = await axios.get(apiUrl("/api/leads"), { params });
+      
+      if (response.data.success) {
+        setLeads(response.data.data);
+        setPagination(response.data.pagination);
+      } else {
+        setLeads(Array.isArray(response.data) ? response.data : []);
+      }
       setError("");
     } catch (err) {
       console.error("Error fetching leads:", err);
@@ -65,29 +114,150 @@ function Leads() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No deps — reads URL directly each time
 
-  const fetchUsers = async () => {
+  // Fetch leads when searchParams change
+  useEffect(() => {
+    fetchLeads();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [searchParams, fetchLeads]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateFilter("search", searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput, updateFilter]);
+
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await axios.get(apiUrl("/api/auth/users"), {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log("Users fetched:", response.data);
       setUsers(response.data);
     } catch (err) {
       console.error("Error fetching users:", err);
-      setError("Failed to fetch users for assignment");
+      setError("Failed to fetch users");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (userRole === "admin") {
+      fetchUsers();
+    }
+  }, [userRole, fetchUsers]);
+
+  // No longer needed as we filter on server
+  const activeLeads = leads;
+
+  // ─── Selection helpers ───────────────────────────────────────────
+  const isAllPageSelected = activeLeads.length > 0 && activeLeads.every(l => selectedLeads.has(l._id));
+
+  const toggleSelectAll = () => {
+    if (isAllPageSelected) {
+      setSelectedLeads(prev => {
+        const next = new Set(prev);
+        activeLeads.forEach(l => next.delete(l._id));
+        return next;
+      });
+    } else {
+      setSelectedLeads(prev => {
+        const next = new Set(prev);
+        activeLeads.forEach(l => next.add(l._id));
+        return next;
+      });
     }
   };
 
-  // Filter leads
-  const filteredLeads = leads.filter(
-    (lead) =>
-      lead.name.toLowerCase().includes(search.toLowerCase()) ||
-      lead.email.toLowerCase().includes(search.toLowerCase()) ||
-      (lead.phone && lead.phone.includes(search)) ||
-      (lead.company && lead.company.toLowerCase().includes(search.toLowerCase()))
-  );
+  const toggleSelectLead = (id) => {
+    setSelectedLeads(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedLeads(new Set());
+
+  // ─── Bulk delete handlers ────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    try {
+      const ids = Array.from(selectedLeads);
+      await axios.delete(apiUrl("/api/leads/bulk"), {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { ids }
+      });
+      setSuccess(`${ids.length} lead(s) deleted.`);
+      clearSelection();
+      setBulkConfirm(null);
+      await fetchLeads();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Bulk delete failed");
+      setBulkConfirm(null);
+    }
+  };
+
+  const handleDeletePage = async () => {
+    try {
+      const ids = activeLeads.map(l => l._id);
+      await axios.delete(apiUrl("/api/leads/bulk"), {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { ids }
+      });
+      setSuccess(`${ids.length} lead(s) on this page deleted.`);
+      clearSelection();
+      setBulkConfirm(null);
+      await fetchLeads();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Delete page failed");
+      setBulkConfirm(null);
+    }
+  };
+
+  const handleDeleteAllFiltered = async () => {
+    try {
+      const params = Object.fromEntries(searchParams.entries());
+      // Remove pagination params — we want to delete ALL matching
+      delete params.page;
+      delete params.limit;
+
+      // Check if no filters applied → need confirmDeleteAll flag
+      const hasFilters = Object.keys(params).length > 0;
+      if (!hasFilters) params.confirmDeleteAll = "true";
+
+      await axios.delete(apiUrl("/api/leads/all"), {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      });
+      setSuccess(`All matching leads deleted.`);
+      clearSelection();
+      setBulkConfirm(null);
+      await fetchLeads();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Delete all failed");
+      setBulkConfirm(null);
+    }
+  };
+
+  // ─── Confirmation dialog helper ──────────────────────────────────
+  const openConfirm = (type) => {
+    const activeFilters = Object.fromEntries(searchParams.entries());
+    delete activeFilters.page; delete activeFilters.limit;
+    const hasFilters = Object.keys(activeFilters).length > 0;
+
+    if (type === "selected") {
+      setBulkConfirm({ type, count: selectedLeads.size, hasFilters });
+    } else if (type === "page") {
+      setBulkConfirm({ type, count: activeLeads.length, hasFilters });
+    } else if (type === "allFiltered") {
+      setBulkConfirm({ type, count: pagination.totalLeads, hasFilters });
+    }
+  };
 
   // Handle form input change
   const handleFormChange = (e) => {
@@ -223,18 +393,19 @@ function Leads() {
   // Import CSV processing
   const processImportData = async (dataToImport, mapping) => {
     try {
-      setLoading(true);
+      setImporting(true);
+      setImportProgress(0);
       setShowMappingModal(false);
 
-      const validData = dataToImport; // Allow all rows, even with missing names/emails
-
-      if (validData.length === 0) {
+      const total = dataToImport.length;
+      if (total === 0) {
         setError("No valid data found to import.");
-        setLoading(false);
+        setImporting(false);
         return;
       }
 
-      for (const row of validData) {
+      for (let i = 0; i < total; i++) {
+        const row = dataToImport[i];
         await axios.post(apiUrl("/api/leads"), {
           name: mapping.name ? row[mapping.name] : "",
           email: mapping.email ? row[mapping.email] : "",
@@ -246,15 +417,18 @@ function Leads() {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        setImportProgress(Math.round(((i + 1) / total) * 100));
       }
+
+      setSuccess(`Imported ${total} leads successfully!`);
       await fetchLeads();
-      setSuccess("CSV imported successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error importing CSV:", err);
       setError(err.response?.data?.message || "Failed to import CSV");
     } finally {
-      setLoading(false);
+      setImporting(false);
+      setImportProgress(0);
     }
   };
 
@@ -373,13 +547,16 @@ function Leads() {
     e.target.value = null; // Reset input
   };
 
-  if (loading) {
-    return (
-      <div className="leads-container">
-        <h3>Loading Leads...</h3>
-      </div>
-    );
-  }
+  // Helper for skeleton rows
+  const renderSkeletons = () => {
+    return [...Array(pagination.limit || 10)].map((_, i) => (
+      <tr key={`skel-${i}`} className="skeleton-row">
+        {[...Array(10)].map((_, j) => (
+          <td key={j}><div className="skeleton-box"></div></td>
+        ))}
+      </tr>
+    ));
+  };
 
   return (
     <div className="leads-container">
@@ -401,21 +578,144 @@ function Leads() {
           />
           <label htmlFor="import-csv-input" className="btn-csv">📥 Import File</label>
         </div>
+        
+        {/* Mobile Toggle Button */}
+        <button 
+          className="btn-filter-toggle" 
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+        >
+          <FaFilter /> {showMobileFilters ? "Hide Filters" : "Show Filters"}
+        </button>
       </div>
 
-      {/* Actions */}
+      {/* Professional Filter Bar */}
+      <div className={`leads-filters ${showMobileFilters ? "show-mobile" : ""}`}>
+        <div className="filter-group search-group">
+          <label>Search</label>
+          <input
+            className="filter-input"
+            type="text"
+            placeholder="Name, email, phone, or company..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
+
+        <div className="filter-group">
+          <label>Status</label>
+          <select
+            className="filter-input"
+            value={searchParams.get("status") || ""}
+            onChange={(e) => updateFilter("status", e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            {LEAD_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label>From Date</label>
+          <input
+            className="filter-input"
+            type="date"
+            value={searchParams.get("startDate") || ""}
+            onChange={(e) => updateFilter("startDate", e.target.value)}
+          />
+        </div>
+
+        <div className="filter-group">
+          <label>To Date</label>
+          <input
+            className="filter-input"
+            type="date"
+            value={searchParams.get("endDate") || ""}
+            onChange={(e) => updateFilter("endDate", e.target.value)}
+          />
+        </div>
+
+        <div className="filter-group">
+          <label>Sort By</label>
+          <div className="date-box">
+            <select
+              className="filter-input"
+              value={searchParams.get("order") || "desc"}
+              onChange={(e) => updateFilter("order", e.target.value)}
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="filter-group">
+          <label>Show</label>
+          <select
+            className="filter-input"
+            value={searchParams.get("limit") || "10"}
+            onChange={(e) => updateFilter("limit", e.target.value)}
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Reset</label>
+          <button className="btn-reset" onClick={handleClearFilters}>
+            🔄 Clear
+          </button>
+        </div>
+      </div>
+
+      {/* Import Progress Overlay */}
+      {importing && (
+        <div className="import-overlay">
+          <div className="import-progress-container">
+            <h3>Processing Import...</h3>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${importProgress}%` }}></div>
+            </div>
+            <p className="progress-text">{importProgress}% Complete</p>
+          </div>
+        </div>
+      )}
+
+      {/* Actions + Bulk Action Bar */}
       <div className="leads-actions">
         <button className="btn-primary" onClick={handleAddLead}>
           ➕ Add New Lead
         </button>
-        <input
-          className="search-bar"
-          type="text"
-          placeholder="Search by name, email, phone, or company..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="results-summary">
+          Found <strong>{pagination.totalLeads}</strong> total leads
+        </div>
+        {userRole === "admin" && !loading && leads.length > 0 && (
+          <div className="bulk-action-bar">
+            <button className="btn-delete-page" onClick={() => openConfirm("page")}>
+              🗑 Delete This Page ({activeLeads.length})
+            </button>
+            <button className="btn-delete-all" onClick={() => openConfirm("allFiltered")}>
+              ⚠️ Delete All ({pagination.totalLeads})
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Floating selection bar appears when rows are checked */}
+      {userRole === "admin" && selectedLeads.size > 0 && (
+        <div className="selection-bar">
+          <span className="selection-count">
+            ✅ <strong>{selectedLeads.size}</strong> of {pagination.totalLeads} selected
+          </span>
+          <div className="selection-actions">
+            <button className="btn-clear-select" onClick={clearSelection}>Deselect All</button>
+            <button className="btn-delete-selected" onClick={() => openConfirm("selected")}>
+              🗑 Delete Selected ({selectedLeads.size})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Status Legend */}
       <div className="lead-status">
@@ -424,84 +724,118 @@ function Leads() {
         <div className="status-item not-interested">❄️ Not Interested</div>
       </div>
 
-      {/* Leads Table */}
+      {/* Leads Table Section */}
       <div className="leads-table">
-        {filteredLeads.length > 0 ? (
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Company</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Created By</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-          <tbody>
-  {filteredLeads.map((lead, index) => (
-    <tr key={lead._id}>
-      <td data-label="#"> {index + 1} </td>
+        {leads.length > 0 || loading ? (
+          <>
+            <table>
+              <thead>
+                <tr>
+                  {userRole === "admin" && (
+                    <th className="col-checkbox">
+                      <input
+                        type="checkbox"
+                        className="lead-checkbox"
+                        checked={isAllPageSelected}
+                        onChange={toggleSelectAll}
+                        title="Select all on this page"
+                      />
+                    </th>
+                  )}
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th>Created By</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  renderSkeletons()
+                ) : (
+                  activeLeads.map((lead, index) => (
+                    <tr key={lead._id} className={selectedLeads.has(lead._id) ? "row-selected" : ""}>
+                      {userRole === "admin" && (
+                        <td className="col-checkbox">
+                          <input
+                            type="checkbox"
+                            className="lead-checkbox"
+                            checked={selectedLeads.has(lead._id)}
+                            onChange={() => toggleSelectLead(lead._id)}
+                          />
+                        </td>
+                      )}
+                      <td data-label="#"> {(pagination.currentPage - 1) * pagination.limit + index + 1} </td>
 
-      <td data-label="Name" className="lead-name">
-        {lead.name || "-"}
-      </td>
+                      <td data-label="Name" className="lead-name">
+                        {lead.name || "-"}
+                      </td>
 
-      <td data-label="Email" className="lead-email">
-        {lead.email || "-"}
-      </td>
+                      <td data-label="Email" className="lead-email">
+                        {lead.email || "-"}
+                      </td>
 
-      <td data-label="Phone">
-        {lead.phone || "-"}
-      </td>
+                      <td data-label="Phone">
+                        {lead.phone || "-"}
+                      </td>
 
-      <td data-label="Company">
-        {lead.company || "-"}
-      </td>
+                      <td data-label="Company">
+                        {lead.company || "-"}
+                      </td>
 
-      <td data-label="Status">
-        <span className={`badge ${lead.status.toLowerCase().replace(" ", "-")}`}>
-          {lead.status}
-        </span>
-      </td>
+                      <td data-label="Status">
+                        <span className={`badge ${lead.status.toLowerCase().replace(" ", "-")}`}>
+                          {lead.status}
+                        </span>
+                      </td>
 
-      <td data-label="Assigned To">
-        {lead.assignedTo?.name || "-"}
-      </td>
+                      <td data-label="Assigned To">
+                        {lead.assignedTo?.name || "-"}
+                      </td>
 
-      <td data-label="Created By">
-        {lead.createdBy?.name || "Unknown"}
-      </td>
+                      <td data-label="Created By">
+                        {lead.createdBy?.name || "Unknown"}
+                      </td>
 
-      <td data-label="Created At">
-        {new Date(lead.createdAt).toLocaleDateString()}
-      </td>
+                      <td data-label="Created At">
+                        {new Date(lead.createdAt).toLocaleDateString()}
+                      </td>
 
-      <td data-label="Actions" className="actions-cell">
-        <button
-          className="btn-edit"
-          onClick={() => handleEditLead(lead)}
-        >
-          ✏️ Edit
-        </button>
+                      <td data-label="Actions" className="actions-cell">
+                        <button
+                          className="btn-edit"
+                          onClick={() => handleEditLead(lead)}
+                        >
+                          ✏️ Edit
+                        </button>
 
-        {userRole === "admin" && (
-          <button
-            className="btn-delete"
-            onClick={() => handleDeleteLead(lead._id)}
-          >
-            🗑 Delete
-          </button>
-        )}
-      </td>
-    </tr>
-  ))}
-</tbody>
-          </table>
+                        {userRole === "admin" && (
+                          <button
+                            className="btn-delete"
+                            onClick={() => handleDeleteLead(lead._id)}
+                          >
+                            🗑 Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            {!loading && activeLeads.length === 0 && (
+              <div className="empty-state">
+                <h3>No leads found 😢</h3>
+                <p>Try adjusting your search or filters to find what you're looking for.</p>
+              </div>
+            )}
+          </>
         ) : (
           <div className="no-leads">
             <p>No leads found 😢</p>
@@ -509,7 +843,117 @@ function Leads() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Pagination Footer */}
+      {pagination.totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            Showing <strong>{leads.length}</strong> of <strong>{pagination.totalLeads}</strong> leads
+            (Page {pagination.currentPage} of {pagination.totalPages})
+          </div>
+
+          <div className="pagination-controls">
+            <button
+              className="btn-page"
+              disabled={pagination.currentPage <= 1}
+              onClick={() => updateFilter("page", (pagination.currentPage - 1).toString())}
+            >
+              Previous
+            </button>
+
+            {[...Array(pagination.totalPages)].map((_, i) => {
+              const pageNum = i + 1;
+              // Only show nearby pages if there are many
+              if (
+                pagination.totalPages > 7 &&
+                pageNum !== 1 &&
+                pageNum !== pagination.totalPages &&
+                Math.abs(pageNum - pagination.currentPage) > 2
+              ) {
+                if (Math.abs(pageNum - pagination.currentPage) === 3) return <span key={pageNum}>...</span>;
+                return null;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  className={`btn-page ${pagination.currentPage === pageNum ? "active" : ""}`}
+                  onClick={() => updateFilter("page", pageNum.toString())}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              className="btn-page"
+              disabled={pagination.currentPage >= pagination.totalPages}
+              onClick={() => updateFilter("page", (pagination.currentPage + 1).toString())}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content danger-modal">
+            <div className="modal-header">
+              <h3>⚠️ Confirm Deletion</h3>
+              <button className="close-btn" onClick={() => setBulkConfirm(null)}>✕</button>
+            </div>
+            <div className="danger-body">
+              {bulkConfirm.type === "selected" && (
+                <>
+                  <p>You are about to permanently delete <strong>{bulkConfirm.count}</strong> selected lead(s).</p>
+                  <p className="danger-warning">This action cannot be undone.</p>
+                  <div className="modal-footer">
+                    <button className="btn-cancel" onClick={() => setBulkConfirm(null)}>Cancel</button>
+                    <button className="btn-danger-confirm" onClick={handleBulkDelete}>
+                      Delete {bulkConfirm.count} Leads
+                    </button>
+                  </div>
+                </>
+              )}
+              {bulkConfirm.type === "page" && (
+                <>
+                  <p>You are about to permanently delete all <strong>{bulkConfirm.count}</strong> leads on this page.</p>
+                  <p className="danger-warning">This action cannot be undone.</p>
+                  <div className="modal-footer">
+                    <button className="btn-cancel" onClick={() => setBulkConfirm(null)}>Cancel</button>
+                    <button className="btn-danger-confirm" onClick={handleDeletePage}>
+                      Delete {bulkConfirm.count} Leads
+                    </button>
+                  </div>
+                </>
+              )}
+              {bulkConfirm.type === "allFiltered" && (
+                <>
+                  <p>You are about to permanently delete <strong>{bulkConfirm.count}</strong> leads
+                    {bulkConfirm.hasFilters
+                      ? <> matching <strong>the current filters</strong>.</>
+                      : <> — that's <strong>EVERY lead in the system</strong>!</>
+                    }
+                  </p>
+                  {!bulkConfirm.hasFilters && (
+                    <p className="danger-critical">🚨 NO FILTERS ARE ACTIVE. This will wipe all your data.</p>
+                  )}
+                  <p className="danger-warning">This action cannot be undone.</p>
+                  <div className="modal-footer">
+                    <button className="btn-cancel" onClick={() => setBulkConfirm(null)}>Cancel, Keep Leads</button>
+                    <button className="btn-danger-confirm" onClick={handleDeleteAllFiltered}>
+                      Yes, Delete All {bulkConfirm.count} Leads
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Form Modal */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
