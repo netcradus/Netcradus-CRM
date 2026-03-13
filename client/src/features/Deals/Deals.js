@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Deals.css";
-import { FaHandshake } from "react-icons/fa";
+import { Handshake, Plus, Search } from "lucide-react";
 
 function Deals() {
   const [deals, setDeals] = useState([]);
@@ -28,12 +28,37 @@ function Deals() {
   };
 
   return (
-    <div className="deals-container">
-      <h2 className="deals-heading"><FaHandshake /> Deals Management</h2>
+    <div className="nc-page deals-page">
+      <div className="nc-hero">
+        <div>
+          <div className="nc-badge">
+            <Handshake size={14} />
+            <span>Netcradus Deal Room</span>
+          </div>
+          <h1 className="nc-hero-title">
+            Deals <span className="nc-gradient-text">Pipeline</span>
+          </h1>
+          <p className="nc-hero-subtitle">
+            Track opportunity health, update stages, and keep revenue forecasting accurate.
+          </p>
+        </div>
+      </div>
 
-      <div className="deals-actions">
-        <button className="btn-primary" onClick={openModal}>+ Add New Deal</button>
-        <input className="search-bar" placeholder="Search deals..." />
+      <div className="nc-panel nc-section">
+        <div className="nc-controls">
+          <div className="nc-controls-left">
+            <div className="deals-search">
+              <Search size={16} />
+              <input className="nc-input deals-search-input" placeholder="Search deals..." />
+            </div>
+          </div>
+          <div className="nc-controls-right">
+            <button className="nc-btn nc-btn--primary" onClick={openModal}>
+              <Plus size={16} />
+              Add Deal
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="pipeline-stages">
@@ -43,8 +68,9 @@ function Deals() {
         <div className="stage lost">Lost</div>
       </div>
 
-      <div className="deals-table">
-        <table>
+      <div className="nc-panel nc-section">
+        <div className="nc-table-wrap">
+          <table className="nc-table">
           <thead>
             <tr>
               <th>Deal Name</th>
@@ -63,9 +89,15 @@ function Deals() {
                 <tr key={deal.id}>
                   <td data-label="Deal Name">{deal.name}</td>
                   <td data-label="Status">
-                    <span className={`badge ${deal.status.toLowerCase().replace(" ", "-")}`}>
-                      {deal.status}
-                    </span>
+                    {deal.status === "Won" ? (
+                      <span className="nc-status nc-status--ok">Won</span>
+                    ) : deal.status === "Lost" ? (
+                      <span className="nc-status nc-status--pending">Lost</span>
+                    ) : deal.status === "In Progress" ? (
+                      <span className="nc-status nc-status--done">In Progress</span>
+                    ) : (
+                      <span className="nc-status nc-status--pending">New</span>
+                    )}
                   </td>
                   <td data-label="Value">{deal.value}</td>
                   <td data-label="Assigned To">{deal.assignedTo}</td>
@@ -74,6 +106,7 @@ function Deals() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && (
@@ -113,8 +146,8 @@ function Deals() {
               </select>
 
               <div className="modal-buttons">
-                <button type="submit" className="btn-primary">Save Deal</button>
-                <button type="button" className="btn-cancel" onClick={closeModal}>Cancel</button>
+                <button type="submit" className="nc-btn nc-btn--primary">Save Deal</button>
+                <button type="button" className="nc-btn" onClick={closeModal}>Cancel</button>
               </div>
             </form>
           </div>

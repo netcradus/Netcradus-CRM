@@ -1,139 +1,161 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaSearch, FaChevronDown, FaBars, FaTimes } from "react-icons/fa";
-import { Link, useLocation } from "react-router-dom";
 import {
-  FaHome, FaUser, FaPhone, FaFileAlt, FaBuilding,
-  FaHandshake, FaTasks, FaCalendarAlt, FaPhoneSquareAlt, FaBox, FaFileInvoice,
-  FaClipboardList, FaTruck, FaEnvelopeOpenText, FaBullhorn, FaUserTie, FaBook,
-  FaBriefcase, FaBookOpen, FaFile, FaChartBar, FaMapMarkerAlt, FaComments,
-  FaCogs, FaProjectDiagram, FaTools, FaUserFriends, FaSignOutAlt, FaLayerGroup
-} from "react-icons/fa";
+  Search,
+  ChevronDown,
+  Menu,
+  X,
+  Home,
+  Users,
+  Phone,
+  FileText,
+  Building2,
+  Handshake,
+  CheckSquare2,
+  CalendarClock,
+  PhoneCall,
+  Boxes,
+  Receipt,
+  ClipboardList,
+  Truck,
+  Inbox,
+  BookOpen,
+  BriefcaseBusiness,
+  BarChart3,
+  MapPin,
+  MessageCircle,
+  Settings2,
+  Workflow,
+  Wrench,
+  UserCircle2,
+  Layers3,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
 
 // ─── Menu config ─────────────────────────────────────────────────────────────
 const roleMenus = {
   admin: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
-    { label: "User Management", path: "/user-management", icon: <FaUserFriends /> },
-    { label: "Device Security", path: "/admin/devices", icon: <FaTools /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
+    { label: "Device Security", path: "/admin/devices", icon: <Wrench size={18} /> },
     {
       label: "CRM",
-      icon: <FaLayerGroup />,
+      icon: <Layers3 size={18} />,
       children: [
-        { label: "Leads", path: "/leads", icon: <FaUser /> },
-        { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
-        { label: "Accounts", path: "/accounts", icon: <FaBuilding /> },
-        { label: "Deals", path: "/deals", icon: <FaHandshake /> },
-        { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
-        { label: "Meetings", path: "/meetings", icon: <FaCalendarAlt /> },
-        { label: "Calls", path: "/calls", icon: <FaPhoneSquareAlt /> },
+        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
+        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
+        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        { label: "Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
+        { label: "Calls", path: "/calls", icon: <PhoneCall size={16} /> },
       ],
     },
     {
       label: "Sales",
-      icon: <FaChartBar />,
+      icon: <BarChart3 size={18} />,
       children: [
-        { label: "Products", path: "/products", icon: <FaBox /> },
-        { label: "Quotes", path: "/quotes", icon: <FaFileInvoice /> },
-        { label: "Sales Orders", path: "/sales-orders", icon: <FaClipboardList /> },
-        { label: "Purchase Orders", path: "/purchase-orders", icon: <FaTruck /> },
-        { label: "Invoices", path: "/invoices", icon: <FaFileAlt /> },
-        { label: "Sales Inbox", path: "/sales-inbox", icon: <FaEnvelopeOpenText /> },
-        { label: "Price Books", path: "/price-books", icon: <FaBook /> },
-        { label: "Vendors", path: "/vendors", icon: <FaUserTie /> },
+        { label: "Products", path: "/products", icon: <Boxes size={16} /> },
+        { label: "Quotes", path: "/quotes", icon: <Receipt size={16} /> },
+        { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={16} /> },
+        { label: "Purchase Orders", path: "/purchase-orders", icon: <Truck size={16} /> },
+        { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
+        { label: "Sales Inbox", path: "/sales-inbox", icon: <Inbox size={16} /> },
+        { label: "Price Books", path: "/price-books", icon: <BookOpen size={16} /> },
+        { label: "Vendors", path: "/vendors", icon: <UserCircle2 size={16} /> },
       ],
     },
     {
       label: "Marketing",
-      icon: <FaBullhorn />,
+      icon: <MessageCircle size={18} />,
       children: [
-        { label: "Campaigns", path: "/campaigns", icon: <FaBullhorn /> },
-        { label: "Social", path: "/social", icon: <FaComments /> },
-        { label: "Visits", path: "/visits", icon: <FaMapMarkerAlt /> },
+        { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
+        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
+        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
       ],
     },
     {
       label: "Support",
-      icon: <FaBriefcase />,
+      icon: <BriefcaseBusiness size={18} />,
       children: [
-        { label: "Cases", path: "/cases", icon: <FaBriefcase /> },
-        { label: "Solutions", path: "/solutions", icon: <FaBookOpen /> },
-        { label: "Documents", path: "/documents", icon: <FaFile /> },
-        { label: "Forecasts", path: "/forecasts", icon: <FaChartBar /> },
+        { label: "Cases", path: "/cases", icon: <BriefcaseBusiness size={16} /> },
+        { label: "Solutions", path: "/solutions", icon: <BookOpen size={16} /> },
+        { label: "Documents", path: "/documents", icon: <FileText size={16} /> },
+        { label: "Forecasts", path: "/forecasts", icon: <BarChart3 size={16} /> },
       ],
     },
     {
       label: "Operations",
-      icon: <FaCogs />,
+      icon: <Settings2 size={18} />,
       children: [
-        { label: "Services", path: "/services", icon: <FaCogs /> },
-        { label: "Projects", path: "/projects", icon: <FaProjectDiagram /> },
-        { label: "CT", path: "/ct", icon: <FaTools /> },
-        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> },
-        { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+        { label: "Services", path: "/services", icon: <Settings2 size={16} /> },
+        { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
+        { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
+        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
+        { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
       ],
     },
   ],
 
   user: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
-    { label: "Leads", path: "/leads", icon: <FaUser /> },
-    { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
-    { label: "Deals", path: "/deals", icon: <FaHandshake /> },
-    { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
-    { label: "Calls", path: "/calls", icon: <FaPhoneSquareAlt /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Leads", path: "/leads", icon: <Users size={18} /> },
+    { label: "Contacts", path: "/contacts", icon: <Phone size={18} /> },
+    { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
+    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
+    { label: "Calls", path: "/calls", icon: <PhoneCall size={18} /> },
   ],
 
   support: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
-    { label: "Cases", path: "/cases", icon: <FaBriefcase /> },
-    { label: "Solutions", path: "/solutions", icon: <FaBookOpen /> },
-    { label: "Contacts", path: "/contacts", icon: <FaPhone /> },
-    { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Cases", path: "/cases", icon: <BriefcaseBusiness size={18} /> },
+    { label: "Solutions", path: "/solutions", icon: <BookOpen size={18} /> },
+    { label: "Contacts", path: "/contacts", icon: <Phone size={18} /> },
+    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
   ],
 
   sales: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
-    { label: "Leads", path: "/leads", icon: <FaUser /> },
-    { label: "Deals", path: "/deals", icon: <FaHandshake /> },
-    { label: "Accounts", path: "/accounts", icon: <FaBuilding /> },
-    { label: "Quotes", path: "/quotes", icon: <FaFileInvoice /> },
-    { label: "Sales Orders", path: "/sales-orders", icon: <FaClipboardList /> },
-    { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Leads", path: "/leads", icon: <Users size={18} /> },
+    { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
+    { label: "Accounts", path: "/accounts", icon: <Building2 size={18} /> },
+    { label: "Quotes", path: "/quotes", icon: <Receipt size={18} /> },
+    { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={18} /> },
+    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
   ],
 
   hr: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
-    { label: "Employees", path: "/contacts", icon: <FaUserTie /> },
-    { label: "Tasks", path: "/tasks", icon: <FaTasks /> },
-    { label: "Meetings", path: "/meetings", icon: <FaCalendarAlt /> },
-    { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Employees", path: "/contacts", icon: <Users size={18} /> },
+    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
+    { label: "Meetings", path: "/meetings", icon: <CalendarClock size={18} /> },
+    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
   ],
 
   it: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     {
       label: "IT Management",
-      icon: <FaCogs />,
+      icon: <Settings2 size={18} />,
       children: [
-        { label: "Projects", path: "/projects", icon: <FaProjectDiagram /> },
-        { label: "CT", path: "/ct", icon: <FaTools /> },
-        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <FaUserFriends /> },
+        { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
+        { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
+        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
       ],
     },
   ],
 
   digital_media: [
-    { label: "Home", path: "/dashboard", icon: <FaHome /> },
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     {
       label: "Campaigns",
-      icon: <FaBullhorn />,
+      icon: <MessageCircle size={18} />,
       children: [
-        { label: "Campaigns", path: "/campaigns", icon: <FaBullhorn /> },
-        { label: "Social", path: "/social", icon: <FaComments /> },
-        { label: "Visits", path: "/visits", icon: <FaMapMarkerAlt /> },
-        { label: "Reports", path: "/reports", icon: <FaChartBar /> },
+        { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
+        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
+        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
+        { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
       ],
     },
   ],
@@ -174,7 +196,7 @@ function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick }) {
           <>
             <span className="nav-label">{item.label}</span>
             <span className={`nav-chevron ${open ? "rotated" : ""}`}>
-              <FaChevronDown />
+              <ChevronDown size={14} />
             </span>
           </>
         )}
@@ -266,7 +288,7 @@ function Sidebar() {
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         aria-label="Toggle menu"
       >
-        {isMobileOpen ? <FaTimes /> : <FaBars />}
+        {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
 
       {/* Mobile Overlay */}
@@ -297,7 +319,7 @@ function Sidebar() {
         {(isHovered || isMobileOpen) && (
           <div className="sidebar-search">
             <div className="search-input-wrapper">
-              <FaSearch />
+              <Search size={14} />
               <input
                 type="text"
                 placeholder="Search..."
@@ -354,7 +376,9 @@ function Sidebar() {
         {/* LOGOUT */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
-            <FaSignOutAlt className="logout-icon" />
+            <span className="logout-icon">
+              ⏏
+            </span>
             {(isHovered || isMobileOpen) && <span>Logout</span>}
           </button>
         </div>

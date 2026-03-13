@@ -15,6 +15,30 @@ code {
 
 
 
+/* Design tokens inspired by Netcradus branding */
+:root {
+  --nc-bg: #050712;
+  --nc-bg-elevated: #0b0f1c;
+  --nc-bg-soft: #111625;
+  --nc-border-subtle: #191f30;
+  --nc-border-strong: #262f46;
+  --nc-text: #f9fafb;
+  --nc-text-muted: #9ca3af;
+  --nc-accent: #ff4f9a;
+  --nc-accent-soft: #ff8a3d;
+  --nc-accent-alt: #ffc83d;
+  --nc-accent-gradient: linear-gradient(120deg, #ff4f9a, #ff8a3d, #ffc83d);
+  --nc-accent-gradient-soft: radial-gradient(circle at top left, #ff4f9a55, transparent 55%),
+                             radial-gradient(circle at bottom right, #ff8a3d40, transparent 55%);
+  --nc-radius-xs: 4px;
+  --nc-radius-sm: 8px;
+  --nc-radius-md: 12px;
+  --nc-radius-lg: 18px;
+  --nc-radius-pill: 999px;
+  --nc-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+  --nc-shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.75);
+}
+
 /* Reset some defaults */
 * {
   margin: 0;
@@ -23,14 +47,16 @@ code {
 }
 
 /* Base styling for the entire app */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  background-color: #0f0f0f; /* Dark background */
-  color: #fff;               /* Default light text */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--nc-bg);
+  color: var(--nc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
@@ -38,7 +64,7 @@ html, body, #root {
 
 /* Code blocks or monospaced text */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
 /* Scrollbar styling (optional) */
@@ -47,16 +73,16 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: #141826;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: #3b425a;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: #4b5675;
 }
 
 /* Utility class (optional) */

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import "./Leads.css";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
-import { FaClipboardList, FaFilter } from "react-icons/fa";
+import { LayoutPanelLeft, SlidersHorizontal } from "lucide-react";
 import * as mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
 
@@ -560,7 +560,10 @@ function Leads() {
 
   return (
     <div className="leads-container">
-      <h2 className="leads-heading"><FaClipboardList /> Leads Management</h2>
+      <h2 className="leads-heading">
+        <LayoutPanelLeft size={22} />
+        Leads Management
+      </h2>
 
       {/* Alerts */}
       {error && <div className="alert alert-error">{error}</div>}
@@ -584,7 +587,7 @@ function Leads() {
           className="btn-filter-toggle" 
           onClick={() => setShowMobileFilters(!showMobileFilters)}
         >
-          <FaFilter /> {showMobileFilters ? "Hide Filters" : "Show Filters"}
+          <SlidersHorizontal size={16} /> {showMobileFilters ? "Hide Filters" : "Show Filters"}
         </button>
       </div>
 

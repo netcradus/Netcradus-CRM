@@ -3,10 +3,62 @@
   display: inline-block;
 }
 
-.bell-icon {
-  font-size: 22px;
+.bell-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 1));
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  color: #f0b429; /* golden yellow tone */
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.85);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease,
+    background 0.18s ease;
+}
+
+.bell-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
+  border-color: rgba(255, 228, 230, 0.7);
+}
+
+.bell-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 20% 0%, #ffc83d, #ff4f9a 70%);
+  color: #020617;
+}
+
+.bell-dot {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fef2f2;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px #020617;
+}
+
+.bell-label {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .popup-box {
