@@ -159,6 +159,12 @@ function Login() {
 
   return (
     <div className="login-page-container">
+      <button 
+        className="explore-acis-btn" 
+        onClick={() => window.open(process.env.REACT_APP_EXPLORE_ACIS_LINK, "_blank")}
+      >
+        Explore ACIS
+      </button>
       {/* Cosmic Background Layer */}
       <div className="background-glow" />
 
