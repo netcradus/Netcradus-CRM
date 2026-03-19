@@ -486,7 +486,8 @@ function Login() {
       }
 
       if (cardRef.current) {
-        cardRef.current.style.transform = `translate(-50%, -50%) rotateY(${m.cx * 4.3}deg) rotateX(${-m.cy * 2.8}deg)`;
+        // card parallax removed - only background moves
+        cardRef.current.style.transform = `translate(-50%, -50%)`;
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -679,34 +680,25 @@ function Login() {
     <div className={`lp-root ${isDay ? "lp-day" : "lp-night"}`}>
       <div className="lp-scene-wrap" ref={sceneRef}>
         {isDay ? <DayBackground /> : <NightBackground />}
-    <div className="login-page-container">
-      <button 
-        className="explore-acis-btn" 
-        onClick={() => window.open(process.env.REACT_APP_EXPLORE_ACIS_LINK, "_blank")}
-      >
-        Explore ACIS
-      </button>
-      {/* Cosmic Background Layer */}
-      <div className="background-glow" />
+        
+        <FloatingParticles isDay={isDay} />
 
-      {/* Right-side Dashboard Illustration */}
-      <div className="illustration-container">
-        <img
-          src="/heroimg2.png"
-          alt="Dashboard Preview"
-          className="hero-image"
-        />
+        <div className="lp-vignette" />
+        <div className="lp-noise" />
+        <div className="lp-orb lp-orb-a" />
+        <div className="lp-orb lp-orb-b" />
+
       </div>
-
-      <FloatingParticles isDay={isDay} />
-
-      <div className="lp-vignette" />
-      <div className="lp-noise" />
-      <div className="lp-orb lp-orb-a" />
-      <div className="lp-orb lp-orb-b" />
 
       <button className="lp-theme-btn" onClick={() => setIsDay((d) => !d)}>
         {isDay ? <MoonStar size={17} /> : <SunMedium size={17} />}
+      </button>
+
+      <button 
+        className="lp-explore-btn" 
+        onClick={() => window.open(process.env.REACT_APP_EXPLORE_ACIS_LINK || "#", "_blank")}
+      >
+        Explore ACIS
       </button>
 
       <div className="lp-card-wrap" ref={cardRef}>
@@ -876,9 +868,9 @@ function Login() {
 
           <p className="lp-copy">© 2026 Netcradus. All rights reserved.</p>
         </div>
-      </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default Login;
