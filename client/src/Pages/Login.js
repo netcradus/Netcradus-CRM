@@ -551,12 +551,16 @@ function Login() {
       const data = err.response?.data;
 
       if (err.response?.status === 403 && data?.action) {
-        setSecurityAction(data.action);
-        setUserId(data.userId);
-        if (data.deviceId) setDeviceId(data.deviceId);
-        setTimeLeft(data.action === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? 300 : 600);
-      } else if (data?.action === "DEVICE_LIMIT_REACHED") {
-        setError(data.message);
+        if (data.action === "DEVICE_LIMIT_REACHED") {
+          setError(data.message);
+          setSecurityAction(null);
+        } else {
+          setSecurityAction(data.action);
+          setUserId(data.userId);
+          if (data.deviceId) setDeviceId(data.deviceId);
+          setTimeLeft(data.action === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? 300 : 600);
+        }
+      } else if (data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
       } else if (data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
         setError(
           <span>

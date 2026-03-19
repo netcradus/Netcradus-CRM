@@ -22,7 +22,9 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ["admin", "sales", "support", "hr", "it", "digital_media"],
-    default: "sales"
+    default: "sales",
+    trim: true,
+    lowercase: true
   },
 
   lastPasswordChange: {
