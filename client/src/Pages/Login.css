@@ -24,6 +24,66 @@ body,
 
 /* background scene */
 .lp-scene-wrap {
+/* ===== LOGIN PAGE CONTAINER ===== */
+.login-page-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;       /* desktop: row */
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 8%;
+  background-color: #1b1429;
+  background-image:
+    radial-gradient(circle at 20% 30%, #3e2b5e 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, #251a3d 0%, transparent 50%);
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  gap: 40px;
+  flex-wrap: wrap;
+  overflow-x: hidden;
+}
+
+.explore-acis-btn {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explore-acis-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ff7e5f;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.explore-acis-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .explore-acis-btn {
+    top: 20px;
+    right: 20px;
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+}
+/* ===== BACKGROUND EFFECTS ===== */
+.background-glow {
   position: absolute;
   inset: -90px;
   pointer-events: none;

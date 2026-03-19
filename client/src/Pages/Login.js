@@ -679,6 +679,23 @@ function Login() {
     <div className={`lp-root ${isDay ? "lp-day" : "lp-night"}`}>
       <div className="lp-scene-wrap" ref={sceneRef}>
         {isDay ? <DayBackground /> : <NightBackground />}
+    <div className="login-page-container">
+      <button 
+        className="explore-acis-btn" 
+        onClick={() => window.open(process.env.REACT_APP_EXPLORE_ACIS_LINK, "_blank")}
+      >
+        Explore ACIS
+      </button>
+      {/* Cosmic Background Layer */}
+      <div className="background-glow" />
+
+      {/* Right-side Dashboard Illustration */}
+      <div className="illustration-container">
+        <img
+          src="/heroimg2.png"
+          alt="Dashboard Preview"
+          className="hero-image"
+        />
       </div>
 
       <FloatingParticles isDay={isDay} />
