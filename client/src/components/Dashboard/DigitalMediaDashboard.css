@@ -1,156 +1,71 @@
-/* Main Dashboard */
-.digital-dashboard {
-  padding: 30px;
-  background: linear-gradient(135deg, #1e1e2f, #151521);
-  min-height: 100vh;
-  color: #fff;
-  font-family: "Segoe UI", sans-serif;
-  max-width: 1400px;
-  margin: auto;
-  box-sizing: border-box;
+/* Digital dashboard uses shared .nc-page layout */
+
+.digital-metrics {
+  margin-top: 16px;
 }
 
-/* Title */
-.dashboard-title {
-  text-align: center;
-  margin-bottom: 40px;
-  font-size: 28px;
-  letter-spacing: 1px;
-  font-weight: 600;
+.digital-metric-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* ===================== */
-/* Stats Grid */
-/* ===================== */
+.digital-metric-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #020617;
+  background: var(--nc-accent-gradient);
+  box-shadow: 0 12px 25px rgba(255, 79, 154, 0.14);
+  flex-shrink: 0;
+}
 
-.stats-grid {
+.digital-platforms {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 50px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
 }
 
-.stat-card {
-  background: #24243a;
-  padding: 25px;
-  border-radius: 14px;
-  text-align: center;
-  transition: 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.digital-platform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.stat-card:hover {
-  transform: translateY(-6px);
-  background: #2f2f4d;
+.digital-platform-title {
+  font-size: 16px;
+  font-weight: 780;
+  color: rgba(255, 241, 232, 0.92);
 }
 
-.stat-card h3 {
+.digital-platform-meta {
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 13px;
+}
+
+.digital-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
-  font-size: 15px;
-  color: #bbb;
 }
 
-.stat-card p {
-  font-size: 26px;
-  font-weight: bold;
-}
-
-/* ===================== */
-/* Platform Grid */
-/* ===================== */
-
-.platform-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
-  margin-bottom: 50px;
-}
-
-.platform-card {
-  background: #24243a;
-  padding: 25px;
-  border-radius: 14px;
-  text-align: center;
-  transition: 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.platform-card:hover {
-  transform: scale(1.05);
-}
-
-.platform-card h3 {
-  margin: 12px 0;
+.digital-table-title {
+  margin: 0;
   font-size: 18px;
+  font-weight: 780;
+  color: rgba(255, 241, 232, 0.92);
 }
-
-/* Platform Colors */
-.facebook { border-top: 4px solid #1877f2; }
-.instagram { border-top: 4px solid #e1306c; }
-.youtube { border-top: 4px solid #ff0000; }
-.twitter { border-top: 4px solid #1da1f2; }
-
-/* ===================== */
-/* Campaign Section */
-/* ===================== */
-
-.campaign-section {
-  background: #24243a;
-  padding: 25px;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.campaign-section h2 {
-  margin-bottom: 20px;
-}
-
-/* Make table responsive */
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-}
-
-th, td {
-  padding: 14px;
-  text-align: left;
-}
-
-th {
-  background: #2f2f4d;
-}
-
-tr:nth-child(even) {
-  background: #1f1f2e;
-}
-
-.active { color: #4caf50; font-weight: 600; }
-.completed { color: #2196f3; font-weight: 600; }
-.pending { color: #ff9800; font-weight: 600; }
-
-/* ===================== */
-/* RESPONSIVE */
-/* ===================== */
 
 @media (max-width: 768px) {
-  .digital-dashboard {
-    padding: 20px;
-  }
-
-  .dashboard-title {
-    font-size: 22px;
-  }
-
-  .stat-card p {
-    font-size: 22px;
-  }
-
-  .platform-card h3 {
-    font-size: 16px;
+  .digital-table-head {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

@@ -1,18 +1,40 @@
 import React from "react";
-import { FaHeadset } from "react-icons/fa";
+import { Headset, Search, Plus, Download } from "lucide-react";
 import "./SupportDashboard.css";
 
 function SupportDashboard() {
   return (
-    <div className="dashboard-container">
-      <div className="dashboard">
-        <h2><FaHeadset />Support Agent</h2>
+    <div className="nc-page support-page">
+      <div className="nc-hero">
+        <div>
+          <div className="nc-badge">
+            <Headset size={14} />
+            <span>Netcradus Support Desk</span>
+          </div>
+          <h1 className="nc-hero-title">
+            Support <span className="nc-gradient-text">Command Center</span>
+          </h1>
+          <p className="nc-hero-subtitle">
+            Triage tickets, monitor response time, and resolve issues with a clean premium workflow.
+          </p>
+        </div>
 
-        {/* Actions */}
-        <div className="dashboard-actions">
-          <div className="actions-left">
-            <input type="text" placeholder="Search tickets..." />
-            <select>
+        <div className="nc-hero-actions">
+          <span className="nc-pill">
+            <span className="support-live-dot" />
+            System Active
+          </span>
+        </div>
+      </div>
+
+      <div className="nc-panel nc-section">
+        <div className="nc-controls">
+          <div className="nc-controls-left">
+            <div className="support-search">
+              <Search size={16} />
+              <input className="nc-input support-search-input" placeholder="Search tickets..." />
+            </div>
+            <select className="nc-select">
               <option>All</option>
               <option>Open</option>
               <option>Resolved</option>
@@ -20,47 +42,61 @@ function SupportDashboard() {
             </select>
           </div>
 
-          <div className="actions-right">
-            <button className="btn primary">Raise Ticket</button>
-            <button className="btn success">Export</button>
+          <div className="nc-controls-right">
+            <button className="nc-btn nc-btn--primary">
+              <Plus size={16} />
+              Raise Ticket
+            </button>
+            <button className="nc-btn">
+              <Download size={16} />
+              Export
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="top-cards">
-          <div className="card">
-            <p>Open Tickets</p>
-            <strong>42</strong>
+      <div className="support-spacer" />
+
+      <div className="nc-grid">
+        <div className="nc-card">
+          <div className="nc-card-title">Open Tickets</div>
+          <div className="nc-card-value">42</div>
+        </div>
+        <div className="nc-card">
+          <div className="nc-card-title">Resolved Today</div>
+          <div className="nc-card-value">15</div>
+        </div>
+        <div className="nc-card">
+          <div className="nc-card-title">Avg. Response Time</div>
+          <div className="nc-card-value">4 min</div>
+        </div>
+      </div>
+
+      <div className="support-spacer" />
+
+      <div className="support-bottom">
+        <div className="nc-card">
+          <div className="support-card-header">
+            <h3>Recent Issues</h3>
+            <span className="nc-status nc-status--pending">Hot</span>
           </div>
-          <div className="card">
-            <p>Resolved Today</p>
-            <strong>15</strong>
-          </div>
-          <div className="card">
-            <p>Avg. Response Time</p>
-            <strong>4 min</strong>
-          </div>
+          <ul className="support-list">
+            <li>Password reset — Olivia</li>
+            <li>Login issue — James</li>
+            <li>Account suspended — Emma</li>
+          </ul>
         </div>
 
-        {/* Bottom Section */}
-        <div className="bottom-section">
-          <div className="card">
-            <p><strong>Recent Issues</strong></p>
-            <ul>
-              <li>Password reset - Olivia</li>
-              <li>Login issue - James</li>
-              <li>Account suspended - Emma</li>
-            </ul>
+        <div className="nc-card">
+          <div className="support-card-header">
+            <h3>Pending Follow-ups</h3>
+            <span className="nc-status nc-status--ok">Tracked</span>
           </div>
-
-          <div className="card">
-            <p><strong>Pending Follow-ups</strong></p>
-            <ul>
-              <li>#1056 - awaiting reply</li>
-              <li>#1071 - check status</li>
-              <li>#1090 - pending update</li>
-            </ul>
-          </div>
+          <ul className="support-list">
+            <li>#1056 — awaiting reply</li>
+            <li>#1071 — check status</li>
+            <li>#1090 — pending update</li>
+          </ul>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { FaBell } from "react-icons/fa";
-import "./NotificationButton.css"; 
+import { Bell } from "lucide-react";
+import "./NotificationButton.css";
 
 const NotificationButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,12 +13,27 @@ const NotificationButton = () => {
   ];
 
   const togglePopup = () => {
-    setIsOpen(!isOpen);
+    setIsOpen((open) => !open);
   };
+
+  const unreadCount = notifications.length;
 
   return (
     <div className="notification-container">
-      <FaBell className="bell-icon" onClick={togglePopup} />
+      <button
+        type="button"
+        className="bell-pill"
+        onClick={togglePopup}
+        aria-label="Open notifications"
+      >
+        <span className="bell-icon-wrap">
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span className="bell-dot">{unreadCount}</span>
+          )}
+        </span>
+        <span className="bell-label">Activity</span>
+      </button>
 
       {isOpen && (
         <div className="popup-box">
