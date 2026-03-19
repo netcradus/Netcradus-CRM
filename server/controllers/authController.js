@@ -58,7 +58,7 @@ const createUserByAdmin = async (req, res) => {
       name: firstName,
       email: normalizedEmail,
       password: hashedPassword,
-      role,
+      role: role.toLowerCase(),
     });
 
     await user.save();
@@ -107,7 +107,7 @@ const login = async (req, res) => {
     }
 
     if (!user || !isMatch) {
-      if (user && user.role !== 'admin') {
+      if (user && user.role?.toLowerCase() !== 'admin') {
         const now = new Date();
         const failWindow = 30 * 60 * 1000; // 30 mins
 
@@ -133,7 +133,7 @@ const login = async (req, res) => {
     }
 
     // On Success: Reset tracker
-    if (user.role !== 'admin') {
+    if (user.role?.toLowerCase() !== 'admin') {
       user.failedLoginAttempts = 0;
       user.lastFailedLogin = null;
       await user.save();
@@ -145,7 +145,7 @@ const login = async (req, res) => {
     }
 
     // 2.5 Admin Device Security Check
-    if (user.role === "admin") {
+    if (user.role?.toLowerCase() === "admin") {
       const { fingerprintData } = req.body; // { platform, timezone, screenResolution }
       if (!fingerprintData) {
         return res.status(400).json({ message: "Security fingerprint data required" });
@@ -269,7 +269,7 @@ const login = async (req, res) => {
     let passwordExpiryWarning = false;
 
     // 3. Priority Checks for non-admin
-    if (user.role !== "admin") {
+    if (user.role?.toLowerCase() !== "admin") {
       const now = Date.now();
       const msPerDay = 1000 * 60 * 60 * 24;
 
@@ -453,6 +453,12 @@ const adminChangeUserPassword = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     user.password = hashed;
+    // Reset security timers so the user isn't immediately prompted on login
+    user.lastPasswordChange = new Date();
+    user.lastWeeklyVerification = new Date();
+    user.failedLoginAttempts = 0;
+    user.lastFailedLogin = null;
+    
     await user.save();
 
     res.json({
@@ -598,7 +604,7 @@ const verifyAdminDevice = async (req, res) => {
     const userAgent = req.get('User-Agent');
 
     const user = await User.findById(userId);
-    if (!user || user.role !== "admin") return res.status(403).json({ message: "Unauthorized" });
+    if (!user || user.role?.toLowerCase() !== "admin") return res.status(403).json({ message: "Unauthorized" });
 
     // Verify OTP (Strict 5 min expiry handled in service)
     await require('../services/otpService').verifyOTP(userId, "ADMIN_DEVICE_VERIFY", otp, ipAddress, userAgent);

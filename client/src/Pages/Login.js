@@ -666,9 +666,15 @@ function Login() {
       icon: <ShieldCheck size={22} />,
       showPw: false,
     },
-    default: {
+    REQUIRE_SECURITY_OTP: {
       title: "Security Check",
       sub: "Weekly security check. Enter the OTP sent to your IT admin.",
+      icon: <ShieldCheck size={22} />,
+      showPw: false,
+    },
+    default: {
+      title: "Identity Verification",
+      sub: "Please enter the OTP sent to the administrator to continue.",
       icon: <ShieldCheck size={22} />,
       showPw: false,
     },
