@@ -486,7 +486,8 @@ function Login() {
       }
 
       if (cardRef.current) {
-        cardRef.current.style.transform = `translate(-50%, -50%) rotateY(${m.cx * 4.3}deg) rotateX(${-m.cy * 2.8}deg)`;
+        // card parallax removed - only background moves
+        cardRef.current.style.transform = `translate(-50%, -50%)`;
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -550,12 +551,16 @@ function Login() {
       const data = err.response?.data;
 
       if (err.response?.status === 403 && data?.action) {
-        setSecurityAction(data.action);
-        setUserId(data.userId);
-        if (data.deviceId) setDeviceId(data.deviceId);
-        setTimeLeft(data.action === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? 300 : 600);
-      } else if (data?.action === "DEVICE_LIMIT_REACHED") {
-        setError(data.message);
+        if (data.action === "DEVICE_LIMIT_REACHED") {
+          setError(data.message);
+          setSecurityAction(null);
+        } else {
+          setSecurityAction(data.action);
+          setUserId(data.userId);
+          if (data.deviceId) setDeviceId(data.deviceId);
+          setTimeLeft(data.action === "REQUIRE_ADMIN_DEVICE_VERIFICATION" ? 300 : 600);
+        }
+      } else if (data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
       } else if (data?.action === "SHOW_FORGOT_PASSWORD_LINK") {
         setError(
           <span>
@@ -665,9 +670,15 @@ function Login() {
       icon: <ShieldCheck size={22} />,
       showPw: false,
     },
-    default: {
+    REQUIRE_SECURITY_OTP: {
       title: "Security Check",
       sub: "Weekly security check. Enter the OTP sent to your IT admin.",
+      icon: <ShieldCheck size={22} />,
+      showPw: false,
+    },
+    default: {
+      title: "Identity Verification",
+      sub: "Please enter the OTP sent to the administrator to continue.",
       icon: <ShieldCheck size={22} />,
       showPw: false,
     },
@@ -679,17 +690,25 @@ function Login() {
     <div className={`lp-root ${isDay ? "lp-day" : "lp-night"}`}>
       <div className="lp-scene-wrap" ref={sceneRef}>
         {isDay ? <DayBackground /> : <NightBackground />}
+        
+        <FloatingParticles isDay={isDay} />
+
+        <div className="lp-vignette" />
+        <div className="lp-noise" />
+        <div className="lp-orb lp-orb-a" />
+        <div className="lp-orb lp-orb-b" />
+
       </div>
-
-      <FloatingParticles isDay={isDay} />
-
-      <div className="lp-vignette" />
-      <div className="lp-noise" />
-      <div className="lp-orb lp-orb-a" />
-      <div className="lp-orb lp-orb-b" />
 
       <button className="lp-theme-btn" onClick={() => setIsDay((d) => !d)}>
         {isDay ? <MoonStar size={17} /> : <SunMedium size={17} />}
+      </button>
+
+      <button 
+        className="lp-explore-btn" 
+        onClick={() => window.open(process.env.REACT_APP_EXPLORE_ACIS_LINK || "#", "_blank")}
+      >
+        Explore ACIS
       </button>
 
       <div className="lp-card-wrap" ref={cardRef}>
@@ -859,9 +878,9 @@ function Login() {
 
           <p className="lp-copy">© 2026 Netcradus. All rights reserved.</p>
         </div>
-      </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default Login;

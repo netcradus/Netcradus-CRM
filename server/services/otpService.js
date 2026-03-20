@@ -127,10 +127,16 @@ const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
     else if (type === "FORGOT_PASSWORD") reasonText = "Forgot Password Reset Request";
     else if (type === "ADMIN_DEVICE_VERIFY") reasonText = "New Admin Device Login Verification";
 
-    const timestamp = new Date().toLocaleString();
-    const actionText = `User <strong>${userEmail}</strong> has requested a verification code for: <strong>${reasonText}</strong>.`;
+    let actionText = `User <strong>${userEmail}</strong> has requested an OTP for: <strong>${reasonText}</strong>.`;
+    
+    if (type === "PASSWORD_CHANGE") {
+        actionText = `This user <strong>${userEmail}</strong> is trying to change their password. Please use the code below to authorize.`;
+    } else if (type === "SECURITY_CHECK") {
+        actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
+    }
 
-    const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: ${type === "ADMIN_DEVICE_VERIFY" ? '5' : '10'} minutes.\nDO NOT share this code unless verified.`;
+    const timestamp = new Date().toLocaleString();
+    const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: ${type === "ADMIN_DEVICE_VERIFY" ? '5' : '10'} minutes.`;
 
     const html = `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">
