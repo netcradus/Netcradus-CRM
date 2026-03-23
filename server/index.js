@@ -60,6 +60,13 @@ app.use("/api/deals", DealsRoutes);
 const taskRoutes = require("./routes/taskRoutes");
 app.use("/api/tasks", taskRoutes);
 
+const projectRoutes = require("./routes/projectRoutes");
+app.use("/api/projects", projectRoutes);
+
+//Column Routes
+const columnRoutes = require("./routes/columnRoutes");
+app.use("/api/columns", columnRoutes);
+
 //product routes
 const productRoutes = require("./routes/productRoutes");
 app.use("/api/products", productRoutes);
