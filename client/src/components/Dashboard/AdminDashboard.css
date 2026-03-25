@@ -573,3 +573,68 @@
     pointer-events: auto;
   }
 }
+
+.role-dashboard-preview {
+  animation: highlightFade 0.5s ease;
+}
+
+@keyframes highlightFade {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 138, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 138, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 rgba(255, 138, 0, 0);
+  }
+}
+
+/* Dashboard preview inside admin */
+.role-dashboard-preview {
+
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 138, 0, 0.15);
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Slight scaling for preview dashboards */
+.role-dashboard-preview .sales-dashboard,
+.role-dashboard-preview .support-dashboard,
+.role-dashboard-preview .hr-dashboard,
+.role-dashboard-preview .tech-dashboard,
+.role-dashboard-preview .digital-dashboard {
+  
+  transform-origin: top center;
+}
+
+/* Reduce spacing inside preview */
+.role-dashboard-preview .sales-hero,
+.role-dashboard-preview .sales-controls {
+  margin-bottom: 15px;
+}
+
+/* Optional: reduce font size slightly */
+.role-dashboard-preview h1 {
+  font-size: 22px;
+}
+
+/* Smooth animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

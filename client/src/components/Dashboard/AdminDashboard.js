@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FileBarChart } from "lucide-react";
 import { FaUserShield, FaUsers, FaUserCheck, FaUserTimes } from "react-icons/fa";
 import {
@@ -16,7 +16,13 @@ import {
 } from "recharts";
 import axios from "axios";
 import "./AdminDashboard.css";
+import SalesDashboard from "./SalesDashboard";
+import SupportDashboard from "./SupportDashboard";
+import HRDashboard from "./HRDashboard";
+import TechDashboard from "./TechDashboard";
+import DigitalMediaDashboard from "./DigitalMediaDashboard";
 import { apiUrl } from "../../config/api";
+import { useNavigate } from "react-router-dom";
 
 const chartData = [
   { month: "Jan", users: 12 },
@@ -46,7 +52,7 @@ const PIE_COLORS = [
 const AdminDashboard = () => {
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
-
+const previewRef = useRef(null);
   const userName = localStorage.getItem("userName") || "User";
   const userRole = localStorage.getItem("userRole") || "Admin";
   const token = localStorage.getItem("token");
@@ -67,7 +73,63 @@ const AdminDashboard = () => {
   }, [token]);
 
   const totalUsers = users.length;
+const [selectedRole, setSelectedRole] = useState("");
+const [selectedUser, setSelectedUser] = useState(null);
 
+const handleRoleChange = (e) => {
+  const role = e.target.value;
+  setSelectedRole(role);
+  setSelectedUser(null); // reset user
+};
+
+const handleSearch = () => {
+  const searchValue = search.toLowerCase().trim();
+
+  const foundUser = users.find(
+    (u) =>
+      u.name.toLowerCase().includes(searchValue) ||
+      u.email.toLowerCase().includes(searchValue) ||
+      u.role.toLowerCase().includes(searchValue)
+  );
+
+  console.log("FOUND USER 👉", foundUser);
+
+  if (foundUser) {
+    setSelectedUser(foundUser);
+    setSelectedRole(foundUser.role);
+  } else {
+    alert("User not found ❌");
+  }
+};
+
+const renderSelectedDashboard = () => {
+  const role = selectedUser ? selectedUser.role : selectedRole;
+
+  console.log("ROLE 👉", role);
+
+  switch (role) {
+    case "sales":
+      return <SalesDashboard preview={!selectedUser} />;
+    case "support":
+      return <SupportDashboard preview={!selectedUser} />;
+    case "hr":
+      return <HRDashboard preview={!selectedUser} />;
+    case "it":
+      return <TechDashboard preview={!selectedUser} />;
+    case "digital_media":
+      return <DigitalMediaDashboard preview={!selectedUser} />;
+    default:
+      return <p>No dashboard found</p>;
+  }
+};
+useEffect(() => {
+  if (previewRef.current) {
+    previewRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+}, [selectedRole, selectedUser]);
   return (
     <div className="admin-dashboard">
       <div className="admin-hero">
@@ -93,20 +155,25 @@ const AdminDashboard = () => {
 
       <div className="admin-controls glass">
         <input
-          type="text"
-          className="admin-search"
-          placeholder="Search user..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+  type="text"
+  className="admin-search"
+  placeholder="Search user..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
 
-        <select className="admin-select">
-          <option value="sales">Sales</option>
-          <option value="support">Support</option>
-          <option value="hr">HR</option>
-          <option value="it">IT</option>
-          <option value="digital_media">Digital Media</option>
-        </select>
+<button onClick={handleSearch} className="btn-primary">
+  Search
+</button>
+
+       <select className="admin-select" onChange={handleRoleChange}>
+  <option value="">Select Role</option>
+  <option value="sales">Sales</option>
+  <option value="support">Support</option>
+  <option value="hr">HR</option>
+  <option value="it">IT</option>
+  <option value="digital_media">Digital Media</option>
+</select>
 
         <button className="btn-primary netcradus-btn">
           <FileBarChart size={18} />
@@ -242,6 +309,12 @@ const AdminDashboard = () => {
           </ul>
         </div>
       </div>
+
+  {selectedRole && (
+  <div ref={previewRef} className="role-dashboard-preview">
+    {renderSelectedDashboard()}
+  </div>
+)}
     </div>
   );
 };

@@ -28,6 +28,9 @@ import {
   Wrench,
   UserCircle2,
   Layers3,
+  Shield,
+  Database,
+  FileLock,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
@@ -38,7 +41,7 @@ const roleMenus = {
   admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
-    { label: "Device Security", path: "/admin/devices", icon: <Wrench size={18} /> },
+    // { label: "Device Security", path: "/admin/devices", icon: <Wrench size={18} /> },
     {
       label: "CRM",
       icon: <Layers3 size={18} />,
@@ -94,6 +97,14 @@ const roleMenus = {
         { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
         { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
         { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
+      ],
+    },
+
+    {
+      label: "Security",
+      icon: <Shield size={18} />,
+      children: [
+        { label: "Device Security", path: "/admin/devices", icon: <FileLock size={18} /> },
       ],
     },
   ],
