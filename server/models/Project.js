@@ -1,24 +1,18 @@
 const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema({
-  name: String,
+  name: {
+    type: String,
+    required: true,
+  },
   client: String,
 
+  // status is now free-text, driven by column name — no enum restriction
   status: {
     type: String,
-    enum: [
-      "Pending",
-      "Ongoing",
-      "Completed",
-      "To Do",
-      "Bugs",
-      "Solutions",
-      "Ideas",
-    ],
-    default: "Pending",
+    default: "To Do",
   },
 
-  // ✅ NEW FIELD (IMPORTANT)
   columnId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Column",
@@ -31,7 +25,6 @@ const projectSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-
 }, { timestamps: true });
 
 module.exports = mongoose.model("Project", projectSchema);
