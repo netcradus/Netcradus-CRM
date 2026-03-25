@@ -3,20 +3,20 @@ import axios from "axios";
 import "./Projects.css";
 
 const RANDOM_COLORS = [
-  "#ff3e6c","#ffb020","#00d68f","#7c6dfa",
-  "#f04aff","#2eb8ff","#00c9b1","#fb923c","#34d399",
+  "#ff3e6c", "#ffb020", "#00d68f", "#7c6dfa",
+  "#f04aff", "#2eb8ff", "#00c9b1", "#fb923c", "#34d399",
 ];
 
 const BASE_PROJECTS = "http://localhost:5000/api/projects";
-const BASE_COLUMNS  = "http://localhost:5000/api/columns";
+const BASE_COLUMNS = "http://localhost:5000/api/columns";
 
 const getProgressLevel = (pct) => pct >= 100 ? "high" : pct >= 50 ? "mid" : "low";
 const formatDate = (str) =>
-  str ? new Date(str).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" }) : "";
+  str ? new Date(str).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "";
 
 /* ------------------------------------------------------------------ Card */
 function Card({ card, onDelete, onDragStart }) {
-  const pct   = Number(card.progress) || 0;
+  const pct = Number(card.progress) || 0;
   const level = getProgressLevel(pct);
   return (
     <div className="pb-card" draggable onDragStart={(e) => onDragStart(e, card._id)}>
@@ -24,21 +24,27 @@ function Card({ card, onDelete, onDragStart }) {
         <span className="pb-card-name">{card.name}</span>
         <button className="pb-card-del" onClick={() => onDelete(card._id)} title="Delete card">x</button>
       </div>
+
+      {card.description && (
+  <div className="pb-card-desc">
+    {card.description}
+  </div>
+)}
       {card.client && (
         <div className="pb-card-meta">
-          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" /><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           {card.client}
         </div>
       )}
       {card.deadline && (
         <div className="pb-card-meta pb-card-meta--deadline">
-          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M5 1v2M11 1v2M2 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M5 1v2M11 1v2M2 7h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           {formatDate(card.deadline)}
         </div>
       )}
       <div className="pb-progress-row">
         <div className="pb-progress-track">
-          <div className={`pb-progress-fill pb-progress-fill--${level}`} style={{ width:`${pct}%` }} />
+          <div className={`pb-progress-fill pb-progress-fill--${level}`} style={{ width: `${pct}%` }} />
         </div>
         <span className={`pb-progress-pct pb-progress-pct--${level}`}>{pct}%</span>
       </div>
@@ -48,10 +54,10 @@ function Card({ card, onDelete, onDragStart }) {
 
 /* --------------------------------------------------------------- Column */
 function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onRenameCol, onDragStart, onDrop }) {
-  const [menuOpen,    setMenuOpen]    = useState(false);
-  const [renaming,    setRenaming]    = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(col.name);
-  const menuRef   = useRef(null);
+  const menuRef = useRef(null);
   const submitted = useRef(false);
 
   // Sync local input if parent updates col.name (after successful save)
@@ -77,9 +83,9 @@ function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onR
     setTimeout(() => { submitted.current = false; }, 150);
   };
 
-  const dragOver  = (e) => { e.preventDefault(); e.currentTarget.classList.add("is-drag-over"); };
-  const dragLeave = (e) =>   e.currentTarget.classList.remove("is-drag-over");
-  const drop      = (e) => { e.currentTarget.classList.remove("is-drag-over"); onDrop(e, col._id); };
+  const dragOver = (e) => { e.preventDefault(); e.currentTarget.classList.add("is-drag-over"); };
+  const dragLeave = (e) => e.currentTarget.classList.remove("is-drag-over");
+  const drop = (e) => { e.currentTarget.classList.remove("is-drag-over"); onDrop(e, col._id); };
 
   return (
     <div className="pb-col" onDragOver={dragOver} onDragLeave={dragLeave} onDrop={drop}>
@@ -93,7 +99,7 @@ function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onR
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={commitRename}
               onKeyDown={(e) => {
-                if (e.key === "Enter")  commitRename();
+                if (e.key === "Enter") commitRename();
                 if (e.key === "Escape") { setRenaming(false); setRenameValue(col.name); }
               }}
               autoFocus
@@ -111,25 +117,25 @@ function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onR
             title="Column options"
           >
             <svg viewBox="0 0 4 16" fill="currentColor" width="14" height="14">
-              <circle cx="2" cy="2"  r="1.5"/>
-              <circle cx="2" cy="8"  r="1.5"/>
-              <circle cx="2" cy="14" r="1.5"/>
+              <circle cx="2" cy="2" r="1.5" />
+              <circle cx="2" cy="8" r="1.5" />
+              <circle cx="2" cy="14" r="1.5" />
             </svg>
           </button>
 
           {menuOpen && (
             <div className="pb-col-dropdown" onClick={(e) => e.stopPropagation()}>
               <button className="pb-dropdown-item" onClick={() => { setRenaming(true); setMenuOpen(false); }}>
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>
                 Rename list
               </button>
               <button className="pb-dropdown-item" onClick={() => { onAddCard(col._id); setMenuOpen(false); }}>
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M8 5v6M5 8h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.4" /><path d="M8 5v6M5 8h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
                 Add a card
               </button>
               <div className="pb-dropdown-divider" />
               <button className="pb-dropdown-item pb-dropdown-item--danger" onClick={() => { onDeleteCol(col._id); setMenuOpen(false); }}>
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M3 4h10M6 4V2h4v2M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M3 4h10M6 4V2h4v2M5 4v8a1 1 0 001 1h4a1 1 0 001-1V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 Delete list
               </button>
             </div>
@@ -139,10 +145,10 @@ function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onR
 
       <div className="pb-cards">
         {loading ? (
-          <><div className="pb-skeleton" /><div className="pb-skeleton" style={{ height:52, opacity:0.4 }} /></>
+          <><div className="pb-skeleton" /><div className="pb-skeleton" style={{ height: 52, opacity: 0.4 }} /></>
         ) : cards.length === 0 ? (
           <div className="pb-empty-col">
-            <svg viewBox="0 0 40 40" fill="none"><rect x="6" y="10" width="28" height="24" rx="4" stroke="currentColor" strokeWidth="1.5"/><path d="M13 6h14M20 17v10M15 22h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            <svg viewBox="0 0 40 40" fill="none"><rect x="6" y="10" width="28" height="24" rx="4" stroke="currentColor" strokeWidth="1.5" /><path d="M13 6h14M20 17v10M15 22h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             <p>No cards yet</p>
           </div>
         ) : (
@@ -163,7 +169,13 @@ function Column({ col, cards, loading, onAddCard, onDeleteCard, onDeleteCol, onR
 
 /* --------------------------------------------------------- AddCardModal */
 function AddCardModal({ onSave, onClose }) {
-  const [form, setForm] = useState({ name:"", client:"", deadline:"", progress:0 });
+  const [form, setForm] = useState({
+    name: "",
+    client: "",
+    deadline: "",
+    progress: 0,
+    description: ""   // ✅ NEW
+  });
   const [saving, setSaving] = useState(false);
   const set = (f) => (e) => setForm((p) => ({ ...p, [f]: e.target.value }));
   const handleSave = async () => {
@@ -180,18 +192,24 @@ function AddCardModal({ onSave, onClose }) {
           <button className="pb-modal-close" onClick={onClose}>x</button>
         </div>
         {[
-          { label:"Project / Task", field:"name",     type:"text",   placeholder:"e.g. Landing page redesign", autoFocus:true },
-          { label:"Client",         field:"client",   type:"text",   placeholder:"e.g. Acme Corp" },
-          { label:"Deadline",       field:"deadline", type:"date",   placeholder:"" },
-          { label:"Progress %",     field:"progress", type:"number", placeholder:"0 - 100" },
+          { label: "Project / Task", field: "name", type: "text", placeholder: "e.g. Landing page redesign", autoFocus: true },
+          { label: "Client", field: "client", type: "text", placeholder: "e.g. Acme Corp" },
+          { label: "Deadline", field: "deadline", type: "date", placeholder: "" },
+          { label: "Progress %", field: "progress", type: "number", placeholder: "0 - 100" },
+          {
+            label: "Description",
+            field: "description",
+            type: "text",
+            placeholder: "Write what is done & what remains..."
+          }
         ].map(({ label, field, type, placeholder, autoFocus }) => (
           <div className="pb-modal-field" key={field}>
             <label className="pb-modal-label">{label}</label>
             <input
               className="pb-modal-input" type={type} placeholder={placeholder}
               value={form[field]} onChange={set(field)}
-              min={type==="number"?0:undefined} max={type==="number"?100:undefined}
-              autoFocus={autoFocus||undefined}
+              min={type === "number" ? 0 : undefined} max={type === "number" ? 100 : undefined}
+              autoFocus={autoFocus || undefined}
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
             />
           </div>
@@ -209,7 +227,7 @@ function AddCardModal({ onSave, onClose }) {
 
 /* ------------------------------------------------------- AddColumnModal */
 function AddColumnModal({ onSave, onClose }) {
-  const [name,  setName]  = useState("");
+  const [name, setName] = useState("");
   const [color, setColor] = useState(RANDOM_COLORS[Math.floor(Math.random() * RANDOM_COLORS.length)]);
   const [saving, setSaving] = useState(false);
   const handleSave = async () => {
@@ -235,8 +253,8 @@ function AddColumnModal({ onSave, onClose }) {
           <label className="pb-modal-label">Colour</label>
           <div className="pb-color-row">
             {RANDOM_COLORS.map((c) => (
-              <button key={c} className={`pb-color-swatch${color===c?" is-active":""}`}
-                style={{ background:c }} onClick={() => setColor(c)} />
+              <button key={c} className={`pb-color-swatch${color === c ? " is-active" : ""}`}
+                style={{ background: c }} onClick={() => setColor(c)} />
             ))}
           </div>
         </div>
@@ -253,13 +271,13 @@ function AddColumnModal({ onSave, onClose }) {
 
 /* ---------------------------------------------------------- Main Board */
 export default function Project() {
-  const [columns,   setColumns]   = useState([]);
-  const [projects,  setProjects]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
-  const [cardModal, setCardModal] = useState({ open:false, colId:null });
-  const [colModal,  setColModal]  = useState(false);
-  const dragCardId  = useRef(null);
+  const [columns, setColumns] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cardModal, setCardModal] = useState({ open: false, colId: null });
+  const [colModal, setColModal] = useState(false);
+  const dragCardId = useRef(null);
   const dragFromCol = useRef(null);
 
   const fetchAll = async () => {
@@ -317,7 +335,7 @@ export default function Project() {
     try {
       const { data: created } = await axios.post(BASE_PROJECTS, { ...formData, columnId: colId });
       setProjects((prev) => [...prev, created]);
-      setCardModal({ open:false, colId:null });
+      setCardModal({ open: false, colId: null });
     } catch (err) {
       setError(`Failed to save card: ${err.response?.data?.error || err.message}`);
     }
@@ -333,7 +351,7 @@ export default function Project() {
   };
 
   const handleDragStart = (e, cardId) => {
-    dragCardId.current  = cardId;
+    dragCardId.current = cardId;
     const card = projects.find((p) => p._id === cardId);
     dragFromCol.current = card?.columnId?._id ?? card?.columnId;
   };
@@ -357,7 +375,7 @@ export default function Project() {
       <header className="pb-header">
         <div className="pb-logo">
           <div className="pb-logo-icon">
-            <svg viewBox="0 0 20 20"><rect x="1" y="1" width="7" height="18" rx="2"/><rect x="12" y="1" width="7" height="11" rx="2"/><rect x="12" y="15" width="7" height="4" rx="2"/></svg>
+            <svg viewBox="0 0 20 20"><rect x="1" y="1" width="7" height="18" rx="2" /><rect x="12" y="1" width="7" height="11" rx="2" /><rect x="12" y="15" width="7" height="4" rx="2" /></svg>
           </div>
           <span className="pb-title">Project Board</span>
           <span className="pb-live-badge"><span className="pb-live-dot" />Live</span>
@@ -380,7 +398,7 @@ export default function Project() {
             key={col._id} col={col}
             cards={getColProjects(col._id)}
             loading={loading}
-            onAddCard={(colId)  => setCardModal({ open:true, colId })}
+            onAddCard={(colId) => setCardModal({ open: true, colId })}
             onDeleteCard={handleDeleteCard}
             onDeleteCol={handleDeleteCol}
             onRenameCol={handleRenameCol}
@@ -398,7 +416,7 @@ export default function Project() {
       {cardModal.open && (
         <AddCardModal
           onSave={(fd) => handleSaveCard(cardModal.colId, fd)}
-          onClose={() => setCardModal({ open:false, colId:null })}
+          onClose={() => setCardModal({ open: false, colId: null })}
         />
       )}
       {colModal && <AddColumnModal onSave={handleSaveColumn} onClose={() => setColModal(false)} />}

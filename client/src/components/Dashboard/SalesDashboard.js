@@ -51,7 +51,7 @@ const recentDeals = [
 
 const pieColors = ['#ff8a00', '#ff5f3d', '#ff2d8f'];
 
-const SalesDashboard = () => {
+const SalesDashboard = ({ preview }) => {
   const [search, setSearch] = useState('');
   const userName = localStorage.getItem('userName') || 'User';
   const userRole = localStorage.getItem('userRole') || 'Admin';

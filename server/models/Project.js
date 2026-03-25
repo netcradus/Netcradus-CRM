@@ -25,6 +25,22 @@ const projectSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+
+   description: {
+  type: String,
+  default: "",
+},
+
+comments: [
+  {
+    text: String,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("Project", projectSchema);

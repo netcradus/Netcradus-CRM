@@ -76,7 +76,7 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+
   margin-bottom: 20px;
   padding: 10px 8px;
   flex-shrink: 0;
@@ -97,8 +97,7 @@
 
 .company-name img {
   width: 100%;
-  height: auto;
-  max-width: 160px;
+  height: 30px;
 }
 
 /* ===== SEARCH ===== */
@@ -450,7 +449,7 @@
   margin-top: 50px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  /* gap: 8px; */
   margin-bottom: 20px;
   padding: 8px 10px;
   flex-shrink: 0;

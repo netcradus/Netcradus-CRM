@@ -509,3 +509,9 @@ button { cursor: pointer; font-family: var(--font-mono); }
   .pb-col        { min-width: 200px; }
   .pb-modal      { padding: 20px 18px 18px; }
 }
+.pb-card-desc {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
