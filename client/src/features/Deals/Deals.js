@@ -1,34 +1,65 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./Deals.css";
 import { Handshake, Plus, Search } from "lucide-react";
+
+const API = "http://localhost:5000/api/deals";
 
 function Deals() {
   const [deals, setDeals] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newDeal, setNewDeal] = useState({
-    name: "",
-    status: "New",
-    value: "",
-    assignedTo: ""
-  });
+  const [editModal, setEditModal] = useState(null);
 
-  const openModal = () => setShowModal(true);
-  const closeModal = () => setShowModal(false);
+const [form, setForm] = useState({
+  name: "",
+  status: "In Progress",
+  value: "",
+  assignedTo: "",
+  date: "",
+});
 
-  const handleChange = (e) => {
-    setNewDeal({ ...newDeal, [e.target.name]: e.target.value });
+  // 🔥 FETCH
+  const fetchDeals = async () => {
+    const res = await axios.get(API);
+    setDeals(res.data);
   };
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  // 🔥 INPUT
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // 🔥 CREATE
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const dealToAdd = { ...newDeal, id: Date.now() };
-    setDeals([dealToAdd, ...deals]);
-    setNewDeal({ name: "", status: "New", value: "", assignedTo: "" });
-    closeModal();
+    await axios.post(API, form);
+    fetchDeals();
+    setShowModal(false);
+    setForm({ name: "", status: "New", value: "", assignedTo: "" });
+  };
+
+  // 🔥 DELETE
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this deal?")) return;
+    await axios.delete(`${API}/${id}`);
+    fetchDeals();
+  };
+
+  // 🔥 UPDATE
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    await axios.put(`${API}/${editModal._id}`, editModal);
+    setEditModal(null);
+    fetchDeals();
   };
 
   return (
     <div className="nc-page deals-page">
+      {/* HERO */}
       <div className="nc-hero">
         <div>
           <div className="nc-badge">
@@ -38,116 +69,155 @@ function Deals() {
           <h1 className="nc-hero-title">
             Deals <span className="nc-gradient-text">Pipeline</span>
           </h1>
-          <p className="nc-hero-subtitle">
-            Track opportunity health, update stages, and keep revenue forecasting accurate.
-          </p>
         </div>
       </div>
 
+      {/* CONTROLS */}
       <div className="nc-panel nc-section">
         <div className="nc-controls">
-          <div className="nc-controls-left">
-            <div className="deals-search">
-              <Search size={16} />
-              <input className="nc-input deals-search-input" placeholder="Search deals..." />
-            </div>
+          <div className="deals-search">
+            <Search size={16} />
+            <input placeholder="Search deals..." />
           </div>
-          <div className="nc-controls-right">
-            <button className="nc-btn nc-btn--primary" onClick={openModal}>
-              <Plus size={16} />
-              Add Deal
-            </button>
-          </div>
+
+          <button className="nc-btn nc-btn--primary" onClick={() => setShowModal(true)}>
+            <Plus size={16} /> Add Deal
+          </button>
         </div>
       </div>
 
-      <div className="pipeline-stages">
-        <div className="stage">New</div>
-        <div className="stage">In Progress</div>
-        <div className="stage won">Won</div>
-        <div className="stage lost">Lost</div>
-      </div>
-
+      {/* TABLE */}
       <div className="nc-panel nc-section">
         <div className="nc-table-wrap">
           <table className="nc-table">
-          <thead>
-            <tr>
-              <th>Deal Name</th>
-              <th>Status</th>
-              <th>Value</th>
-              <th>Assigned To</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.length === 0 ? (
+            <thead>
               <tr>
-                <td colSpan="4" style={{ textAlign: "center" }}>No deals found.</td>
+                <th>#</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Value</th>
+                <th>Assigned</th>
+                <th>Actions</th>
               </tr>
-            ) : (
-              deals.map((deal) => (
-                <tr key={deal.id}>
-                  <td data-label="Deal Name">{deal.name}</td>
-                  <td data-label="Status">
-                    {deal.status === "Won" ? (
-                      <span className="nc-status nc-status--ok">Won</span>
-                    ) : deal.status === "Lost" ? (
-                      <span className="nc-status nc-status--pending">Lost</span>
-                    ) : deal.status === "In Progress" ? (
-                      <span className="nc-status nc-status--done">In Progress</span>
-                    ) : (
-                      <span className="nc-status nc-status--pending">New</span>
-                    )}
-                  </td>
-                  <td data-label="Value">{deal.value}</td>
-                  <td data-label="Assigned To">{deal.assignedTo}</td>
+            </thead>
+
+            <tbody>
+              {deals.length === 0 ? (
+                <tr>
+                  <td colSpan="6">No deals found</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                deals.map((d, i) => (
+                  <tr key={d._id}>
+                    <td>{i + 1}</td>
+                    <td>{d.name}</td>
+
+                    <td>
+                    <span className={`status ${d.status.toLowerCase().replace(" ", "-")}`}>
+                        {d.status}
+                      </span>
+                    </td>
+
+
+
+                    <td>₹ {d.value}</td>
+
+                    <td>{d.assignedTo}</td>
+                    
+
+                    <td>
+                      <button
+                        className="btn-edit"
+                        onClick={() => setEditModal(d)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDelete(d._id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
+      {/* ===== ADD MODAL ===== */}
       {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Add New Deal</h3>
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Add Deal</h3>
+
             <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                name="name"
-                placeholder="Deal Name"
-                value={newDeal.name}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="value"
-                placeholder="Value"
-                value={newDeal.value}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="assignedTo"
-                placeholder="Assigned To"
-                value={newDeal.assignedTo}
-                onChange={handleChange}
-                required
-              />
-              <select name="status" value={newDeal.status} onChange={handleChange}>
+              <input name="name" placeholder="Deal Name" onChange={handleChange} required />
+              <input name="value" placeholder="Value" onChange={handleChange} required />
+              <input name="assignedTo" placeholder="Assigned To" onChange={handleChange} required />
+
+              <select name="status" onChange={handleChange}>
                 <option>New</option>
                 <option>In Progress</option>
                 <option>Won</option>
                 <option>Lost</option>
               </select>
 
-              <div className="modal-buttons">
-                <button type="submit" className="nc-btn nc-btn--primary">Save Deal</button>
-                <button type="button" className="nc-btn" onClick={closeModal}>Cancel</button>
+              <div className="modal-actions">
+                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== EDIT MODAL ===== */}
+      {editModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Edit Deal</h3>
+
+            <form onSubmit={handleUpdate}>
+              <input
+                value={editModal.name}
+                onChange={(e) =>
+                  setEditModal({ ...editModal, name: e.target.value })
+                }
+              />
+
+              <input
+                value={editModal.value}
+                onChange={(e) =>
+                  setEditModal({ ...editModal, value: e.target.value })
+                }
+              />
+
+              <input
+                value={editModal.assignedTo}
+                onChange={(e) =>
+                  setEditModal({ ...editModal, assignedTo: e.target.value })
+                }
+              />
+
+              <select
+                value={editModal.status}
+                onChange={(e) =>
+                  setEditModal({ ...editModal, status: e.target.value })
+                }
+              >
+                <option>New</option>
+                <option>In Progress</option>
+                <option>Won</option>
+                <option>Lost</option>
+              </select>
+
+              <div className="modal-actions">
+                <button onClick={() => setEditModal(null)}>Cancel</button>
+                <button className="btn-primary">Update</button>
               </div>
             </form>
           </div>

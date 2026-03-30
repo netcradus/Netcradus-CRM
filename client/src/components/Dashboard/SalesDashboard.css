@@ -153,6 +153,35 @@
   color: #9f9f9f;
 }
 
+.sales-table {
+  overflow-x: auto;
+}
+
+.sales-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #111;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sales-table th {
+  background: #1a1a1a;
+  color: #ff8a00;
+  text-align: left;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.sales-table td {
+  padding: 12px;
+  border-bottom: 1px solid #222;
+  color: #ddd;
+}
+
+.sales-table tr:hover {
+  background: #1c1c1c;
+}
 .sales-search:focus,
 .sales-select:focus {
   outline: none;
@@ -388,14 +417,14 @@
   text-transform: capitalize;
 }
 
-.status.open {
-  background: rgba(255, 179, 71, 0.14);
-  color: #ffbe8c;
-}
 
 .status.won {
   background: rgba(255, 95, 61, 0.14);
   color: #ff8f73;
+}
+.status.in-progress {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
 }
 
 .status.lost {

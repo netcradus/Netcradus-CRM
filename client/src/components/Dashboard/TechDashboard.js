@@ -11,7 +11,7 @@ const initialData = {
   "New Ideas": ["Add dark mode toggle", "Implement notifications"]
 };
 
-function TechDashboard() {
+function TechDashboard({ preview = false, isAdmin = false }) {
   const [data, setData] = useState(initialData);
   const [newCard, setNewCard] = useState({});
   const [newProject, setNewProject] = useState("");
@@ -34,78 +34,112 @@ function TechDashboard() {
   };
 
   return (
-    <div className="nc-page tech-page">
-      <div className="nc-hero">
-        <div>
-          <div className="nc-badge">
-            <Kanban size={14} />
-            <span>Netcradus IT Workspace</span>
-          </div>
-          <h1 className="nc-hero-title">
-            Tech <span className="nc-gradient-text">Delivery Board</span>
-          </h1>
-          <p className="nc-hero-subtitle">
-            Track initiatives, bugs, and improvements with a clean kanban workflow built for production teams.
-          </p>
-        </div>
-        <div className="nc-hero-actions">
-          <span className="nc-pill">
-            <Sparkles size={16} />
-            Live Board
-          </span>
-        </div>
-      </div>
+    <div className={`nc-page tech-page ${preview ? "preview-mode" : ""}`}>
 
-      <div className="nc-panel nc-section">
-        <div className="nc-controls">
-          <div className="nc-controls-left">
-            <div className="tech-add-project">
-              <Columns3 size={16} />
-              <input
-                className="nc-input tech-project-input"
-                type="text"
-                placeholder="New column (e.g., Sprint 12)"
-                value={newProject}
-                onChange={(e) => setNewProject(e.target.value)}
-              />
+      {/* 🔥 HERO (hidden in preview) */}
+      {!preview && (
+        <div className="nc-hero">
+          <div>
+            <div className="nc-badge">
+              <Kanban size={14} />
+              <span>Netcradus IT Workspace</span>
+            </div>
+            <h1 className="nc-hero-title">
+              Tech <span className="nc-gradient-text">Delivery Board</span>
+            </h1>
+            <p className="nc-hero-subtitle">
+              Track initiatives, bugs, and improvements with a clean kanban workflow built for production teams.
+            </p>
+          </div>
+
+          <div className="nc-hero-actions">
+            <span className="nc-pill">
+              <Sparkles size={16} />
+              Live Board
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 CONTROLS (hidden in preview) */}
+      {!preview && (
+        <div className="nc-panel nc-section">
+          <div className="nc-controls">
+            <div className="nc-controls-left">
+              <div className="tech-add-project">
+                <Columns3 size={16} />
+                <input
+                  className="nc-input tech-project-input"
+                  type="text"
+                  placeholder="New column (e.g., Sprint 12)"
+                  value={newProject}
+                  onChange={(e) => setNewProject(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="nc-controls-right">
+              <button className="nc-btn nc-btn--primary" onClick={addProject}>
+                <Plus size={16} />
+                Add Column
+              </button>
             </div>
           </div>
-          <div className="nc-controls-right">
-            <button className="nc-btn nc-btn--primary" onClick={addProject}>
-              <Plus size={16} />
-              Add Column
-            </button>
-          </div>
         </div>
-      </div>
+      )}
 
+      {/* 🔥 BOARD */}
       <div className="board-container">
         {Object.keys(data).map((column) => (
           <div key={column} className="board-column">
+
             <div className="board-column-header">
               <h2>{column}</h2>
               <span className="board-count">{data[column].length}</span>
             </div>
+
             <div className="cards">
               {data[column].map((card, index) => (
                 <div key={index} className="card">
                   {card}
+
+                  {/* 🔥 Admin Controls */}
+                  {isAdmin && !preview && (
+                    <button
+                      className="delete-btn"
+                      onClick={() => {
+                        const updated = data[column].filter((_, i) => i !== index);
+                        setData({ ...data, [column]: updated });
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
-            <div className="add-card">
-              <input
-                className="nc-input tech-card-input"
-                type="text"
-                placeholder="Add a card"
-                value={newCard[column] || ""}
-                onChange={(e) => setNewCard({ ...newCard, [column]: e.target.value })}
-              />
-              <button className="nc-btn tech-add-card-btn" onClick={() => addCard(column)}>
-                <Plus size={16} />
-                Add
-              </button>
-            </div>
+
+            {/* 🔥 Add card hidden in preview */}
+            {!preview && (
+              <div className="add-card">
+                <input
+                  className="nc-input tech-card-input"
+                  type="text"
+                  placeholder="Add a card"
+                  value={newCard[column] || ""}
+                  onChange={(e) =>
+                    setNewCard({ ...newCard, [column]: e.target.value })
+                  }
+                />
+                <button
+                  className="nc-btn tech-add-card-btn"
+                  onClick={() => addCard(column)}
+                >
+                  <Plus size={16} />
+                  Add
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

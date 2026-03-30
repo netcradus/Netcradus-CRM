@@ -1,4 +1,3 @@
-// models/Meeting.js
 const mongoose = require("mongoose");
 
 const meetingSchema = new mongoose.Schema(
@@ -6,38 +5,37 @@ const meetingSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
-      trim: true,
     },
-    participants: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // Users attending the meeting
-      },
-    ],
+
+      clientName: {
+      type: String,
+      required: true,
+    },
+
+
+    company: {
+      type: String,
+      required: true,
+    },
+    phone: String,
+    email: String,
+    projectTitle: String,
+    projectDetails: String,
+    participants: String,
+
+    visitDate: {
+      type: Date,
+    },
+
     date: {
       type: Date,
       required: true,
     },
+
     status: {
       type: String,
-      enum: ["Scheduled", "Completed", "Cancelled", "Deferred"],
-      default: "Scheduled",
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    owner: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // User who created the meeting
-    },
-    associatedAccount: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Account", // Related CRM account
-    },
-    associatedLead: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Lead", // Related CRM lead
+      enum: ["Upcoming", "Completed", "Cancelled"],
+      default: "Upcoming",
     },
   },
   { timestamps: true }

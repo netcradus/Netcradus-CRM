@@ -1,13 +1,19 @@
-
 const express = require("express");
 const router = express.Router();
-const meetingsController = require("../controllers/meetingsController");
+
+const {
+  getMeetings,
+  getMeeting,
+  createMeeting,
+  updateMeeting,
+  deleteMeeting,
+} = require("../controllers/meetingController");
 
 // Routes
-router.get("/", meetingsController.getMeetings);        // Get all meetings
-router.get("/:id", meetingsController.getMeeting);      // Get single meeting by ID
-router.post("/", meetingsController.createMeeting);     // Create a new meeting
-router.put("/:id", meetingsController.updateMeeting);   // Update a meeting
-router.delete("/:id", meetingsController.deleteMeeting);// Delete a meeting
+router.get("/", getMeetings);
+router.get("/:id", getMeeting); 
+router.post("/", createMeeting);
+router.put("/:id", updateMeeting);
+router.delete("/:id", deleteMeeting);
 
 module.exports = router;

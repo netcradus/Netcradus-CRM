@@ -131,9 +131,9 @@ const roleMenus = {
     { label: "Leads", path: "/leads", icon: <Users size={18} /> },
     { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
     { label: "Accounts", path: "/accounts", icon: <Building2 size={18} /> },
-    { label: "Quotes", path: "/quotes", icon: <Receipt size={18} /> },
+    { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
+     { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
     { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={18} /> },
-    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
   ],
 
   hr: [
