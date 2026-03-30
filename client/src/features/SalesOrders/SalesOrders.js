@@ -1,71 +1,93 @@
- import React, { useState } from "react";
-import { FaShoppingCart } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { FaShoppingCart, FaEdit, FaTrash } from "react-icons/fa";
 import "./SalesOrders.css";
 
-function SalesOrders() {
-  const [orders, setOrders] = useState([
-   
-  ]);
+const API = "http://localhost:5000/api/salesorders";
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
+function SalesOrders() {
+  const [orders, setOrders] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId] = useState(null);
 
   const [newOrder, setNewOrder] = useState({
-    id: "",
+    orderId: "",
     customer: "",
     amount: "",
     status: "Pending",
-    date: "",
+    orderedOn: "",
   });
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "All" || order.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // ✅ FETCH
+  const fetchOrders = async () => {
+    const res = await fetch(API);
+    const data = await res.json();
+    setOrders(data);
+  };
 
-  const handleInputChange = (e) => {
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // INPUT
+  const handleChange = (e) => {
     setNewOrder({ ...newOrder, [e.target.name]: e.target.value });
   };
 
-  const handleCreateOrder = (e) => {
+  // CREATE / UPDATE
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setOrders([...orders, newOrder]);
-    setNewOrder({ id: "", customer: "", amount: "", status: "Pending", date: "" });
+
+    const method = editId ? "PUT" : "POST";
+    const url = editId ? `${API}/${editId}` : API;
+
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newOrder),
+    });
+
+    fetchOrders();
     setShowModal(false);
+    setEditId(null);
+    setNewOrder({
+      orderId: "",
+      customer: "",
+      amount: "",
+      status: "Pending",
+      orderedOn: "",
+    });
+  };
+
+  // EDIT
+  const handleEdit = (order) => {
+    setNewOrder({
+      orderId: order.orderId,
+      customer: order.customer,
+      amount: order.amount,
+      status: order.status,
+      orderedOn: order.orderedOn?.split("T")[0],
+    });
+    setEditId(order._id);
+    setShowModal(true);
+  };
+
+  // DELETE
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this order?")) return;
+
+    await fetch(`${API}/${id}`, { method: "DELETE" });
+    fetchOrders();
   };
 
   return (
     <div className="salesorders-container">
-      <h2 className="salesorders-heading"><FaShoppingCart /> Sales Orders</h2>
+      <h2 className="salesorders-heading">
+        <FaShoppingCart /> Sales Orders
+      </h2>
 
-      <div className="salesorders-actions">
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          + Create Order
-        </button>
-        <input
-          className="search-bar"
-          type="text"
-          placeholder="Search Orders"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <div className="order-status">
-        {["All", "Pending", "Shipped", "Delivered"].map((status) => (
-          <div
-            key={status}
-            className={`tag ${status.toLowerCase()} ${filterStatus === status ? "active" : ""}`}
-            onClick={() => setFilterStatus(status)}
-          >
-            {status}
-          </div>
-        ))}
-      </div>
+      <button className="btn-primary" onClick={() => setShowModal(true)}>
+        + Add Order
+      </button>
 
       <div className="salesorders-table">
         <table>
@@ -75,80 +97,90 @@ function SalesOrders() {
               <th>Customer</th>
               <th>Amount</th>
               <th>Status</th>
-              <th>Ordered On</th>
+              <th>Date</th>
+              <th>Actions</th>
             </tr>
           </thead>
-         <tbody>
-  {filteredOrders.length > 0 ? (
-    filteredOrders.map((order) => (
-      <tr key={order.id}>
-        <td data-label="Order ID">{order.id}</td>
-        <td data-label="Customer">{order.customer}</td>
-        <td data-label="Amount">{order.amount}</td>
-        <td data-label="Status">
-          <span className={`badge ${order.status.toLowerCase()}`}>
-            {order.status}
-          </span>
-        </td>
-        <td data-label="Ordered On">{order.date}</td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-        No orders found.
+<tbody>
+  {orders.map((o) => (
+    <tr key={o._id}>
+      <td data-label="Order ID">{o.orderId}</td>
+      <td data-label="Customer">{o.customer}</td>
+      <td data-label="Amount">₹ {o.amount}</td>
+
+      <td data-label="Status">
+        <span className={`badge ${o.status.toLowerCase()}`}>
+          {o.status}
+        </span>
+      </td>
+
+      <td data-label="Date">
+        {new Date(o.orderedOn).toLocaleDateString()}
+      </td>
+
+      <td data-label="Actions">
+        <FaEdit
+          style={{ cursor: "pointer", marginRight: 10 }}
+          onClick={() => handleEdit(o)}
+        />
+        <FaTrash
+          style={{ cursor: "pointer", color: "red" }}
+          onClick={() => handleDelete(o._id)}
+        />
       </td>
     </tr>
-  )}
+  ))}
 </tbody>
         </table>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Create New Order</h3>
-            <form onSubmit={handleCreateOrder}>
+            <h3>{editId ? "Update Order" : "Create Order"}</h3>
+
+            <form onSubmit={handleSubmit}>
               <input
-                type="text"
-                name="id"
+                name="orderId"
                 placeholder="Order ID"
-                value={newOrder.id}
-                onChange={handleInputChange}
+                value={newOrder.orderId}
+                onChange={handleChange}
                 required
               />
               <input
-                type="text"
                 name="customer"
-                placeholder="Customer Name"
+                placeholder="Customer"
                 value={newOrder.customer}
-                onChange={handleInputChange}
+                onChange={handleChange}
                 required
               />
               <input
-                type="text"
                 name="amount"
+                type="number"
                 placeholder="Amount"
                 value={newOrder.amount}
-                onChange={handleInputChange}
+                onChange={handleChange}
                 required
               />
-              <select name="status" value={newOrder.status} onChange={handleInputChange}>
+
+              <select name="status" value={newOrder.status} onChange={handleChange}>
                 <option>Pending</option>
                 <option>Shipped</option>
                 <option>Delivered</option>
               </select>
+
               <input
                 type="date"
-                name="date"
-                value={newOrder.date}
-                onChange={handleInputChange}
+                name="orderedOn"
+                value={newOrder.orderedOn}
+                onChange={handleChange}
                 required
               />
+
               <div className="modal-buttons">
-                <button type="submit" className="btn-primary">
-                  Save Order
+                <button className="btn-primary">
+                  {editId ? "Update" : "Save"}
                 </button>
                 <button
                   type="button"

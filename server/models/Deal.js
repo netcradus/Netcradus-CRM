@@ -21,6 +21,7 @@ const dealSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    
   },
   { timestamps: true } // automatically adds createdAt and updatedAt fields
 );

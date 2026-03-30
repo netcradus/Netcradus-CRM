@@ -90,7 +90,7 @@ const quickTasks = [
   { icon: '📝', text: 'Update Policies' },
 ];
 
-const HRDashboard = () => {
+const HRDashboard = ({ preview }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('Monthly growth');
 

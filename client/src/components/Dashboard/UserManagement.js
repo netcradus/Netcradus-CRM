@@ -40,6 +40,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     fetchUsers();
+     fetchExpenses(); 
   }, [fetchUsers]);
 
   // Form Change
@@ -124,6 +125,52 @@ const UserManagement = () => {
     }
   };
 
+  const EXPENSE_API = "http://localhost:5000/api/expenses";
+
+const [expenses, setExpenses] = useState([]);
+const [showExpenseModal, setShowExpenseModal] = useState(false);
+
+const [expenseForm, setExpenseForm] = useState({
+  title: "",
+  amount: "",
+  category: "Misc",
+  date: "",
+});
+
+const fetchExpenses = async () => {
+  try {
+    const res = await axios.get(EXPENSE_API);
+    setExpenses(res.data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
+
+const handleAddExpense = async (e) => {
+  e.preventDefault();
+
+  await axios.post(EXPENSE_API, expenseForm);
+
+  fetchExpenses();
+  setShowExpenseModal(false);
+
+  setExpenseForm({
+    title: "",
+    amount: "",
+    category: "Misc",
+    date: "",
+  });
+};
+
+
+const handleDeleteExpense = async (id) => {
+  if (!window.confirm("Delete this expense?")) return;
+
+  await axios.delete(`${EXPENSE_API}/${id}`);
+  fetchExpenses();
+};
   return (
     <div className="admin-panel">
       <h2 className="admin-panel-title">
@@ -276,7 +323,138 @@ const UserManagement = () => {
               </table>
             </div>
           )}
+
+          
         </section>
+        {/* ===== EXPENSE MANAGEMENT ===== */}
+<section className="admin-card">
+  <h3>Expense Management</h3>
+
+  <button
+    className="admin-form button"
+    style={{ marginBottom: "15px" }}
+    onClick={() => setShowExpenseModal(true)}
+  >
+    + Add Expense
+  </button>
+
+  <div className="admin-table-wrap">
+    <table className="admin-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Amount</th>
+          <th>Category</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {expenses.length > 0 ? (
+          expenses.map((e) => (
+            <tr key={e._id}>
+              <td data-label="Title">{e.title}</td>
+
+              <td data-label="Amount">₹ {e.amount}</td>
+
+              <td data-label="Category">{e.category}</td>
+
+              <td data-label="Date">
+                {e.date
+                  ? new Date(e.date).toLocaleDateString()
+                  : "-"}
+              </td>
+
+              <td data-label="Actions">
+                <button
+                  className="btn-delete"
+                  onClick={() => handleDeleteExpense(e._id)}
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="5" className="admin-muted">
+              No expenses found.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{/* ===== EXPENSE MODAL ===== */}
+{showExpenseModal && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <div className="modal-header">
+        <h4>Add Expense</h4>
+      </div>
+
+      <form onSubmit={handleAddExpense} className="admin-form">
+        <input
+          placeholder="Title"
+          value={expenseForm.title}
+          onChange={(e) =>
+            setExpenseForm({ ...expenseForm, title: e.target.value })
+          }
+          required
+        />
+
+        <input
+          type="number"
+          placeholder="Amount"
+          value={expenseForm.amount}
+          onChange={(e) =>
+            setExpenseForm({ ...expenseForm, amount: e.target.value })
+          }
+          required
+        />
+
+        <select
+          value={expenseForm.category}
+          onChange={(e) =>
+            setExpenseForm({ ...expenseForm, category: e.target.value })
+          }
+        >
+          <option>Travel</option>
+          <option>Food</option>
+          <option>Salary</option>
+          <option>Office</option>
+          <option>Misc</option>
+        </select>
+
+        <input
+          type="date"
+          value={expenseForm.date}
+          onChange={(e) =>
+            setExpenseForm({ ...expenseForm, date: e.target.value })
+          }
+          required
+        />
+
+        <div className="modal-footer">
+          <button type="submit" className="btn-save">
+            Save
+          </button>
+
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={() => setShowExpenseModal(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
