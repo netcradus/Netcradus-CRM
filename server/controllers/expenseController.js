@@ -13,24 +13,14 @@ exports.createExpense = async (req, res) => {
   res.json(saved);
 };
 
-// UPDATE
-// UPDATE
+
 exports.updateExpense = async (req, res) => {
-  try {
-    const updated = await Expense.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ message: "Expense not found" });
-    }
-
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const updated = await Expense.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true }
+  );
+  res.json(updated);
 };
 // DELETE
 exports.deleteExpense = async (req, res) => {
