@@ -10,8 +10,10 @@ import {
   BriefcaseBusiness,
 } from "lucide-react";
 import "./SalesDashboard.css";
+import { apiUrl } from "../../config/api";
 
-const API = "http://localhost:5000/api/deals";
+
+const API =apiUrl("/api/deals");
 
 const SalesDashboard = () => {
   const [deals, setDeals] = useState([]);

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { apiUrl } from "../../config/api";
+
 import "./Deals.css";
 import { Handshake, Plus, Search } from "lucide-react";
 
-const API = "http://localhost:5000/api/deals";
+const API = apiUrl("/api/deals");
 
 function Deals() {
   const [deals, setDeals] = useState([]);

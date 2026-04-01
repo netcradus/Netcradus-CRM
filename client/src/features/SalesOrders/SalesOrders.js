@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { FaShoppingCart, FaEdit, FaTrash } from "react-icons/fa";
+import { apiUrl } from "../../config/api";
+
 import "./SalesOrders.css";
 
-const API = "http://localhost:5000/api/salesorders";
+const API = apiUrl("/api/salesorders");
 
 function SalesOrders() {
   const [orders, setOrders] = useState([]);
