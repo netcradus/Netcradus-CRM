@@ -154,20 +154,50 @@ const UserManagement = () => {
     }
   };
 
-  // Update User Info
-  const onUpdateUser = async (user, field, value) => {
-    try {
-      await axios.patch(
-        apiUrl(`/api/auth/users/${user._id}`),
-        { [field]: value },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSuccess(`${field} updated for ${user.name}`);
-      fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Update failed");
-    }
-  };
+  const EXPENSE_API = apiUrl("/api/expenses");
+
+const [expenses, setExpenses] = useState([]);
+const [editExpenseId, setEditExpenseId] = useState(null);
+const [editForm, setEditForm] = useState({
+  title: "",
+  amount: "",
+  category: "",
+  date: "",
+});
+
+const [expenseForm, setExpenseForm] = useState({
+  title: "",
+  amount: "",
+  category: "Misc",
+  date: "",
+});
+
+const fetchExpenses = async () => {
+  try {
+    const res = await axios.get(EXPENSE_API);
+    setExpenses(res.data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
+
+const handleAddExpense = async (e) => {
+  e.preventDefault();
+
+  await axios.post(EXPENSE_API, expenseForm);
+
+  fetchExpenses();
+
+  setExpenseForm({
+    title: "",
+    amount: "",
+    category: "Misc",
+    date: "",
+  });
+};
+
 
   // Expense Handlers
   const handleAddExpense = async (e) => {
