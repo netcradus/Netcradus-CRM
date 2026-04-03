@@ -22,8 +22,7 @@ const UserManagement = () => {
 
   const token = localStorage.getItem("token");
 
-  // Expense State
-  const EXPENSE_API = "http://localhost:5000/api/expenses";
+  const EXPENSE_API = apiUrl("/api/expenses");
   const [expenses, setExpenses] = useState([]);
   const [editExpenseId, setEditExpenseId] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -132,6 +131,21 @@ const UserManagement = () => {
     }
   };
 
+  // Update User Details
+  const onUpdateUser = async (user, field, value) => {
+    try {
+      await axios.put(
+        apiUrl(`/api/auth/users/${user._id}`),
+        { [field]: value },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuccess(`${field} updated successfully`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Update failed");
+    }
+  };
+
   // Change Password
   const onChangePassword = async (id) => {
     if (!newPassword) {
@@ -153,51 +167,6 @@ const UserManagement = () => {
       setError(err.response?.data?.message || "Update failed");
     }
   };
-
-  const EXPENSE_API = apiUrl("/api/expenses");
-
-const [expenses, setExpenses] = useState([]);
-const [editExpenseId, setEditExpenseId] = useState(null);
-const [editForm, setEditForm] = useState({
-  title: "",
-  amount: "",
-  category: "",
-  date: "",
-});
-
-const [expenseForm, setExpenseForm] = useState({
-  title: "",
-  amount: "",
-  category: "Misc",
-  date: "",
-});
-
-const fetchExpenses = async () => {
-  try {
-    const res = await axios.get(EXPENSE_API);
-    setExpenses(res.data);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-
-
-const handleAddExpense = async (e) => {
-  e.preventDefault();
-
-  await axios.post(EXPENSE_API, expenseForm);
-
-  fetchExpenses();
-
-  setExpenseForm({
-    title: "",
-    amount: "",
-    category: "Misc",
-    date: "",
-  });
-};
-
 
   // Expense Handlers
   const handleAddExpense = async (e) => {
@@ -235,6 +204,7 @@ const handleAddExpense = async (e) => {
       console.error(err);
     }
   };
+
 
   return (
     <div className="admin-panel">
