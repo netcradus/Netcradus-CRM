@@ -22,7 +22,6 @@ const UserManagement = () => {
 
   const token = localStorage.getItem("token");
 
-  // Expense State
   const EXPENSE_API = apiUrl("/api/expenses");
   const [expenses, setExpenses] = useState([]);
   const [editExpenseId, setEditExpenseId] = useState(null);
@@ -132,6 +131,21 @@ const UserManagement = () => {
     }
   };
 
+  // Update User Info
+  const onUpdateUser = async (user, field, value) => {
+    try {
+      await axios.patch(
+        apiUrl(`/api/auth/users/${user._id}`),
+        { [field]: value },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuccess(`${field} updated for ${user.name}`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Update failed");
+    }
+  };
+
   // Change Password
   const onChangePassword = async (id) => {
     if (!newPassword) {
@@ -149,21 +163,6 @@ const UserManagement = () => {
       setSuccess("Password updated successfully");
       setPwdUserId(null);
       setNewPassword("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Update failed");
-    }
-  };
-
-  // Update User Info
-  const onUpdateUser = async (user, field, value) => {
-    try {
-      await axios.patch(
-        apiUrl(`/api/auth/users/${user._id}`),
-        { [field]: value },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSuccess(`${field} updated for ${user.name}`);
-      fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || "Update failed");
     }
@@ -205,6 +204,7 @@ const UserManagement = () => {
       console.error(err);
     }
   };
+
 
   return (
     <div className="admin-panel">
