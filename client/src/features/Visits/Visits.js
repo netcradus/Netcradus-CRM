@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaMapMarkerAlt } from "react-icons/fa";
+import { apiUrl } from "../../config/api";
+
 import "./Visits.css";
 
-const API = "http://localhost:5000/api/visits";
+const API =apiUrl("/api/visits");
 
 function Visits() {
   const [visits, setVisits] = useState([]);

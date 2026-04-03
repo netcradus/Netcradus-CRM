@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { apiUrl } from "../../config/api";
+
 import "./Projects.css";
 
 const RANDOM_COLORS = [
@@ -7,8 +9,8 @@ const RANDOM_COLORS = [
   "#f04aff", "#2eb8ff", "#00c9b1", "#fb923c", "#34d399",
 ];
 
-const BASE_PROJECTS = "http://localhost:5000/api/projects";
-const BASE_COLUMNS = "http://localhost:5000/api/columns";
+const BASE_PROJECTS = apiUrl("/api/projects");
+const BASE_COLUMNS = apiUrl("/api/columns");
 
 const getProgressLevel = (pct) => pct >= 100 ? "high" : pct >= 50 ? "mid" : "low";
 const formatDate = (str) =>

@@ -1,19 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaCalendarAlt } from "react-icons/fa";
-import "./Meetings.css";
-import { useEffect } from "react";
+import { apiUrl } from "../../config/api";
 
+import "./Meetings.css";
 
 function Meetings() {
   const [meetings, setMeetings] = useState([]);
-
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
 
   const [newMeeting, setNewMeeting] = useState({
     title: "",
-    clientName: "",   // 👈 ADD THIS
+    clientName: "",
     company: "",
     phone: "",
     email: "",
@@ -25,18 +24,36 @@ function Meetings() {
     status: "Upcoming",
   });
 
-  // Filter logic
+  // ✅ FETCH MEETINGS
+  useEffect(() => {
+    const fetchMeetings = async () => {
+      try {
+        const res = await fetch(apiUrl("/api/meetings")); // ✅ FIXED
+        if (!res.ok) throw new Error("Failed to fetch meetings");
+        const data = await res.json();
+        setMeetings(data);
+      } catch (err) {
+        console.error(err);
+        setMeetings([]);
+      }
+    };
+
+    fetchMeetings();
+  }, []);
+
+  // ✅ FILTER (SAFE VERSION)
   const filteredMeetings = meetings.filter((meeting) => {
     const matchesFilter = filter === "All" || meeting.status === filter;
+
     const matchesSearch =
-      meeting.title.toLowerCase().includes(search.toLowerCase()) ||
-      meeting.company.toLowerCase().includes(search.toLowerCase()) ||
-      meeting.projectTitle.toLowerCase().includes(search.toLowerCase());
+      (meeting.title || "").toLowerCase().includes(search.toLowerCase()) ||
+      (meeting.company || "").toLowerCase().includes(search.toLowerCase()) ||
+      (meeting.projectTitle || "").toLowerCase().includes(search.toLowerCase());
 
     return matchesFilter && matchesSearch;
   });
 
-  // Add Meeting
+  // ✅ ADD MEETING
   const handleAddMeeting = async (e) => {
     e.preventDefault();
 
@@ -51,7 +68,7 @@ function Meetings() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/meetings", {
+      const res = await fetch(apiUrl("/api/meetings"), { // ✅ FIXED
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,12 +76,12 @@ function Meetings() {
         body: JSON.stringify(newMeeting),
       });
 
+      if (!res.ok) throw new Error("Failed to save meeting");
+
       const data = await res.json();
 
-      // ✅ Update UI instantly
       setMeetings((prev) => [data, ...prev]);
 
-      // Reset form
       setNewMeeting({
         title: "",
         clientName: "",
@@ -86,19 +103,13 @@ function Meetings() {
     }
   };
 
-  useEffect(() => {
-    fetch("http://localhost:5000/api/meetings")
-      .then((res) => res.json())
-      .then((data) => setMeetings(data))
-      .catch((err) => console.error(err));
-  }, []);
-
   return (
     <div className="meetings-container">
       <h2 className="meetings-heading">
         <FaCalendarAlt /> Meetings
       </h2>
 
+      {/* ACTIONS */}
       <div className="meetings-actions">
         <button className="btn-primary" onClick={() => setShowModal(true)}>
           + Schedule Meeting
@@ -112,7 +123,7 @@ function Meetings() {
         />
       </div>
 
-      {/* Filter */}
+      {/* FILTER */}
       <div className="meeting-status">
         {["All", "Upcoming", "Completed", "Cancelled"].map((status) => (
           <div
@@ -125,7 +136,7 @@ function Meetings() {
         ))}
       </div>
 
-      {/* Table */}
+      {/* TABLE */}
       <div className="meetings-table">
         <table>
           <thead>
@@ -146,19 +157,26 @@ function Meetings() {
             {filteredMeetings.length > 0 ? (
               filteredMeetings.map((m, i) => (
                 <tr key={i}>
-                  <td data-label="Title">{m.title}</td>
-                  <td data-label="Client">{m.clientName}</td>
-                  <td data-label="Company">{m.company}</td>
-                  <td data-label="Phone">{m.phone}</td>
-                  <td data-label="Email">{m.email}</td>
-                  <td data-label="Project">{m.projectTitle}</td>
-                  <td data-label="Visit Date">
-                    {m.visitDate ? new Date(m.visitDate).toLocaleDateString() : "—"}
+                  <td>{m.title}</td>
+                  <td>{m.clientName}</td>
+                  <td>{m.company}</td>
+                  <td>{m.phone}</td>
+                  <td>{m.email}</td>
+                  <td>{m.projectTitle}</td>
+
+                  <td>
+                    {m.visitDate
+                      ? new Date(m.visitDate).toLocaleDateString()
+                      : "—"}
                   </td>
-                  <td data-label="Meeting Date">
-                    {new Date(m.date).toLocaleDateString()}
+
+                  <td>
+                    {m.date
+                      ? new Date(m.date).toLocaleDateString()
+                      : "—"}
                   </td>
-                  <td data-label="Status">
+
+                  <td>
                     <span className={`badge ${m.status.toLowerCase()}`}>
                       {m.status}
                     </span>
@@ -167,7 +185,7 @@ function Meetings() {
               ))
             ) : (
               <tr>
-                <td colSpan="8" style={{ textAlign: "center" }}>
+                <td colSpan="9" style={{ textAlign: "center" }}>
                   No meetings found
                 </td>
               </tr>
@@ -180,8 +198,8 @@ function Meetings() {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-
-            {/* SIMPLE HEADER */}
+            
+            {/* HEADER */}
             <div className="modal-header-simple">
               <h3>Meetings</h3>
               <button
@@ -195,115 +213,90 @@ function Meetings() {
             {/* BODY */}
             <div className="modal-body">
               <form>
-
                 <div className="form-grid">
 
-                  <div className="form-group">
-                    <label>Meeting Title *</label>
-                    <input
-                      value={newMeeting.title}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, title: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Meeting Title *"
+                    value={newMeeting.title}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, title: e.target.value })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Client Name *</label>
-                    <input
-                      value={newMeeting.clientName}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, clientName: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Client Name *"
+                    value={newMeeting.clientName}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, clientName: e.target.value })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Company *</label>
-                    <input
-                      value={newMeeting.company}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, company: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Company *"
+                    value={newMeeting.company}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, company: e.target.value })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Phone</label>
-                    <input
-                      value={newMeeting.phone}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, phone: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Phone"
+                    value={newMeeting.phone}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, phone: e.target.value })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      value={newMeeting.email}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, email: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Email"
+                    value={newMeeting.email}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, email: e.target.value })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Project Title</label>
-                    <input
-                      value={newMeeting.projectTitle}
-                      onChange={(e) =>
-                        setNewMeeting({
-                          ...newMeeting,
-                          projectTitle: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                  <input
+                    placeholder="Project Title"
+                    value={newMeeting.projectTitle}
+                    onChange={(e) =>
+                      setNewMeeting({
+                        ...newMeeting,
+                        projectTitle: e.target.value,
+                      })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Visit Date</label>
-                    <input
-                      type="date"
-                      value={newMeeting.visitDate}
-                      onChange={(e) =>
-                        setNewMeeting({
-                          ...newMeeting,
-                          visitDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    value={newMeeting.visitDate}
+                    onChange={(e) =>
+                      setNewMeeting({
+                        ...newMeeting,
+                        visitDate: e.target.value,
+                      })
+                    }
+                  />
 
-                  <div className="form-group">
-                    <label>Meeting Date *</label>
-                    <input
-                      type="date"
-                      value={newMeeting.date}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, date: e.target.value })
-                      }
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    value={newMeeting.date}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, date: e.target.value })
+                    }
+                  />
 
-
-
-                  <div className="form-group full">
-                    <label>Status</label>
-                    <select
-                      value={newMeeting.status}
-                      onChange={(e) =>
-                        setNewMeeting({ ...newMeeting, status: e.target.value })
-                      }
-                    >
-                      <option>Upcoming</option>
-                      <option>Completed</option>
-                      <option>Cancelled</option>
-                    </select>
-                  </div>
+                  <select
+                    value={newMeeting.status}
+                    onChange={(e) =>
+                      setNewMeeting({ ...newMeeting, status: e.target.value })
+                    }
+                  >
+                    <option>Upcoming</option>
+                    <option>Completed</option>
+                    <option>Cancelled</option>
+                  </select>
 
                 </div>
-
               </form>
             </div>
 
@@ -315,8 +308,6 @@ function Meetings() {
               >
                 Cancel
               </button>
-
-
 
               <button
                 className="btn-primary"

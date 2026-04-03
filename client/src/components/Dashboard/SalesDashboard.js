@@ -11,8 +11,10 @@ import {
 } from "lucide-react";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import "./SalesDashboard.css";
+import { apiUrl } from "../../config/api";
 
-const API = "http://localhost:5000/api/deals";
+
+const API =apiUrl("/api/deals");
 
 const SalesDashboard = ({ preview }) => {
   const [deals, setDeals] = useState([]);
