@@ -23,7 +23,7 @@ const UserManagement = () => {
   const token = localStorage.getItem("token");
 
   // Expense State
-  const EXPENSE_API = "http://localhost:5000/api/expenses";
+  const EXPENSE_API = apiUrl("/api/expenses");
   const [expenses, setExpenses] = useState([]);
   const [editExpenseId, setEditExpenseId] = useState(null);
   const [editForm, setEditForm] = useState({
