@@ -125,7 +125,7 @@ const UserManagement = () => {
     }
   };
 
-  const EXPENSE_API = apiUrl("/api//expenses");
+  const EXPENSE_API = apiUrl("/api/expenses");
 
 const [expenses, setExpenses] = useState([]);
 const [editExpenseId, setEditExpenseId] = useState(null);
