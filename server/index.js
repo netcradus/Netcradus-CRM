@@ -47,6 +47,10 @@ app.use("/api/leads", leadsRoutes);
 const accountRoutes = require("./routes/accountRoutes");
 app.use("/api/accounts", accountRoutes);
 
+//expense Routes
+const expenseRoutes = require("./routes/expenseRoutes");
+app.use("/api/expenses", expenseRoutes)
+
 // Calls routes
 const callsRoutes = require("./routes/callsRoutes");
 app.use("/api/calls", callsRoutes);
@@ -106,6 +110,10 @@ app.use("/api/pricebooks", priceBookRoutes);
 const caseRoutes = require("./routes/caseRoutes");
 app.use("/api/cases", caseRoutes);
 
+// meeting Routes
+const meetingRoutes = require("./routes/meetingRoutes");
+app.use("/api/meetings", meetingRoutes);
+
 //solution Routes
 const solutionRoutes = require("./routes/solutionRoutes");
 app.use("/api/solutions", solutionRoutes);
@@ -128,6 +136,10 @@ app.use("/api/leave", leaveRoutes);
 // Holiday routes
 const holidayRoutes = require("./routes/holidays");
 app.use("/api/holidays", holidayRoutes);
+
+// Visit routes
+const visitRoutes = require("./routes/visitRoutes");
+app.use("/api/visits", visitRoutes);
 
 // Cron health check
 const { registerCronJobs, getCronLastRun } = require("./cron");

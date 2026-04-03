@@ -11,7 +11,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 
-function DigitalMediaDashboard() {
+function DigitalMediaDashboard({ preview }) {
   return (
     <div className="nc-page digital-page">
       <div className="nc-hero">

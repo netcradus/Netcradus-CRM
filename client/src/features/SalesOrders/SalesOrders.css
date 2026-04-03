@@ -1,240 +1,280 @@
+/* ════════════════════════════════════════════════════════════════
+   SALES ORDERS - PREMIUM CRM UI (MATCHES ALL PAGES)
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --primary-gradient: linear-gradient(135deg, #ff4b2b, #ff6a4a, #ff8a3d);
+  --primary-accent: #ff4b2b;
+
+  --glass-bg: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.08);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+
+  --bg-primary: #0f1419;
+  --bg-secondary: #141829;
+}
+
+/* =========================
+   CONTAINER
+========================= */
 .salesorders-container {
-  padding: 25px;
-  padding-left: calc(max(25px, 220px + 25px));
-  color: #f1f1f1;
+  padding: 30px;
+  padding-left: calc(max(30px, 220px + 30px));
   min-height: 100vh;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  transition: padding-left 0.3s ease;
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
+  font-family: "Inter", sans-serif;
 }
 
+/* =========================
+   HEADING
+========================= */
 .salesorders-heading {
-  font-size: 28px;
-  margin-bottom: 25px;
-  background: linear-gradient(90deg, #FF4F9A 5%, #FF8A3D 10%, #FFC83D 20%);
+  font-size: 34px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 30px;
+
+  background: linear-gradient(90deg, #ff4b2b, #ff8a3d, #ffc83d);
   -webkit-background-clip: text;
-  background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  letter-spacing: 0.5px;
+
+  text-shadow: 0 10px 30px rgba(255,75,43,0.2);
 }
 
+/* =========================
+   ACTIONS
+========================= */
 .salesorders-actions {
   display: flex;
   gap: 15px;
-  margin-bottom: 25px;
+  justify-content: center;
   flex-wrap: wrap;
+  margin-bottom: 25px;
 }
 
+/* BUTTON */
 .btn-primary {
-  background: linear-gradient(90deg, #ff4b2b, #ff416c);
-  color: #fff;
-  padding: 10px 18px;
+  background: var(--primary-gradient);
+  color: #0b1020;
   border: none;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 700;
+  font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(255, 75, 43, 0.3);
-  transition: all 0.2s ease;
+
+  box-shadow:
+    0 10px 30px rgba(255,75,43,0.3),
+    inset 0 1px 1px rgba(255,255,255,0.2);
+
+  transition: all 0.25s ease;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  transform: translateY(-2px) scale(1.03);
 }
 
+/* SEARCH */
 .search-bar {
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #1e1e1e;
-  color: #fff;
-  width: 250px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  width: 260px;
 }
 
+/* =========================
+   STATUS TAGS
+========================= */
 .order-status {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 25px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .tag {
-  background-color: #1c1c1c;
-  padding: 6px 12px;
-  border-radius: 5px;
-  font-size: 14px;
-  color: #ccc;
-  border-left: 4px solid #888;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
-.tag.active,
-.tag:hover {
-  background-color: #ff4b2b;
+.tag:hover,
+.tag.active {
+  background: rgba(255,75,43,0.1);
+  border-color: var(--primary-accent);
   color: #fff;
-  border-left-color: #ff4b2b;
 }
 
-.tag.pending {
-  border-color: #ffa500;
-}
-
-.tag.shipped {
-  border-color: #1e90ff;
-}
-
-.tag.delivered {
-  border-color: #00cc88;
-}
-
+/* =========================
+   TABLE
+========================= */
 .salesorders-table {
-  overflow-x: auto;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+
+  overflow: hidden;
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .salesorders-table table {
-   width: auto;            /* let table size to content */
-  min-width: 100%;        /* keeps it responsive if content is wider than container */
-  table-layout: auto;
+  width: 100%;
   border-collapse: collapse;
-  background-color: #1a1a1a;
-  box-shadow: 0 0 10px rgba(255, 75, 43, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
 }
 
-.salesorders-table th,
-.salesorders-table td {
-  padding: 14px;
-  text-align: left;
-  border-bottom: 1px solid #2a2a2a;
-  color: #ddd;
-}
-
+/* HEADER */
 .salesorders-table th {
-  background-color: #1c1c1c;
-  color: #ff4b2b;
-  font-weight: 600;
+  padding: 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  background: rgba(255,75,43,0.08);
+  color: var(--primary-accent);
+}
+
+/* CELLS */
+.salesorders-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* ROW HOVER */
+.salesorders-table tr {
+  transition: all 0.25s ease;
 }
 
 .salesorders-table tr:hover {
-  background-color: #222;
+  background: rgba(255,75,43,0.06);
+  transform: scale(1.01);
 }
 
+/* =========================
+   BADGES
+========================= */
 .badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: bold;
-  display: inline-block;
-  text-align: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .badge.pending {
-  background-color: #ffa500;
-  color: #fff;
+  background: rgba(249,115,22,0.2);
+  color: #fdba74;
 }
 
 .badge.shipped {
-  background-color: #1e90ff;
-  color: #fff;
+  background: rgba(59,130,246,0.2);
+  color: #93c5fd;
 }
 
 .badge.delivered {
-  background-color: #00cc88;
-  color: #fff;
+  background: rgba(34,197,94,0.2);
+  color: #86efac;
 }
 
-/* Modal overlay */
+/* =========================
+   MODAL
+========================= */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 15, 15, 0.8);
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
 }
 
-/* Modal content */
 .modal-content {
-  background-color: #1c1c1c;
-  padding: 25px;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  box-shadow: 0 0 20px rgba(255, 75, 43, 0.3);
+  width: 420px;
+  max-width: 95%;
+
+  padding: 28px;
+  border-radius: 18px;
+
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+
+  box-shadow:
+    0 40px 100px rgba(0,0,0,0.9);
+
+  animation: modalPop 0.25s ease;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .modal-content h3 {
   margin-bottom: 20px;
-  color: #ff4b2b;
-  text-align: center;
-}
-
-.modal-content form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  color: var(--primary-accent);
 }
 
 .modal-content input,
 .modal-content select {
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #1e1e1e;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
   color: #fff;
 }
 
-.modal-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-}
-
+/* =========================
+   BUTTON SECONDARY
+========================= */
 .btn-secondary {
-  background-color: #444;
-  color: #fff;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 6px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background-color: #555;
+  border-color: var(--primary-accent);
+  color: var(--primary-accent);
 }
 
-/* ================================= */
-/* MOBILE TABLE → CARD CONVERSION */
-/* ================================= */
-
+/* =========================
+   MOBILE
+========================= */
 @media (max-width: 768px) {
 
   .salesorders-container {
-    padding-left: 15px;
-    padding-right: 15px;
-     width: 100%;
-  margin-left:0;
+    padding: 20px;
+  }
+
+  .salesorders-heading {
+    font-size: 24px;
   }
 
   .salesorders-table table,
   .salesorders-table thead,
   .salesorders-table tbody,
-  .salesorders-table th,
-  .salesorders-table td,
-  .salesorders-table tr {
+  .salesorders-table tr,
+  .salesorders-table td {
     display: block;
-    width: 100%;
   }
 
   .salesorders-table thead {
@@ -242,53 +282,36 @@
   }
 
   .salesorders-table tr {
-    background: #1a1a1a;
+    background: var(--glass-bg);
     margin-bottom: 15px;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #2a2a2a;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    padding: 14px;
+    border-radius: 12px;
   }
 
   .salesorders-table td {
-    border: none;
-    border-bottom: 1px solid #2a2a2a;
-    padding: 10px 0;
-    padding-left: 50%;
-    position: relative;
-    text-align: left;
-    white-space: normal;
-  }
-
-  .salesorders-table td:last-child {
-    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
   }
 
   .salesorders-table td::before {
     content: attr(data-label);
-    position: absolute;
-    left: 0;
-    width: 45%;
-    padding-left: 10px;
-    font-weight: 600;
-    color: #ff4b2b;
-    font-size: 13px;
+    color: var(--primary-accent);
+    font-size: 11px;
+    font-weight: 700;
   }
 
   .salesorders-actions {
     flex-direction: column;
   }
 
-  .salesorders-actions .search-bar {
+  .search-bar,
+  .btn-primary {
     width: 100%;
   }
+}
 
-  .salesorders-actions .btn-primary {
-    width: 100%;
-  }
-
-  .order-status {
-    flex-direction: column;
-    gap: 8px;
-  }
+/* ICON HOVER */
+td svg:hover {
+  transform: scale(1.2);
+  transition: 0.2s;
 }

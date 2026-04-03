@@ -1,74 +1,117 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   TrendingUp,
   Search,
   Plus,
   Download,
-  BarChart3,
-  Users,
   CheckCircle2,
   BadgeDollarSign,
   CircleDashed,
   BriefcaseBusiness,
-} from 'lucide-react';
-import AttendanceWidget from '../../features/Attendance/AttendanceWidget';
+} from "lucide-react";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import "./SalesDashboard.css";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import './SalesDashboard.css';
-
-const chartData = [
-  { month: 'Jan', deals: 12 },
-  { month: 'Feb', deals: 19 },
-  { month: 'Mar', deals: 25 },
-  { month: 'Apr', deals: 18 },
-  { month: 'May', deals: 22 },
-  { month: 'Jun', deals: 28 },
-  { month: 'Jul', deals: 32 },
-  { month: 'Aug', deals: 26 },
-];
-
-const pipelineData = [
-  { name: 'Open', value: 42, color: '#ff8a00' },
-  { name: 'Won', value: 36, color: '#ff5f3d' },
-  { name: 'Lost', value: 22, color: '#ff2d8f' },
-];
-
-const recentDeals = [
-  { id: 1, client: 'Acme Corp', owner: 'A. Sharma', value: '$8,500', status: 'open' },
-  { id: 2, client: 'Pixel Nova', owner: 'R. Singh', value: '$14,200', status: 'won' },
-  { id: 3, client: 'Vertex Labs', owner: 'S. Khan', value: '$5,900', status: 'lost' },
-  { id: 4, client: 'Blue Peak', owner: 'N. Roy', value: '$11,400', status: 'open' },
-];
-
-const pieColors = ['#ff8a00', '#ff5f3d', '#ff2d8f'];
+const API = "http://localhost:5000/api/deals";
 
 const SalesDashboard = ({ preview }) => {
-  const [search, setSearch] = useState('');
-  const userName = localStorage.getItem('userName') || 'User';
-  const userRole = localStorage.getItem('userRole') || 'Admin';
+  const [deals, setDeals] = useState([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  const [newDeal, setNewDeal] = useState({
+    name: "",
+    value: "",
+    status: "In Progress",
+    assignedTo: "",
+  });
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "Admin";
+
+  // 🔥 FETCH DEALS
+  const fetchDeals = async () => {
+    try {
+      const res = await fetch(API);
+      const data = await res.json();
+      setDeals(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  // 🔥 ADD DEAL
+ const handleAddDeal = async (e) => {
+  e.preventDefault();
+
+  try {
+    await fetch(API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newDeal),
+    });
+
+    fetchDeals();
+    setShowModal(false);
+
+    setNewDeal({
+      name: "",
+      value: "",
+      status: "In Progress",
+      assignedTo: "",
+    });
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+  // 🔥 FILTER
+ const filteredDeals = deals.filter((d) => {
+  const matchesStatus = filter
+    ? d.status?.toLowerCase() === filter.toLowerCase()
+    : true;
+
+  return matchesStatus;
+});
+  // 🔥 RECENT 3 DEALS
+  const recentDeals = filteredDeals.slice(0, 3);
+
+  // 🔥 METRICS
+  const openDeals = deals.filter((d) => d.status === "open").length;
+
+  const wonDeals = deals.filter((d) => d.status === "won");
+
+  const revenue = wonDeals.reduce(
+    (acc, d) => acc + Number(d.value || 0),
+    0
+  );
+
+  const conversionRate = deals.length
+    ? ((wonDeals.length / deals.length) * 100).toFixed(1)
+    : 0;
 
   return (
     <div className="sales-dashboard">
+      {/* HERO */}
       <div className="sales-hero">
-        <div className="sales-hero-left">
+        <div>
           <div className="sales-badge">
             <TrendingUp size={14} />
-            <span>NETCRADUS SALES COMMAND CENTER</span>
+            <span>SALES DASHBOARD</span>
           </div>
-          <h1 className="sales-title">Welcome, <span>{userName}</span></h1>
+
+          <h1 className="sales-title">
+            Welcome, <span>{userName}</span>
+          </h1>
+
           <p className="sales-subtitle">
-            Role: <strong>{userRole}</strong> — Empowering your sales momentum with actionable insights, pipeline visibility and performance tracking.
+            Role: <strong>{userRole}</strong>
           </p>
         </div>
 
@@ -81,51 +124,61 @@ const SalesDashboard = ({ preview }) => {
         </div>
       </div>
 
+      {/* CONTROLS */}
       <div className="sales-controls glass-panel">
         <div className="sales-search-wrap">
           <Search size={16} className="sales-search-icon" />
           <input
             className="sales-search"
-            type="text"
-            placeholder="Search deals or client..."
+            placeholder="Search deals..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <select className="sales-select">
-          <option value="">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="won">Won</option>
-          <option value="lost">Lost</option>
-        </select>
+     <select
+  className="sales-select"
+  onChange={(e) => setFilter(e.target.value)}
+>
+  <option value="">All Statuses</option>
+  <option value="In Progress">In Progress</option>
+  <option value="Won">Won</option>
+  <option value="Lost">Lost</option>
+</select>
 
-        <button className="btn-primary sales-btn-primary">
+        <button
+          className="btn-primary sales-btn-primary"
+          onClick={() => setShowModal(true)}
+        >
           <Plus size={16} />
-          <span>Add New Deal</span>
+          Add Deal
         </button>
 
-        <button className="btn-outline">
+        <button
+          className="btn-outline"
+          onClick={() => {
+            const csv = deals
+              .map(
+                (d) =>
+                  `${d.name},${d.client},${d.value},${d.status}`
+              )
+              .join("\n");
+
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "deals.csv";
+            a.click();
+          }}
+        >
           <Download size={16} />
-          <span>Export Report</span>
-        </button>
-
-        <button className="btn-outline">
-          <BarChart3 size={16} />
-          <span>Review Reports</span>
-        </button>
-
-        <button className="btn-outline">
-          <Users size={16} />
-          <span>Manage Roles</span>
-        </button>
-
-        <button className="btn-outline">
-          <CheckCircle2 size={16} />
-          <span>Approve Requests</span>
+          Export Report
         </button>
       </div>
 
+      {/* METRICS */}
       <div className="sales-metrics">
         <div className="metric-card gradient-orange">
           <div className="metric-icon metric-orange">
@@ -133,7 +186,7 @@ const SalesDashboard = ({ preview }) => {
           </div>
           <div>
             <div className="metric-label">Open Deals</div>
-            <div className="metric-value">27</div>
+            <div className="metric-value">{openDeals}</div>
           </div>
         </div>
 
@@ -142,8 +195,8 @@ const SalesDashboard = ({ preview }) => {
             <BadgeDollarSign size={22} />
           </div>
           <div>
-            <div className="metric-label">Revenue (This Month)</div>
-            <div className="metric-value">$42,500</div>
+            <div className="metric-label">Revenue</div>
+            <div className="metric-value">₹ {revenue}</div>
           </div>
         </div>
 
@@ -153,113 +206,110 @@ const SalesDashboard = ({ preview }) => {
           </div>
           <div>
             <div className="metric-label">Conversion Rate</div>
-            <div className="metric-value">32%</div>
+            <div className="metric-value">{conversionRate}%</div>
           </div>
         </div>
       </div>
 
-      <div className="sales-grid">
-        <div className="sales-charts net-panel">
-          <div className="section-header">
-            <h3 className="chart-heading">Monthly Performance Overview</h3>
-            <span className="mini-chip">Last 8 Months</span>
+      {/* RECENT DEALS */}
+    <div className="sales-list net-panel">
+  <div className="section-header">
+    <h3>Recent Deals</h3>
+  </div>
+
+  <div className="sales-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Deal Name</th>
+          <th>Value</th>
+          <th>Status</th>
+                  </tr>
+      </thead>
+
+    <tbody>
+  {recentDeals.map((deal) => (
+    <tr key={deal._id}>
+      <td>{deal.name}</td>
+
+      <td>₹ {deal.value}</td>
+
+      <td>
+        <span
+          className={`status ${deal.status
+            .toLowerCase()
+            .replace(" ", "-")}`}
+        >
+          {deal.status}
+        </span>
+      </td>
+    </tr>
+  ))}
+</tbody>
+    </table>
+  </div>
+</div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Add Deal</h3>
+
+           <form onSubmit={handleAddDeal}>
+  <input
+    placeholder="Deal Name"
+    value={newDeal.name}
+    onChange={(e) =>
+      setNewDeal({ ...newDeal, name: e.target.value })
+    }
+    required
+  />
+
+  <input
+    placeholder="Value"
+    type="number"
+    value={newDeal.value}
+    onChange={(e) =>
+      setNewDeal({ ...newDeal, value: e.target.value })
+    }
+    required
+  />
+
+  <input
+    placeholder="Assigned To"
+    value={newDeal.assignedTo}
+    onChange={(e) =>
+      setNewDeal({ ...newDeal, assignedTo: e.target.value })
+    }
+    required
+  />
+
+  <select
+    value={newDeal.status}
+    onChange={(e) =>
+      setNewDeal({ ...newDeal, status: e.target.value })
+    }
+  >
+    <option>In Progress</option>
+    <option>Won</option>
+    <option>Lost</option>
+  </select>
+
+  <div className="modal-buttons">
+    <button className="btn-primary">Save</button>
+    <button
+      type="button"
+      className="btn-secondary"
+      onClick={() => setShowModal(false)}
+    >
+      Cancel
+    </button>
+  </div>
+</form>
           </div>
-
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={chartData}>
-              <defs>
-                <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#ff8a00" stopOpacity={0.95} />
-                  <stop offset="50%" stopColor="#ff5f3d" stopOpacity={0.85} />
-                  <stop offset="100%" stopColor="#ff2d8f" stopOpacity={0.75} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="month" stroke="#b7b7b7" />
-              <YAxis stroke="#d4d4d4" />
-              <Tooltip
-                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                contentStyle={{
-                  background: '#111116',
-                  border: '1px solid rgba(255, 138, 0, 0.18)',
-                  borderRadius: '12px',
-                  color: '#fff',
-                }}
-              />
-              <Bar dataKey="deals" fill="url(#salesBarGradient)" radius={[10, 10, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
-
-        <div className="sales-side net-panel">
-          <div className="section-header">
-            <h3>Pipeline Distribution</h3>
-            <span className="mini-chip">Live Split</span>
-          </div>
-
-          <div className="pie-wrap">
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={pipelineData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={92}
-                  paddingAngle={4}
-                >
-                  {pipelineData.map((entry, index) => (
-                    <Cell key={entry.name} fill={pieColors[index % pieColors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: '#111116',
-                    border: '1px solid rgba(255, 138, 0, 0.18)',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="sales-legend">
-            {pipelineData.map((item) => (
-              <div className="legend-item" key={item.name}>
-                <span className="legend-color" style={{ background: item.color }} />
-                <span className="legend-label">{item.name}</span>
-                <span className="legend-value">{item.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="sales-list net-panel">
-        <div className="section-header">
-          <h3>Recent Deals</h3>
-          <button className="btn-outline compact-btn">
-            <BarChart3 size={15} />
-            <span>View All</span>
-          </button>
-        </div>
-
-        <div className="deal-list-wrap">
-          {recentDeals.map((deal) => (
-            <div className="deal-item" key={deal.id}>
-              <div className="deal-main">
-                <div className="deal-client">{deal.client}</div>
-                <div className="deal-owner">Owner: {deal.owner}</div>
-              </div>
-              <div className="deal-value">{deal.value}</div>
-              <span className={`status ${deal.status}`}>{deal.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

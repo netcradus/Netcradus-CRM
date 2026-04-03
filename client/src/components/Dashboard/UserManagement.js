@@ -22,6 +22,24 @@ const UserManagement = () => {
 
   const token = localStorage.getItem("token");
 
+  // Expense State
+  const EXPENSE_API = "http://localhost:5000/api/expenses";
+  const [expenses, setExpenses] = useState([]);
+  const [editExpenseId, setEditExpenseId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    amount: "",
+    category: "",
+    date: "",
+  });
+
+  const [expenseForm, setExpenseForm] = useState({
+    title: "",
+    amount: "",
+    category: "Misc",
+    date: "",
+  });
+
   // Fetch Users
   const fetchUsers = useCallback(async () => {
     try {
@@ -38,9 +56,20 @@ const UserManagement = () => {
     }
   }, [token]);
 
+  // Fetch Expenses
+  const fetchExpenses = useCallback(async () => {
+    try {
+      const res = await axios.get(EXPENSE_API);
+      setExpenses(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [EXPENSE_API]);
+
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchExpenses();
+  }, [fetchUsers, fetchExpenses]);
 
   // Form Change
   const onChange = (e) => {
@@ -140,6 +169,43 @@ const UserManagement = () => {
     }
   };
 
+  // Expense Handlers
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(EXPENSE_API, expenseForm);
+      fetchExpenses();
+      setExpenseForm({
+        title: "",
+        amount: "",
+        category: "Misc",
+        date: "",
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (!window.confirm("Delete this expense?")) return;
+    try {
+      await axios.delete(`${EXPENSE_API}/${id}`);
+      fetchExpenses();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateExpense = async (id) => {
+    try {
+      await axios.put(`${EXPENSE_API}/${id}`, editForm);
+      setEditExpenseId(null);
+      fetchExpenses();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="admin-panel">
       <h2 className="admin-panel-title">
@@ -192,7 +258,6 @@ const UserManagement = () => {
               onChange={onChange}
             >
               <option value="sales">Sales</option>
-              {/* Admin option removed for security - system only supports one admin */}
               <option value="support">Support</option>
               <option value="hr">HR</option>
               <option value="it">IT</option>
@@ -304,7 +369,7 @@ const UserManagement = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="admin-muted">
+                      <td colSpan="6" className="admin-muted">
                         No users found.
                       </td>
                     </tr>
@@ -314,6 +379,190 @@ const UserManagement = () => {
               </table>
             </div>
           )}
+        </section>
+
+        {/* ===== CREATE EXPENSE ===== */}
+        <section className="admin-card">
+          <h3>Create Expense</h3>
+
+          <form onSubmit={handleAddExpense} className="admin-form">
+            <input
+              placeholder="Title"
+              value={expenseForm.title}
+              onChange={(e) =>
+                setExpenseForm({ ...expenseForm, title: e.target.value })
+              }
+              required
+            />
+
+            <input
+              type="number"
+              placeholder="Amount"
+              value={expenseForm.amount}
+              onChange={(e) =>
+                setExpenseForm({ ...expenseForm, amount: e.target.value })
+              }
+              required
+            />
+
+            <select
+              value={expenseForm.category}
+              onChange={(e) =>
+                setExpenseForm({ ...expenseForm, category: e.target.value })
+              }
+            >
+              <option>Travel</option>
+              <option>Food</option>
+              <option>Salary</option>
+              <option>Office</option>
+              <option>Misc</option>
+            </select>
+
+            <input
+              type="date"
+              value={expenseForm.date}
+              onChange={(e) =>
+                setExpenseForm({ ...expenseForm, date: e.target.value })
+              }
+              required
+            />
+
+            <button type="submit">Add Expense</button>
+          </form>
+        </section>
+
+        {/* ===== ALL EXPENSES ===== */}
+        <section className="admin-card">
+          <h3>All Expenses</h3>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Amount</th>
+                  <th>Category</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {expenses.map((e) => (
+                  <tr key={e._id}>
+                    {/* TITLE */}
+                    <td data-label="Title">
+                      {editExpenseId === e._id ? (
+                        <input
+                          value={editForm.title}
+                          onChange={(ev) =>
+                            setEditForm({ ...editForm, title: ev.target.value })
+                          }
+                        />
+                      ) : (
+                        e.title
+                      )}
+                    </td>
+
+                    {/* AMOUNT */}
+                    <td data-label="Amount">
+                      {editExpenseId === e._id ? (
+                        <input
+                          type="number"
+                          value={editForm.amount}
+                          onChange={(ev) =>
+                            setEditForm({ ...editForm, amount: ev.target.value })
+                          }
+                        />
+                      ) : (
+                        `₹ ${e.amount}`
+                      )}
+                    </td>
+
+                    {/* CATEGORY */}
+                    <td data-label="Category">
+                      {editExpenseId === e._id ? (
+                        <select
+                          value={editForm.category}
+                          onChange={(ev) =>
+                            setEditForm({ ...editForm, category: ev.target.value })
+                          }
+                        >
+                          <option>Travel</option>
+                          <option>Food</option>
+                          <option>Salary</option>
+                          <option>Office</option>
+                          <option>Misc</option>
+                        </select>
+                      ) : (
+                        e.category
+                      )}
+                    </td>
+
+                    {/* DATE */}
+                    <td data-label="Date">
+                      {editExpenseId === e._id ? (
+                        <input
+                          type="date"
+                          value={editForm.date?.substring(0, 10)}
+                          onChange={(ev) =>
+                            setEditForm({ ...editForm, date: ev.target.value })
+                          }
+                        />
+                      ) : (
+                        new Date(e.date).toLocaleDateString()
+                      )}
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td data-label="Actions">
+                      {editExpenseId === e._id ? (
+                        <>
+                          <button
+                            className="btn-save"
+                            onClick={() => handleUpdateExpense(e._id)}
+                          >
+                            Save
+                          </button>
+
+                          <button
+                            className="btn-cancel"
+                            onClick={() => setEditExpenseId(null)}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn-edit"
+                            onClick={() => {
+                              setEditExpenseId(e._id);
+                              setEditForm({
+                                title: e.title,
+                                amount: e.amount,
+                                category: e.category,
+                                date: e.date,
+                              });
+                            }}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="btn-delete"
+                            onClick={() => handleDeleteExpense(e._id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </div>

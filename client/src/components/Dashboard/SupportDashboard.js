@@ -4,33 +4,35 @@ import "./SupportDashboard.css";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 
 
-function SupportDashboard() {
+function SupportDashboard({ preview }) {
   return (
     <div className="nc-page support-page">
-      <div className="nc-hero">
-        <div>
-          <div className="nc-badge">
-            <Headset size={14} />
-            <span>Netcradus Support Desk</span>
+       {!preview && (
+        <div className="nc-hero">
+          <div>
+            <div className="nc-badge">
+              <Headset size={14} />
+              <span>Netcradus Support Desk</span>
+            </div>
+            <h1 className="nc-hero-title">
+              Support <span className="nc-gradient-text">Command Center</span>
+            </h1>
+            <p className="nc-hero-subtitle">
+              Triage tickets, monitor response time, and resolve issues.
+            </p>
           </div>
-          <h1 className="nc-hero-title">
-            Support <span className="nc-gradient-text">Command Center</span>
-          </h1>
-          <p className="nc-hero-subtitle">
-            Triage tickets, monitor response time, and resolve issues with a clean premium workflow.
-          </p>
-        </div>
 
-        <div className="nc-hero-actions">
-          <span className="nc-pill">
-            <span className="support-live-dot" />
-            System Active
-          </span>
-          <div style={{ marginTop: '12px' }}>
-            <AttendanceWidget />
+          <div className="nc-hero-actions">
+            <span className="nc-pill">
+              <span className="support-live-dot" />
+              System Active
+            </span>
+            <div style={{ marginTop: '12px' }}>
+              <AttendanceWidget />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="nc-panel nc-section">
         <div className="nc-controls">
