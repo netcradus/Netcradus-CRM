@@ -539,6 +539,7 @@ function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", user.role);
+      localStorage.setItem("userName", user.name);
 
       if (passwordExpiryWarning) {
         localStorage.setItem("passwordExpiryWarning", "true");
@@ -637,6 +638,7 @@ function Login() {
       } else {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("userRole", res.data.user.role);
+        localStorage.setItem("userName", res.data.user.name);
         setSecurityAction(null);
         navigate("/welcome");
       }

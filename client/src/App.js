@@ -51,6 +51,11 @@ import PriceBooks from "./features/PriceBooks/PriceBooks";
 import Solutions from "./features/Solutions/Solutions";
 import CT from "./features/CT/CT";
 import UserManagement from "./components/Dashboard/UserManagement";
+import AttendancePage from "./features/Attendance/AttendancePage";
+import LeavePage from "./features/Attendance/LeavePage";
+import HolidaysPage from "./features/Attendance/HolidaysPage";
+import AttendanceReportsPage from "./features/Attendance/AttendanceReportsPage";
+import AdminAttendanceDashboard from "./features/Attendance/AdminAttendanceDashboard";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -58,10 +63,10 @@ function ProtectedLayout() {
   return token ? <MainLayout /> : <Navigate to="/login" replace />;
 }
 
-/* ========== Role Route Helper ========== */
-function RoleRoute({ roleNeeded, children }) {
+function RoleRoute({ roles, children }) {
   const role = localStorage.getItem("userRole");
-  if (role !== roleNeeded) {
+  const allowed = Array.isArray(roles) ? roles.includes(role) : role === roles;
+  if (!allowed) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -87,16 +92,12 @@ function App() {
           {/* ---- Dashboards ---- */}
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/admin-dashboard" element={
-            <RoleRoute roleNeeded="admin">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/admin-dashboard" element={<RoleRoute roles="admin"><Dashboard /></RoleRoute>} />
 
           <Route
             path="/user-management"
             element={
-              <RoleRoute roleNeeded="admin">
+              <RoleRoute roles="admin">
                 <UserManagement />
               </RoleRoute>
             }
@@ -105,41 +106,21 @@ function App() {
           <Route
             path="/admin/devices"
             element={
-              <RoleRoute roleNeeded="admin">
+              <RoleRoute roles="admin">
                 <AdminDevices />
               </RoleRoute>
             }
           />
 
-          <Route path="/support-dashboard" element={
-            <RoleRoute roleNeeded="support">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/support-dashboard" element={<RoleRoute roles="support"><Dashboard /></RoleRoute>} />
 
-          <Route path="/sales-dashboard" element={
-            <RoleRoute roleNeeded="sales">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/sales-dashboard" element={<RoleRoute roles="sales"><Dashboard /></RoleRoute>} />
 
-          <Route path="/hr-dashboard" element={
-            <RoleRoute roleNeeded="hr">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/hr-dashboard" element={<RoleRoute roles="hr"><Dashboard /></RoleRoute>} />
 
-          <Route path="/tech-dashboard" element={
-            <RoleRoute roleNeeded="it">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/tech-dashboard" element={<RoleRoute roles="it"><Dashboard /></RoleRoute>} />
 
-          <Route path="/digital-media-dashboard" element={
-            <RoleRoute roleNeeded="digital_media">
-              <Dashboard />
-            </RoleRoute>
-          } />
+          <Route path="/digital-media-dashboard" element={<RoleRoute roles="digital_media"><Dashboard /></RoleRoute>} />
 
           {/* ---- All Other Modules ---- */}
           <Route path="/leads" element={<Leads />} />
@@ -170,6 +151,17 @@ function App() {
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/price-books" element={<PriceBooks />} />
           <Route path="/ct" element={<CT />} />
+
+          {/* ---- Attendance Module ---- */}
+          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/admin/attendance" element={
+            <RoleRoute roles={["admin", "hr"]}>
+              <AdminAttendanceDashboard />
+            </RoleRoute>
+          } />
+          <Route path="/leave" element={<LeavePage />} />
+          <Route path="/holidays" element={<HolidaysPage />} />
+          <Route path="/attendance-reports" element={<AttendanceReportsPage />} />
 
         </Route>
 

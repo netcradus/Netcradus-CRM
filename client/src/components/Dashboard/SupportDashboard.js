@@ -1,6 +1,8 @@
 import React from "react";
 import { Headset, Search, Plus, Download } from "lucide-react";
 import "./SupportDashboard.css";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+
 
 function SupportDashboard({ preview }) {
   return (
@@ -25,6 +27,9 @@ function SupportDashboard({ preview }) {
               <span className="support-live-dot" />
               System Active
             </span>
+            <div style={{ marginTop: '12px' }}>
+              <AttendanceWidget />
+            </div>
           </div>
         </div>
       )}

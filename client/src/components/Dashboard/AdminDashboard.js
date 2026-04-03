@@ -23,6 +23,8 @@ import TechDashboard from "./TechDashboard";
 import DigitalMediaDashboard from "./DigitalMediaDashboard";
 import { apiUrl } from "../../config/api";
 import { useNavigate } from "react-router-dom";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+
 
 const chartData = [
   { month: "Jan", users: 12 },
@@ -50,6 +52,7 @@ const PIE_COLORS = [
 ];
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
 const previewRef = useRef(null);
@@ -130,6 +133,24 @@ useEffect(() => {
     });
   }
 }, [selectedRole, selectedUser]);
+  const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAttendanceSnapshot(res.data.data);
+      } catch (err) {
+        console.error("Error fetching attendance snapshot:", err);
+      }
+    };
+    fetchAttendance();
+    const interval = setInterval(fetchAttendance, 60000); // refresh every minute
+    return () => clearInterval(interval);
+  }, [token]);
+
   return (
     <div className="admin-dashboard">
       <div className="admin-hero">
@@ -150,8 +171,47 @@ useEffect(() => {
         <div className="admin-hero-right netcradus-status">
           <div className="live-dot" />
           <span>NETCRADUS System Active</span>
+          <div style={{ marginTop: '16px' }}>
+            <AttendanceWidget />
+          </div>
         </div>
       </div>
+
+      {/* Attendance Snapshot Strip */}
+      {(userRole === 'admin' || userRole === 'hr') && attendanceSnapshot && (
+        <div className="admin-att-strip glass-panel" style={{ padding: '15px 20px', marginBottom: '24px', cursor: 'pointer' }} onClick={() => navigate('/admin/attendance')}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <div className="live-dot" />
+            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#8892a4', textTransform: 'uppercase' }}>Real-time Team Attendance</span>
+          </div>
+          <div className="snap-metrics-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#86efac' }}>{attendanceSnapshot.presentCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Present</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#60a5fa' }}>{attendanceSnapshot.clockedInCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Active</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fbbf24' }}>{attendanceSnapshot.lateCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Late</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#c7d2fe' }}>{attendanceSnapshot.onLeaveCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>On Leave</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fca5a5' }}>{attendanceSnapshot.absentCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Absent</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#f472b6' }}>{attendanceSnapshot.overtimeCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Overtime</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="admin-controls glass">
         <input

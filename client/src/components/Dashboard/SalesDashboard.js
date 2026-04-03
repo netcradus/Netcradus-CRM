@@ -9,24 +9,25 @@ import {
   CircleDashed,
   BriefcaseBusiness,
 } from "lucide-react";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import "./SalesDashboard.css";
 import { apiUrl } from "../../config/api";
 
 
 const API =apiUrl("/api/deals");
 
-const SalesDashboard = () => {
+const SalesDashboard = ({ preview }) => {
   const [deals, setDeals] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-const [newDeal, setNewDeal] = useState({
-  name: "",
-  value: "",
-  status: "In Progress",
-  assignedTo: "",
-});
+  const [newDeal, setNewDeal] = useState({
+    name: "",
+    value: "",
+    status: "In Progress",
+    assignedTo: "",
+  });
   const userName = localStorage.getItem("userName") || "User";
   const userRole = localStorage.getItem("userRole") || "Admin";
 
@@ -118,7 +119,10 @@ const [newDeal, setNewDeal] = useState({
 
         <div className="sales-hero-status">
           <div className="live-dot" />
-          <span>System Active</span>
+          <span>Sales System Active</span>
+          <div style={{ marginTop: '12px' }}>
+            <AttendanceWidget />
+          </div>
         </div>
       </div>
 

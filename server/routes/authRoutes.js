@@ -13,7 +13,8 @@ const {
     resetPasswordWithOTP,
     verifyAdminDevice,
     getAdminDevices,
-    revokeAdminDevice
+    revokeAdminDevice,
+    updateUserByAdmin
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");
@@ -41,6 +42,7 @@ router.get("/users", authMiddleware, adminMiddleware, getUsers);
 router.post("/users", authMiddleware, adminMiddleware, createUserByAdmin);
 router.delete("/users/:id", authMiddleware, adminMiddleware, deleteUserByAdmin);
 router.put("/users/:id/password", authMiddleware, adminMiddleware, adminChangeUserPassword);
+router.patch("/users/:id", authMiddleware, adminMiddleware, updateUserByAdmin);
 
 
 module.exports = router;

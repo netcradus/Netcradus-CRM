@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Kanban, Plus, Columns3, Sparkles } from "lucide-react";
 import "./TechDashboard.css";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+
 
 const initialData = {
   "TO DO": ["Setup project repo", "Define database schema"],
@@ -57,6 +59,9 @@ function TechDashboard({ preview = false, isAdmin = false }) {
               <Sparkles size={16} />
               Live Board
             </span>
+            <div style={{ marginTop: '12px' }}>
+              <AttendanceWidget />
+            </div>
           </div>
         </div>
       )}

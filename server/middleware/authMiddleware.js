@@ -2,10 +2,14 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 // Auth middleware - checks if user is authenticated
+// Accepts token from Authorization header OR ?token= query param
+// (query param is needed for browser-navigated routes like document view proxy)
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get token from header
-    const token = req.headers.authorization?.split(" ")[1];
+    // Accept token from header OR query param (for new-tab navigation)
+    const headerToken = req.headers.authorization?.split(" ")[1];
+    const queryToken  = req.query.token;
+    const token = headerToken || queryToken;
 
     if (!token) {
       return res.status(401).json({ message: "No token provided. Please login first." });
