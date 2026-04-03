@@ -14,7 +14,7 @@ const {
 // Create user (admin only)
 const createUserByAdmin = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, department: manualDept, name } = req.body;
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -37,8 +37,8 @@ const createUserByAdmin = async (req, res) => {
       });
     }
 
-    // Extract first name from email
-    const firstName = normalizedEmail.split("@")[0].split(".")[0];
+    // Extract first name from email or use provided name
+    const firstName = name || normalizedEmail.split("@")[0].split(".")[0];
 
     // Department prefix
     const department = role.toLowerCase().replace("_", "");
@@ -59,6 +59,7 @@ const createUserByAdmin = async (req, res) => {
       email: normalizedEmail,
       password: hashedPassword,
       role: role.toLowerCase(),
+      department: manualDept || department,
     });
 
     await user.save();
@@ -479,6 +480,42 @@ const adminChangeUserPassword = async (req, res) => {
   }
 };
 
+// Update user general info (admin only)
+const updateUserByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, role, department } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role === "admin" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Cannot update primary admin" });
+    }
+
+    if (name) user.name = name;
+    if (email) user.email = email.toLowerCase().trim();
+    if (role && role !== "admin") user.role = role.toLowerCase();
+    if (department) user.department = department;
+
+    await user.save();
+
+    res.json({
+      message: `User ${user.name} updated successfully`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department
+      }
+    });
+
+  } catch (err) {
+    console.error("Update User Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 const requestOTP = async (req, res) => {
   try {
     const { userId, type } = req.body;
@@ -674,6 +711,7 @@ module.exports = {
   getUsers,
   deleteUserByAdmin,
   adminChangeUserPassword,
+  updateUserByAdmin,
   requestOTP,
   verifySecurityOTP,
   verifyPasswordChange,

@@ -5,7 +5,7 @@ import "./WelcomeAnimation.css";
 const WelcomeAnimation = () => {
     const navigate = useNavigate();
     const [showWarning, setShowWarning] = React.useState(false);
-    const userName = localStorage.getItem("name") || "User";
+    const userName = localStorage.getItem("userName") || "User";
     const userRole = localStorage.getItem("userRole") || "user";
 
     useEffect(() => {
@@ -32,7 +32,7 @@ const WelcomeAnimation = () => {
         <div className="welcome-container">
             <div className="welcome-card">
                 <div className="welcome-text">
-                    Welcome, {userName.split(' ')[0]}
+                    Welcome, {userName}
                 </div>
                 {showWarning && (
                     <div className="expiry-warning-box">

@@ -20,7 +20,21 @@ const otpRequestLimiter = rateLimit({
     }
 });
 
+// Document upload limiter (scoped by user ID if authenticated, else IP)
+const uploadRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 Minutes
+    max: 20, // Max 20 uploads per user
+    keyGenerator: (req) => req.user?._id || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "Upload limit reached. Please try again after 15 minutes.",
+        code: "RATE_LIMIT_REACHED"
+    }
+});
+
 module.exports = {
     loginLimiter,
-    otpRequestLimiter
+    otpRequestLimiter,
+    uploadRateLimiter
 };

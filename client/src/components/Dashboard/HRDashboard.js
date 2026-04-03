@@ -23,6 +23,10 @@ import {
   AreaChart,
 } from 'recharts';
 import './HRDashboard.css';
+import AttendanceWidget from '../../features/Attendance/AttendanceWidget';
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 
 const headcountData = [
   { month: 'Nov 2022', count: 1150 },
@@ -93,6 +97,25 @@ const quickTasks = [
 const HRDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('Monthly growth');
+  const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  React.useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        const res = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000/api"}/attendance/admin/today-snapshot`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAttendanceSnapshot(res.data.data);
+      } catch (err) {
+        console.error("Error fetching attendance snapshot:", err);
+      }
+    };
+    fetchAttendance();
+    const interval = setInterval(fetchAttendance, 60000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -131,10 +154,49 @@ const HRDashboard = () => {
             />
           </div>
           <div className="user-profile glass-card">
-<CircleUserRound size={26} />
+            <CircleUserRound size={26} />
+          </div>
+          <div style={{ marginLeft: '12px' }}>
+            <AttendanceWidget />
           </div>
         </div>
       </div>
+
+      {/* Attendance Snapshot Strip */}
+      {attendanceSnapshot && (
+        <div className="admin-att-strip glass-panel" style={{ padding: '15px 20px', marginBottom: '24px', cursor: 'pointer' }} onClick={() => navigate('/admin/attendance')}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <div className="live-dot" />
+            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#8892a4', textTransform: 'uppercase' }}>Real-time Team Attendance</span>
+          </div>
+          <div className="snap-metrics-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#86efac' }}>{attendanceSnapshot.presentCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Present</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#60a5fa' }}>{attendanceSnapshot.clockedInCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Active</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fbbf24' }}>{attendanceSnapshot.lateCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Late</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#c7d2fe' }}>{attendanceSnapshot.onLeaveCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>On Leave</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fca5a5' }}>{attendanceSnapshot.absentCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Absent</span>
+            </div>
+            <div className="snap-mini-card">
+              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#f472b6' }}>{attendanceSnapshot.overtimeCount}</span>
+              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Overtime</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="metrics-grid">
         <div className="metric-card net-card gradient-orange">

@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  department: {
+    type: String,
+    trim: true,
+    default: "General"
+  },
 
   lastPasswordChange: {
     type: Date,

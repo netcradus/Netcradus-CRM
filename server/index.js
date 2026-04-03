@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const helmet = require("helmet");
 const connectDB = require("./config/db");
 
 // Load environment variables
@@ -16,8 +17,10 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Middleware
+app.use(helmet({ crossOriginResourcePolicy: false })); // allows cross-origin images to render if needed
 app.use(cors());
 app.use(express.json());
+
 
 // Base routes
 app.get("/", (req, res) => {
@@ -113,6 +116,26 @@ app.use("/api/documents", documentRoutes);
 
 const forecastRoutes = require("./routes/forecastRoutes");
 app.use("/api/forecasts", forecastRoutes);
+
+// Attendance routes
+const attendanceRoutes = require("./routes/attendance");
+app.use("/api/attendance", attendanceRoutes);
+
+// Leave routes
+const leaveRoutes = require("./routes/leave");
+app.use("/api/leave", leaveRoutes);
+
+// Holiday routes
+const holidayRoutes = require("./routes/holidays");
+app.use("/api/holidays", holidayRoutes);
+
+// Cron health check
+const { registerCronJobs, getCronLastRun } = require("./cron");
+registerCronJobs();
+
+app.get("/api/health/cron", (req, res) => {
+  res.status(200).json({ success: true, data: getCronLastRun() });
+});
 
 // Start server
 

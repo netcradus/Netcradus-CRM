@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import axios from "axios";
 import {
   Search,
   ChevronDown,
@@ -31,6 +32,10 @@ import {
   Shield,
   Database,
   FileLock,
+  Clock,
+  CalendarDays,
+  UmbrellaOff,
+  FileBarChart2,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import "./Sidebar.css";
@@ -101,6 +106,21 @@ const roleMenus = {
     },
 
     {
+      label: "HR & Attendance",
+      icon: <Clock size={18} />,
+      children: [
+        { 
+          label: "Team Dashboard", 
+          path: "/admin/attendance", 
+          icon: <BarChart3 size={16} />,
+          badge: true // Mark for badge rendering
+        },
+        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
+        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+      ],
+    },
+    {
       label: "Security",
       icon: <Shield size={18} />,
       children: [
@@ -116,6 +136,8 @@ const roleMenus = {
     { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
     { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
     { label: "Calls", path: "/calls", icon: <PhoneCall size={18} /> },
+    { label: "Attendance", path: "/attendance", icon: <Clock size={18} /> },
+    { label: "Leave", path: "/leave", icon: <UmbrellaOff size={18} /> },
   ],
 
   support: [
@@ -142,6 +164,22 @@ const roleMenus = {
     { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
     { label: "Meetings", path: "/meetings", icon: <CalendarClock size={18} /> },
     { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
+    {
+      label: "Attendance",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { 
+          label: "Team Dashboard", 
+          path: "/admin/attendance", 
+          icon: <BarChart3 size={16} />,
+          badge: true
+        },
+        { label: "Leave Manager", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+      ],
+    },
   ],
 
   it: [
@@ -173,7 +211,7 @@ const roleMenus = {
 };
 
 // ─── NavGroup — dropdown opens BELOW the button ───────────────────────────────
-function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick }) {
+function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick, pendingCount }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const isChildActive = item.children?.some(c => location.pathname === c.path);
@@ -202,7 +240,12 @@ function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick }) {
         onClick={() => setOpen(o => !o)}
         title={!isHovered && !isMobileOpen ? item.label : undefined}
       >
-        <span className="nav-icon">{item.icon}</span>
+        <span className="nav-icon">
+          {item.icon}
+          {!isHovered && !isMobileOpen && item.children.some(c => c.badge) && pendingCount > 0 && (
+            <span className="sidebar-badge-dot" />
+          )}
+        </span>
         {(isHovered || isMobileOpen) && (
           <>
             <span className="nav-label">{item.label}</span>
@@ -232,6 +275,9 @@ function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick }) {
                   >
                     <span className="nav-icon">{child.icon}</span>
                     <span>{child.label}</span>
+                    {child.badge && pendingCount > 0 && (
+                      <span className="sidebar-badge">{pendingCount}</span>
+                    )}
                   </Link>
                 </li>
               );
@@ -250,6 +296,27 @@ function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const fetchPendingCount = useCallback(async () => {
+    const role = localStorage.getItem("userRole");
+    if (role !== "admin" && role !== "hr") return;
+    try {
+      const { data } = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000/api"}/attendance/admin/pending-actions`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      const count = (data.data?.pendingLeaves?.length || 0) + (data.data?.pendingRegularizations?.length || 0);
+      setPendingCount(count);
+    } catch (e) {
+      console.error("Failed to fetch pending counts", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 300000); // 5 mins
+    return () => clearInterval(interval);
+  }, [fetchPendingCount]);
 
   const userRole = localStorage.getItem("userRole");
   const menuItems = roleMenus[userRole] || [];
@@ -366,6 +433,7 @@ function Sidebar() {
                     isMobileOpen={isMobileOpen}
                     location={location}
                     onLinkClick={handleLinkClick}
+                    pendingCount={pendingCount}
                   />
                 ) : (
                   <li key={i}>

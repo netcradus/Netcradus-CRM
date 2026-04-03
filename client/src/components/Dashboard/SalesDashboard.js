@@ -11,6 +11,8 @@ import {
   CircleDashed,
   BriefcaseBusiness,
 } from 'lucide-react';
+import AttendanceWidget from '../../features/Attendance/AttendanceWidget';
+
 import {
   BarChart,
   Bar,
@@ -73,6 +75,9 @@ const SalesDashboard = ({ preview }) => {
         <div className="sales-hero-status">
           <div className="live-dot" />
           <span>Sales System Active</span>
+          <div style={{ marginTop: '12px' }}>
+            <AttendanceWidget />
+          </div>
         </div>
       </div>
 

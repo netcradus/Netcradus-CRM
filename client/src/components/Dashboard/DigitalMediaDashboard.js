@@ -1,5 +1,7 @@
 import React from "react";
 import "./DigitalMediaDashboard.css";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+
 import {
   Megaphone,
   BarChart3,
@@ -31,6 +33,9 @@ function DigitalMediaDashboard() {
             <BadgeCheck size={16} />
             Campaigns Healthy
           </span>
+          <div style={{ marginTop: '12px' }}>
+            <AttendanceWidget />
+          </div>
         </div>
       </div>
 

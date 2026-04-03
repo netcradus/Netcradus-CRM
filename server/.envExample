@@ -1,3 +1,14 @@
 PORT=
 MONGO_URI=
 JWT_SECRET=
+CLIENT_ORIGIN=http://localhost:3000
+
+# Storage
+STORAGE_PROVIDER=drive   # or 'dropbox'
+
+# Google Drive
+GOOGLE_SERVICE_ACCOUNT_KEY_JSON=   # full JSON as a single-line string
+DRIVE_FOLDER_ID=
+
+# Dropbox
+DROPBOX_ACCESS_TOKEN=

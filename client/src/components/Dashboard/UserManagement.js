@@ -11,6 +11,7 @@ const UserManagement = () => {
   const [success, setSuccess] = useState("");
 
   const [form, setForm] = useState({
+    name: "",
     email: "",
     password: "",
     role: "sales",
@@ -28,7 +29,6 @@ const UserManagement = () => {
       const res = await axios.get(apiUrl("/api/auth/users"), {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setUsers(res.data);
       setError("");
     } catch (err) {
@@ -75,6 +75,7 @@ const UserManagement = () => {
 
       // Reset form properly
       setForm({
+        name: "",
         email: "",
         password: "",
         role: "sales",
@@ -124,6 +125,21 @@ const UserManagement = () => {
     }
   };
 
+  // Update User Info
+  const onUpdateUser = async (user, field, value) => {
+    try {
+      await axios.patch(
+        apiUrl(`/api/auth/users/${user._id}`),
+        { [field]: value },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuccess(`${field} updated for ${user.name}`);
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || "Update failed");
+    }
+  };
+
   return (
     <div className="admin-panel">
       <h2 className="admin-panel-title">
@@ -143,6 +159,15 @@ const UserManagement = () => {
           </p>
 
           <form onSubmit={onCreateUser} className="admin-form">
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={onChange}
+              placeholder="Full Name"
+              required
+            />
+
             <input
               type="email"
               name="email"
@@ -192,6 +217,7 @@ const UserManagement = () => {
                     <th>User ID</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Full Name</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -209,6 +235,18 @@ const UserManagement = () => {
                           <span className={`role-badge role-${user.role}`}>
                             {user.role}
                           </span>
+                        </td>
+
+                        <td data-label="Full Name">
+                          <input 
+                            className="inline-edit-input"
+                            defaultValue={user.name} 
+                            onBlur={(e) => {
+                              if (e.target.value !== user.name) {
+                                onUpdateUser(user, 'name', e.target.value);
+                              }
+                            }}
+                          />
                         </td>
 
                         <td data-label="Created">
