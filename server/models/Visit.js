@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const visitSchema = new mongoose.Schema({
   client: { type: String, required: true },
@@ -12,4 +12,4 @@ const visitSchema = new mongoose.Schema({
   notes: String,
 }, { timestamps: true });
 
-export default mongoose.model("Visit", visitSchema);
+module.exports = mongoose.model("Visit", visitSchema);
