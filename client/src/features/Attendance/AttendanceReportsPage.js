@@ -152,7 +152,7 @@ export default function AttendanceReportsPage() {
                   <thead>
                     <tr>
                       <th>Date</th><th>Day</th><th>Status</th>
-                      <th>Punch In</th><th>Punch Out</th><th>Hours</th><th>OT</th><th>Late</th>
+                      <th>Punch In</th><th>Punch Out</th><th>Break Duration</th><th>Net Work</th><th>OT</th><th>Late</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -170,8 +170,9 @@ export default function AttendanceReportsPage() {
                           <td><span className={`badge ${STATUS[r.status] || ""}`}>{r.status?.replace("_"," ")}</span></td>
                           <td>{r.punchIn  ? new Date(r.punchIn).toLocaleTimeString("en-IN",  { hour:"2-digit", minute:"2-digit" }) : "—"}</td>
                           <td>{r.punchOut ? new Date(r.punchOut).toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit" }) : "—"}</td>
-                          <td>{r.workingHours != null ? `${r.workingHours.toFixed(2)} h` : "—"}</td>
-                          <td>{r.overtimeHours > 0 ? `+${r.overtimeHours.toFixed(2)} h` : "—"}</td>
+                          <td>{r.totalBreakDurationMinutes != null ? `${r.totalBreakDurationMinutes} min` : "—"}</td>
+                          <td>{r.netWorkDurationMinutes != null ? `${(r.netWorkDurationMinutes / 60).toFixed(2)} h` : (r.workingHours != null ? `${r.workingHours.toFixed(2)} h` : "—")}</td>
+                          <td>{r.overtimeMinutes > 0 ? `+${(r.overtimeMinutes / 60).toFixed(2)} h` : (r.overtimeHours > 0 ? `+${r.overtimeHours.toFixed(2)} h` : "—")}</td>
                           <td>{r.isLate ? <span className="badge badge-absent">Late</span> : "—"}</td>
                         </tr>
                       );

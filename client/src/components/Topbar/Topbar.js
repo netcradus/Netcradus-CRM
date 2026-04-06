@@ -1,8 +1,12 @@
 import React from "react";
-import { Search, User } from "lucide-react";
+import { Search } from "lucide-react";
+import NotificationButton from "../NotificationButton";
 import "./Topbar.css";
 
 const Topbar = () => {
+  const userName = localStorage.getItem("userName") || "User";
+  const initials = userName.slice(0, 2).toUpperCase();
+
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -25,8 +29,10 @@ const Topbar = () => {
           />
         </div>
 
-        <div className="topbar-avatar">
-          <User size={18} />
+        <NotificationButton />
+
+        <div className="topbar-avatar" title={userName}>
+          {initials}
         </div>
       </div>
     </header>

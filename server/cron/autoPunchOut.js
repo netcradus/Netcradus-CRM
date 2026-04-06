@@ -1,5 +1,7 @@
 const AttendanceRecord = require('../models/AttendanceRecord');
+const AttendanceBreak = require('../models/AttendanceBreak');
 const { getSettings } = require('../config/attendanceSettings');
+const { differenceInMinutes } = require('date-fns');
 const { calculateFields } = require('../services/attendanceService');
 
 /**
@@ -21,12 +23,32 @@ async function autoPunchOut() {
     let count = 0;
     for (const record of openRecords) {
       const autoPunchOutTime = new Date(record.punchIn.getTime() + maxMs);
-      const derived = calculateFields(record, autoPunchOutTime, settings);
+      let totalBreakDurationMinutes = record.totalBreakDurationMinutes || 0;
+
+      if (record.isOnBreak && record.currentBreakStart) {
+        const openBreak = await AttendanceBreak.findOne({
+          attendanceId: record._id,
+          breakEnd: null,
+        }).sort({ breakStart: -1 });
+
+        const breakDurationMinutes = Math.max(0, differenceInMinutes(autoPunchOutTime, new Date(record.currentBreakStart)));
+        totalBreakDurationMinutes += breakDurationMinutes;
+
+        if (openBreak) {
+          openBreak.breakEnd = autoPunchOutTime;
+          openBreak.breakDurationMinutes = breakDurationMinutes;
+          await openBreak.save();
+        }
+      }
+
+      const derived = calculateFields(record, autoPunchOutTime, settings, { totalBreakDurationMinutes });
 
       await AttendanceRecord.findByIdAndUpdate(record._id, {
         $set: {
           punchOut: autoPunchOutTime,
           autoPunchedOut: true,
+          isOnBreak: false,
+          currentBreakStart: null,
           ...derived,
         }
       });

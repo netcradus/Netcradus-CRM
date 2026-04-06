@@ -1,8 +1,18 @@
 const AttendanceRecord = require('../models/AttendanceRecord');
+const AttendanceBreak = require('../models/AttendanceBreak');
 const AttendanceSettings = require('../models/AttendanceSettings');
 const RegularizationRequest = require('../models/RegularizationRequest');
 const AuditLog = require('../models/AuditLog');
-const { handlePunchIn, handlePunchOut, getTodayRecord, getMonthRecords, calculateFields } = require('../services/attendanceService');
+const {
+  handlePunchIn,
+  handlePunchOut,
+  getTodayRecord,
+  getMonthRecords,
+  calculateFields,
+  startBreak,
+  endBreak,
+  getCurrentStatus: getCurrentAttendanceStatus,
+} = require('../services/attendanceService');
 const { getSettings, invalidateCache } = require('../config/attendanceSettings');
 const User = require('../models/User');
 const LeaveApplication = require('../models/LeaveApplication');
@@ -36,7 +46,13 @@ exports.punchOut = async (req, res) => {
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const coords = req.body.coords || null;
     const record = await handlePunchOut(userId, ip, coords);
-    res.status(200).json({ success: true, data: record });
+    res.status(200).json({
+      success: true,
+      data: record,
+      message: record._autoClosedBreak
+        ? 'Break auto-closed on punch out.'
+        : 'Punched out successfully.',
+    });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -47,6 +63,61 @@ exports.getToday = async (req, res) => {
   try {
     const record = await getTodayRecord(req.user._id);
     res.status(200).json({ success: true, data: record });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/attendance/break-start
+exports.breakStart = async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    }
+
+    const breakType = req.body.breakType || 'lunch';
+    const record = await startBreak(req.user._id, breakType);
+    const status = await getCurrentAttendanceStatus(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Break started successfully.',
+      data: { ...status, record },
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/attendance/break-end
+exports.breakEnd = async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    }
+
+    const { record, breakEntry } = await endBreak(req.user._id);
+    const status = await getCurrentAttendanceStatus(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Break ended successfully.',
+      data: { ...status, record, latestBreak: breakEntry },
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/attendance/current-status
+exports.getCurrentStatus = async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    }
+
+    const status = await getCurrentAttendanceStatus(req.user._id);
+    res.status(200).json({ success: true, data: status });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -269,9 +340,19 @@ exports.getTodaySnapshot = async (req, res) => {
         to: { $gte: shiftDate },
       }).lean(),
     ]);
+    const attendanceIds = records.map((record) => record._id);
+    const breaks = attendanceIds.length
+      ? await AttendanceBreak.find({ attendanceId: { $in: attendanceIds } }).lean()
+      : [];
 
     const recordMap = new Map(records.map(r => [r.userId.toString(), r]));
     const leaveMap = new Map(leaves.map(l => [l.userId.toString(), l]));
+    const breaksByAttendance = breaks.reduce((acc, item) => {
+      const key = String(item.attendanceId);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
 
     const employees = users.map(u => {
       const rec = recordMap.get(u._id.toString());
@@ -283,9 +364,14 @@ exports.getTodaySnapshot = async (req, res) => {
       if (rec) {
         status = rec.status;
         if (status === 'present' && rec.punchIn && !rec.punchOut) {
-          const elapsed = (new Date() - new Date(rec.punchIn)) / (1000 * 60 * 60);
-          if (elapsed > settings.standardHours) status = 'overtime';
-          if (elapsed > (settings.standardHours + 2)) warning = 'overworked';
+          const breakMinutesSoFar = (rec.totalBreakDurationMinutes || 0)
+            + (rec.isOnBreak && rec.currentBreakStart
+              ? Math.max(0, differenceInMinutes(new Date(), new Date(rec.currentBreakStart)))
+              : 0);
+          const elapsedMinutes = Math.max(0, differenceInMinutes(new Date(), new Date(rec.punchIn)) - breakMinutesSoFar);
+          const elapsedHours = elapsedMinutes / 60;
+          if (elapsedHours > settings.standardHours) status = 'overtime';
+          if (elapsedHours > (settings.standardHours + 2)) warning = 'overworked';
         } else if (rec.overtimeHours > 0) {
           status = 'overtime';
           if (rec.workingHours > (settings.standardHours + 2)) warning = 'overworked';
@@ -310,6 +396,12 @@ exports.getTodaySnapshot = async (req, res) => {
         punchOut: rec?.punchOut || null,
         workingHours: rec?.workingHours || 0,
         overtimeHours: rec?.overtimeHours || 0,
+        totalBreakDurationMinutes: rec?.totalBreakDurationMinutes || 0,
+        netWorkDurationMinutes: rec?.netWorkDurationMinutes || 0,
+        overtimeMinutes: rec?.overtimeMinutes || 0,
+        isOnBreak: rec?.isOnBreak || false,
+        currentBreakStart: rec?.currentBreakStart || null,
+        breaks: rec?._id ? (breaksByAttendance[String(rec._id)] || []) : [],
         isLate: rec?.isLate || false,
         lateByMinutes: rec?.lateByMinutes || 0,
         leaveType: leave?.leaveType || null,

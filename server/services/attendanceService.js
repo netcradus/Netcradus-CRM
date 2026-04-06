@@ -1,5 +1,6 @@
-const { differenceInMinutes } = require('date-fns');
+const { differenceInMinutes, differenceInSeconds } = require('date-fns');
 const AttendanceRecord = require('../models/AttendanceRecord');
+const AttendanceBreak = require('../models/AttendanceBreak');
 const { getSettings } = require('../config/attendanceSettings');
 const { getHolidaysForYear } = require('./holidayService');
 const {
@@ -20,11 +21,30 @@ function calculateStatus(workingHours, settings) {
   return 'half_day'; // punched in but below min hours = half_day
 }
 
-function calculateFields(record, punchOut, settings) {
+function buildBreakSummary(record, breaks = [], now = new Date()) {
+  const completedBreakMinutes = record?.totalBreakDurationMinutes
+    ?? breaks.reduce((sum, item) => sum + (item.breakDurationMinutes || 0), 0);
+
+  const ongoingBreakMinutes = record?.isOnBreak && record?.currentBreakStart
+    ? Math.max(0, differenceInMinutes(now, new Date(record.currentBreakStart)))
+    : 0;
+
+  return {
+    completedBreakMinutes,
+    ongoingBreakMinutes,
+    totalBreakMinutesSoFar: completedBreakMinutes + ongoingBreakMinutes,
+  };
+}
+
+function calculateFields(record, punchOut, settings, options = {}) {
   const punchIn = new Date(record.punchIn);
   const punchOutDate = new Date(punchOut);
-  const workingHours = calcWorkingHours(punchIn, punchOutDate);
-  const overtimeHours = Math.max(0, +(workingHours - settings.standardHours).toFixed(2));
+  const breakMinutes = options.totalBreakDurationMinutes ?? record.totalBreakDurationMinutes ?? 0;
+  const totalMinutes = Math.max(0, differenceInMinutes(punchOutDate, punchIn));
+  const netWorkDurationMinutes = Math.max(0, totalMinutes - breakMinutes);
+  const overtimeMinutes = Math.max(0, netWorkDurationMinutes - (settings.standardHours * 60));
+  const workingHours = +(netWorkDurationMinutes / 60).toFixed(2);
+  const overtimeHours = +(overtimeMinutes / 60).toFixed(2);
 
   const officeStart = buildOfficeDateTime(record.shiftDate, settings.officeStartTime, settings.timezone);
   const officeEnd = buildOfficeDateTime(record.shiftDate, settings.officeEndTime, settings.timezone);
@@ -34,7 +54,17 @@ function calculateFields(record, punchOut, settings) {
   const isEarlyDeparture = punchOutDate < officeEnd;
   const status = calculateStatus(workingHours, settings);
 
-  return { workingHours, overtimeHours, lateByMinutes, isLate, isEarlyDeparture, status };
+  return {
+    workingHours,
+    overtimeHours,
+    totalBreakDurationMinutes: breakMinutes,
+    netWorkDurationMinutes,
+    overtimeMinutes,
+    lateByMinutes,
+    isLate,
+    isEarlyDeparture,
+    status,
+  };
 }
 
 async function handlePunchIn(userId, ip, coords) {
@@ -61,6 +91,11 @@ async function handlePunchIn(userId, ip, coords) {
         shiftDate,
         punchIn: now,
         status: 'present',
+        totalBreakDurationMinutes: 0,
+        netWorkDurationMinutes: 0,
+        overtimeMinutes: 0,
+        isOnBreak: false,
+        currentBreakStart: null,
         punchInLocation: { ip, coords: coords || null },
       }
     },
@@ -86,7 +121,34 @@ async function handlePunchOut(userId, ip, coords) {
     throw new Error("Punch-out cannot be before punch-in.");
   }
 
-  const derived = calculateFields(record, now, settings);
+  let totalBreakDurationMinutes = record.totalBreakDurationMinutes || 0;
+  let autoClosedBreak = null;
+
+  if (record.isOnBreak && record.currentBreakStart) {
+    const openBreak = await AttendanceBreak.findOne({
+      attendanceId: record._id,
+      breakEnd: null,
+    }).sort({ breakStart: -1 });
+
+    const currentBreakStart = new Date(record.currentBreakStart);
+    const breakDurationMinutes = Math.max(0, differenceInMinutes(now, currentBreakStart));
+    totalBreakDurationMinutes += breakDurationMinutes;
+
+    if (openBreak) {
+      openBreak.breakEnd = now;
+      openBreak.breakDurationMinutes = breakDurationMinutes;
+      await openBreak.save();
+    }
+
+    autoClosedBreak = {
+      breakStart: currentBreakStart,
+      breakEnd: now,
+      breakDurationMinutes,
+      breakType: openBreak?.breakType || 'custom',
+    };
+  }
+
+  const derived = calculateFields(record, now, settings, { totalBreakDurationMinutes });
 
   const updated = await AttendanceRecord.findByIdAndUpdate(
     record._id,
@@ -94,11 +156,16 @@ async function handlePunchOut(userId, ip, coords) {
       $set: {
         punchOut: now,
         punchOutLocation: { ip, coords: coords || null },
+        isOnBreak: false,
+        currentBreakStart: null,
         ...derived,
       }
     },
     { new: true }
   );
+  if (autoClosedBreak) {
+    updated._autoClosedBreak = autoClosedBreak;
+  }
   return updated;
 }
 
@@ -152,4 +219,115 @@ async function getMonthRecords(userId, month, year) {
   return days;
 }
 
-module.exports = { handlePunchIn, handlePunchOut, getTodayRecord, getMonthRecords, calculateFields };
+async function startBreak(userId, breakType = 'lunch') {
+  const settings = await getSettings();
+  const shiftDate = getTodayShiftDate(settings.timezone);
+  const record = await AttendanceRecord.findOne({ userId, shiftDate });
+
+  if (!record || !record.punchIn) {
+    throw new Error('Punch in first before starting a break.');
+  }
+  if (record.punchOut) {
+    throw new Error('Shift already ended for today.');
+  }
+  if (record.isOnBreak) {
+    throw new Error('Break is already in progress.');
+  }
+
+  const now = new Date();
+  record.isOnBreak = true;
+  record.currentBreakStart = now;
+  await record.save();
+
+  await AttendanceBreak.create({
+    attendanceId: record._id,
+    breakStart: now,
+    breakType: ['lunch', 'short', 'custom'].includes(breakType) ? breakType : 'custom',
+  });
+
+  return record;
+}
+
+async function endBreak(userId) {
+  const settings = await getSettings();
+  const shiftDate = getTodayShiftDate(settings.timezone);
+  const record = await AttendanceRecord.findOne({ userId, shiftDate });
+
+  if (!record || !record.punchIn) {
+    throw new Error('No active attendance record found.');
+  }
+  if (!record.isOnBreak || !record.currentBreakStart) {
+    throw new Error('No active break found.');
+  }
+
+  const now = new Date();
+  const breakDurationMinutes = Math.max(0, differenceInMinutes(now, new Date(record.currentBreakStart)));
+  const openBreak = await AttendanceBreak.findOne({
+    attendanceId: record._id,
+    breakEnd: null,
+  }).sort({ breakStart: -1 });
+
+  if (!openBreak) {
+    throw new Error('Open break entry not found.');
+  }
+
+  openBreak.breakEnd = now;
+  openBreak.breakDurationMinutes = breakDurationMinutes;
+  await openBreak.save();
+
+  record.totalBreakDurationMinutes = (record.totalBreakDurationMinutes || 0) + breakDurationMinutes;
+  record.isOnBreak = false;
+  record.currentBreakStart = null;
+  await record.save();
+
+  return { record, breakEntry: openBreak };
+}
+
+async function getCurrentStatus(userId) {
+  const settings = await getSettings();
+  const shiftDate = getTodayShiftDate(settings.timezone);
+  const record = await AttendanceRecord.findOne({ userId, shiftDate }).lean();
+
+  if (!record) {
+    return {
+      serverTime: new Date().toISOString(),
+      record: null,
+      breaks: [],
+      elapsedWorkSeconds: 0,
+      totalBreakDurationMinutes: 0,
+      ongoingBreakDurationSeconds: 0,
+    };
+  }
+
+  const breaks = await AttendanceBreak.find({ attendanceId: record._id })
+    .sort({ breakStart: 1 })
+    .lean();
+
+  const now = new Date();
+  const { totalBreakMinutesSoFar, ongoingBreakMinutes } = buildBreakSummary(record, breaks, now);
+  const endPoint = record.punchOut ? new Date(record.punchOut) : now;
+  const totalShiftSeconds = Math.max(0, differenceInSeconds(endPoint, new Date(record.punchIn)));
+  const elapsedWorkSeconds = Math.max(0, totalShiftSeconds - Math.round(totalBreakMinutesSoFar * 60));
+  const overtimeSeconds = Math.max(0, elapsedWorkSeconds - (settings.standardHours * 60 * 60));
+
+  return {
+    serverTime: now.toISOString(),
+    record,
+    breaks,
+    elapsedWorkSeconds,
+    ongoingBreakDurationSeconds: Math.max(0, Math.round(ongoingBreakMinutes * 60)),
+    totalBreakDurationMinutes: totalBreakMinutesSoFar,
+    overtimeSeconds,
+  };
+}
+
+module.exports = {
+  handlePunchIn,
+  handlePunchOut,
+  getTodayRecord,
+  getMonthRecords,
+  calculateFields,
+  startBreak,
+  endBreak,
+  getCurrentStatus,
+};

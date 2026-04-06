@@ -1,29 +1,26 @@
 .notification-container {
   position: relative;
-  display: inline-block;
+  
 }
 
 .bell-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 1));
-  color: #e5e7eb;
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nc-text);
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.85);
-  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease,
-    background 0.18s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
 
 .bell-pill:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
-  border-color: rgba(255, 228, 230, 0.7);
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.5);
+  border-color: rgba(255, 241, 232, 0.45);
 }
 
 .bell-icon-wrap {
@@ -34,66 +31,128 @@
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: radial-gradient(circle at 20% 0%, #ffc83d, #ff4f9a 70%);
+  background: var(--nc-accent-gradient);
   color: #020617;
 }
 
 .bell-dot {
   position: absolute;
-  top: -4px;
-  right: -3px;
-  min-width: 16px;
-  height: 16px;
-  padding-inline: 3px;
+  top: -5px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
   border-radius: 999px;
   background: #ef4444;
-  color: #fef2f2;
+  color: #fff;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 0 1px #020617;
+  box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.95);
 }
 
 .bell-label {
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .popup-box {
   position: absolute;
+  top: calc(100% + 12px);
   right: 0;
-  top: 35px;
-  background: #1a1c24;
-  color: #f1f1f1;
-  width: 260px;
-  border: 1px solid #2a2d3a;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.7);
-  padding: 15px;
-  z-index: 99;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    radial-gradient(circle at top left, rgba(255, 79, 154, 0.12), transparent 35%),
+    rgba(2, 6, 23, 0.96);
+  box-shadow: 0 24px 55px rgba(2, 6, 23, 0.72);
+  z-index: 40;
 }
 
-.popup-box h4 {
-  margin: 0 0 10px;
+.popup-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.popup-head h4 {
+  margin: 0;
   font-size: 15px;
-  border-bottom: 1px solid #333;
-  padding-bottom: 5px;
+}
+
+.popup-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--nc-text-muted);
+}
+
+.popup-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--nc-text);
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.popup-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .popup-box ul {
-  list-style: none;
   margin: 0;
   padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.popup-box li {
-  padding: 6px 0;
-  border-bottom: 1px solid #2f2f2f;
-  font-size: 14px;
+.popup-item {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: left;
+  color: var(--nc-text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.popup-box li:last-child {
-  border-bottom: none;
+.popup-item.is-unread {
+  border-color: rgba(255, 138, 61, 0.32);
+  background: rgba(255, 138, 61, 0.08);
+}
+
+.popup-item-message {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.popup-item-time {
+  font-size: 11px;
+  color: var(--nc-text-muted);
+}
+
+.popup-empty {
+  margin: 0;
+  color: var(--nc-text-muted);
+  font-size: 13px;
+  padding: 8px 0;
 }

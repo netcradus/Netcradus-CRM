@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Search,
   CircleUserRound,
@@ -7,9 +7,9 @@ import {
   ArrowRightLeft,
   PlaneTakeoff,
   ArrowRight,
+  Clock3,
 } from "lucide-react";
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -21,90 +21,72 @@ import {
   Cell,
   Area,
   AreaChart,
-} from 'recharts';
-import './HRDashboard.css';
-import AttendanceWidget from '../../features/Attendance/AttendanceWidget';
+} from "recharts";
+import "./HRDashboard.css";
+import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-
-const headcountData = [
-  { month: 'Nov 2022', count: 1150 },
-  { month: 'Dec 2022', count: 1170 },
-  { month: 'Jan 2023', count: 1180 },
-  { month: 'Mar 2023', count: 1190 },
-  { month: 'Apr 2023', count: 1190 },
-  { month: 'May 2023', count: 1200 },
-  { month: 'Jun 2023', count: 1220 },
-  { month: 'Jul 2023', count: 1200 },
-  { month: 'Aug 2023', count: 1220 },
-  { month: 'Sep 2023', count: 1200 },
-  { month: 'Oct 2023', count: 1250 },
-];
-
-const departmentData = [
-  { name: 'Sales', value: 28, color: '#ff8a00' },
-  { name: 'Engineering', value: 24, color: '#ff5f3d' },
-  { name: 'Marketing', value: 18, color: '#ff2d8f' },
-  { name: 'Support', value: 10, color: '#ffb347' },
-  { name: 'HR', value: 20, color: '#ff6b57' },
-];
+import { apiUrl } from "../../config/api";
 
 const leaveRequests = [
   {
     id: 1,
-    photo: '👤',
-    name: 'Sarah Jenkins',
-    dept: 'HR',
-    requestDate: '09/10/2023',
-    leaveType: 'Leave Type',
-    dates: 'Dec 10 - Dec 25',
-    status: 'Approved',
+    photo: "SJ",
+    name: "Sarah Jenkins",
+    dept: "HR",
+    requestDate: "09/10/2023",
+    leaveType: "Leave Type",
+    dates: "Dec 10 - Dec 25",
+    status: "Approved",
   },
   {
     id: 2,
-    photo: '👤',
-    name: 'Sarah Jenkins',
-    dept: 'Engineer',
-    requestDate: '09/01/2023',
-    leaveType: 'Leave Typicit',
-    dates: 'Dec 18 - Dec 26',
-    status: 'Pending',
+    photo: "SJ",
+    name: "Sarah Jenkins",
+    dept: "Engineer",
+    requestDate: "09/01/2023",
+    leaveType: "Leave Typicit",
+    dates: "Dec 18 - Dec 26",
+    status: "Pending",
   },
   {
     id: 3,
-    photo: '👤',
-    name: 'Sarah Jenkins',
-    dept: 'Dept.',
-    requestDate: '09/01/2023',
-    leaveType: 'Leave Type',
-    dates: 'Dec 18 - Dec 23',
-    status: 'Rejected',
+    photo: "SJ",
+    name: "Sarah Jenkins",
+    dept: "Dept.",
+    requestDate: "09/01/2023",
+    leaveType: "Leave Type",
+    dates: "Dec 18 - Dec 23",
+    status: "Rejected",
   },
 ];
 
 const anniversaries = [
-  { name: 'Sarah Jenkins', date: '06/10/2023', dept: 'Sales' },
-  { name: 'Sarah Jenkins', date: '06/10/2023', dept: 'Depts' },
+  { name: "Sarah Jenkins", date: "06/10/2023", dept: "Sales" },
+  { name: "Sarah Jenkins", date: "06/10/2023", dept: "Depts" },
 ];
 
 const quickTasks = [
-  { icon: '📋', text: 'Review Candidate Profiles' },
-  { icon: '💰', text: 'Complete Payroll' },
-  { icon: '📝', text: 'Update Policies' },
+  { icon: "Checklist", text: "Review Candidate Profiles" },
+  { icon: "Payroll", text: "Complete Payroll" },
+  { icon: "Policies", text: "Update Policies" },
 ];
 
+const DEPARTMENT_COLORS = ["#ff8a00", "#ff5f3d", "#ff2d8f", "#ffb347", "#ff6b57", "#c084fc"];
+
 const HRDashboard = ({ preview }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('Monthly growth');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("Today snapshot");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "hr";
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const res = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000/api"}/attendance/admin/today-snapshot`, {
+        const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
           headers: { Authorization: `Bearer ${token}` },
         });
         setAttendanceSnapshot(res.data.data);
@@ -112,21 +94,50 @@ const HRDashboard = ({ preview }) => {
         console.error("Error fetching attendance snapshot:", err);
       }
     };
+
     fetchAttendance();
     const interval = setInterval(fetchAttendance, 60000);
     return () => clearInterval(interval);
   }, [token]);
 
+  const attendanceTrendData = useMemo(() => {
+    if (!attendanceSnapshot) return [];
+
+    return [
+      { label: "Present", count: attendanceSnapshot.presentCount || 0 },
+      { label: "Active", count: attendanceSnapshot.clockedInCount || 0 },
+      { label: "Late", count: attendanceSnapshot.lateCount || 0 },
+      { label: "On Leave", count: attendanceSnapshot.onLeaveCount || 0 },
+      { label: "Absent", count: attendanceSnapshot.absentCount || 0 },
+      { label: "Overtime", count: attendanceSnapshot.overtimeCount || 0 },
+    ];
+  }, [attendanceSnapshot]);
+
+  const departmentData = useMemo(() => {
+    const employees = attendanceSnapshot?.employees || [];
+    const groupedDepartments = employees.reduce((acc, employee) => {
+      const department = employee.department || "General";
+      acc[department] = (acc[department] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(groupedDepartments).map(([name, value], index) => ({
+      name,
+      value,
+      color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+    }));
+  }, [attendanceSnapshot]);
+
   const getStatusClass = (status) => {
     switch (status) {
-      case 'Approved':
-        return 'status-approved';
-      case 'Pending':
-        return 'status-pending';
-      case 'Rejected':
-        return 'status-rejected';
+      case "Approved":
+        return "status-approved";
+      case "Pending":
+        return "status-pending";
+      case "Rejected":
+        return "status-rejected";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -135,16 +146,32 @@ const HRDashboard = ({ preview }) => {
       <div className="hr-hero">
         <div className="hr-hero-left">
           <div className="hr-badge">NETCRADUS HR COMMAND CENTER</div>
-          <h1 className="hr-title">Human Resources Dashboard</h1>
+          <h1 className="hr-title">Welcome, {userName}</h1>
+          <p className="hr-role-line">Role: <strong>{userRole}</strong></p>
+          <div className="nc-attendance-brief hr-attendance-brief">
+            <p className="nc-attendance-kicker">
+              <Clock3 size={14} />
+              Attendance System
+            </p>
+            <h2 className="nc-attendance-heading">Attendance system live for your shift</h2>
+            <p className="nc-attendance-copy">
+              Keep your work timer, punch status, and break controls visible while managing people operations.
+            </p>
+          </div>
           <p className="hr-subtitle">
             Manage people operations, hiring pipeline, workforce trends and leave activity from one branded control panel.
           </p>
         </div>
 
-        <div className="header-right hr-header-actions">
+        <div className="hr-hero-right">
+          <AttendanceWidget />
+        </div>
+      </div>
+
+      <div className="header-right hr-header-actions hr-toolbar">
           <span className="header-date">October 26, 2023</span>
           <div className="search-box glass-card">
-         <Search size={16} className="search-icon" />
+            <Search size={16} className="search-icon" />
             <input
               type="text"
               placeholder="Search employee, leave, role..."
@@ -156,43 +183,77 @@ const HRDashboard = ({ preview }) => {
           <div className="user-profile glass-card">
             <CircleUserRound size={26} />
           </div>
-          <div style={{ marginLeft: '12px' }}>
-            <AttendanceWidget />
-          </div>
-        </div>
       </div>
 
-      {/* Attendance Snapshot Strip */}
       {attendanceSnapshot && (
-        <div className="admin-att-strip glass-panel" style={{ padding: '15px 20px', marginBottom: '24px', cursor: 'pointer' }} onClick={() => navigate('/admin/attendance')}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        <div
+          className="admin-att-strip glass-panel"
+          style={{ padding: "15px 20px", marginBottom: "24px", cursor: "pointer" }}
+          onClick={() => navigate("/admin/attendance")}
+        >
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}
+          >
             <div className="live-dot" />
-            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#8892a4', textTransform: 'uppercase' }}>Real-time Team Attendance</span>
+            <span
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "700",
+                color: "#8892a4",
+                textTransform: "uppercase",
+              }}
+            >
+              Real-time Team Attendance
+            </span>
           </div>
-          <div className="snap-metrics-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+          <div className="snap-metrics-grid" style={{ gridTemplateColumns: "repeat(6, 1fr)" }}>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#86efac' }}>{attendanceSnapshot.presentCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Present</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#86efac" }}>
+                {attendanceSnapshot.presentCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                Present
+              </span>
             </div>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#60a5fa' }}>{attendanceSnapshot.clockedInCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Active</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#60a5fa" }}>
+                {attendanceSnapshot.clockedInCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                Active
+              </span>
             </div>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fbbf24' }}>{attendanceSnapshot.lateCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Late</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#fbbf24" }}>
+                {attendanceSnapshot.lateCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                Late
+              </span>
             </div>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#c7d2fe' }}>{attendanceSnapshot.onLeaveCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>On Leave</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#c7d2fe" }}>
+                {attendanceSnapshot.onLeaveCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                On Leave
+              </span>
             </div>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#fca5a5' }}>{attendanceSnapshot.absentCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Absent</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#fca5a5" }}>
+                {attendanceSnapshot.absentCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                Absent
+              </span>
             </div>
             <div className="snap-mini-card">
-              <span className="snap-val" style={{ fontSize: '1.2rem', color: '#f472b6' }}>{attendanceSnapshot.overtimeCount}</span>
-              <span className="snap-lab" style={{ fontSize: '0.65rem' }}>Overtime</span>
+              <span className="snap-val" style={{ fontSize: "1.2rem", color: "#f472b6" }}>
+                {attendanceSnapshot.overtimeCount}
+              </span>
+              <span className="snap-lab" style={{ fontSize: "0.65rem" }}>
+                Overtime
+              </span>
             </div>
           </div>
         </div>
@@ -201,19 +262,19 @@ const HRDashboard = ({ preview }) => {
       <div className="metrics-grid">
         <div className="metric-card net-card gradient-orange">
           <div className="metric-icon metric-orange">
-<Users size={22} />
+            <Users size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Total Employees</div>
             <div className="metric-value">
-              1,250 <span className="metric-change positive">↑ +3%</span>
+              1,250 <span className="metric-change positive">+3%</span>
             </div>
           </div>
         </div>
 
         <div className="metric-card net-card gradient-coral">
           <div className="metric-icon metric-coral">
-           <BriefcaseBusiness size={22} />
+            <BriefcaseBusiness size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Open Positions</div>
@@ -237,7 +298,7 @@ const HRDashboard = ({ preview }) => {
 
         <div className="metric-card net-card gradient-gold">
           <div className="metric-icon metric-gold">
-           <PlaneTakeoff size={22} />
+            <PlaneTakeoff size={22} />
           </div>
           <div className="metric-content">
             <div className="metric-label">Pending Leave Requests</div>
@@ -251,20 +312,18 @@ const HRDashboard = ({ preview }) => {
       <div className="charts-section">
         <div className="chart-card large net-panel">
           <div className="chart-header">
-            <h3>Employee Headcount Trend</h3>
+            <h3>Live Attendance Trend</h3>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="chart-select"
             >
-              <option>Monthly growth</option>
-              <option>Quarterly growth</option>
-              <option>Yearly growth</option>
+              <option>Today snapshot</option>
             </select>
           </div>
 
           <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={headcountData}>
+            <AreaChart data={attendanceTrendData}>
               <defs>
                 <linearGradient id="headcountGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#ff8a00" stopOpacity={0.35} />
@@ -273,14 +332,14 @@ const HRDashboard = ({ preview }) => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="month" stroke="#b7b7b7" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#b7b7b7" style={{ fontSize: '12px' }} domain={[1100, 1300]} />
+              <XAxis dataKey="label" stroke="#b7b7b7" style={{ fontSize: "12px" }} />
+              <YAxis stroke="#b7b7b7" style={{ fontSize: "12px" }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  background: '#111116',
-                  border: '1px solid rgba(255, 138, 0, 0.18)',
-                  borderRadius: '12px',
-                  color: '#fff',
+                  background: "#111116",
+                  border: "1px solid rgba(255, 138, 0, 0.18)",
+                  borderRadius: "12px",
+                  color: "#fff",
                 }}
               />
               <Area type="monotone" dataKey="count" stroke="none" fill="url(#headcountGradient)" />
@@ -289,8 +348,8 @@ const HRDashboard = ({ preview }) => {
                 dataKey="count"
                 stroke="#ff7a18"
                 strokeWidth={3}
-                dot={{ fill: '#ff5f3d', r: 4 }}
-                activeDot={{ r: 7, fill: '#ff2d8f' }}
+                dot={{ fill: "#ff5f3d", r: 4 }}
+                activeDot={{ r: 7, fill: "#ff2d8f" }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -299,7 +358,7 @@ const HRDashboard = ({ preview }) => {
         <div className="chart-card net-panel">
           <div className="chart-header">
             <h3>Department Distribution</h3>
-            <span className="mini-chip">Live Split</span>
+            <span className="mini-chip">Attendance Team Split</span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
@@ -318,10 +377,10 @@ const HRDashboard = ({ preview }) => {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: '#111116',
-                  border: '1px solid rgba(255, 138, 0, 0.18)',
-                  borderRadius: '12px',
-                  color: '#fff',
+                  background: "#111116",
+                  border: "1px solid rgba(255, 138, 0, 0.18)",
+                  borderRadius: "12px",
+                  color: "#fff",
                 }}
               />
             </PieChart>
@@ -329,9 +388,9 @@ const HRDashboard = ({ preview }) => {
           <div className="pie-legend">
             {departmentData.map((dept, index) => (
               <div key={index} className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: dept.color }}></div>
+                <div className="legend-color" style={{ backgroundColor: dept.color }} />
                 <span className="legend-label">{dept.name}</span>
-                <span className="legend-value">{dept.value}%</span>
+                <span className="legend-value">{dept.value}</span>
               </div>
             ))}
           </div>
@@ -413,7 +472,7 @@ const HRDashboard = ({ preview }) => {
                 <div key={index} className="task-item">
                   <span className="task-icon">{task.icon}</span>
                   <span className="task-text">{task.text}</span>
-                  <span className="task-arrow">›</span>
+                  <span className="task-arrow">{">"}</span>
                 </div>
               ))}
             </div>

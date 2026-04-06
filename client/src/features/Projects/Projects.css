@@ -48,7 +48,7 @@ button { cursor: pointer; font-family: var(--font-mono); }
 .pb-root {
   display: flex;
   flex-direction: column;
-  padding-left: max(0px, 220px);
+  /* padding-left: max(0px, 220px); */
   min-height: 100vh;
   background: var(--bg-base);
   color: var(--text-primary);

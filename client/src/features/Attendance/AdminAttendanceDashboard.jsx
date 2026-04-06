@@ -8,11 +8,7 @@ import {
   Umbrella, 
   UserX, 
   Zap, 
-  Search, 
-  Filter,
-  CheckCircle,
-  XCircle,
-  ChevronRight
+  Search
 } from "lucide-react";
 import "./Attendance.css";
 
@@ -30,21 +26,80 @@ const STATUS_BADGE = {
 };
 
 // ─── Live Timer Component ──────────────────────────────────────────────────
-const LiveTimer = ({ startTime }) => {
+const formatMinutesSummary = (minutes = 0) => {
+  const safeMinutes = Math.max(0, Math.floor(minutes));
+  const hrs = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  if (!hrs) return `${mins}m`;
+  if (!mins) return `${hrs}h`;
+  return `${hrs}h ${mins}m`;
+};
+
+// eslint-disable-next-line no-unused-vars
+const formatBreakLog = (breaks = []) => {
+  if (!breaks.length) return "—";
+  return breaks
+    .map((item) => {
+      const start = item.breakStart ? format(parseISO(item.breakStart), "hh:mm a") : "--";
+      const end = item.breakEnd ? format(parseISO(item.breakEnd), "hh:mm a") : "Live";
+      return `${start}-${end} (${formatMinutesSummary(item.breakDurationMinutes || 0)})`;
+    })
+    .join(" | ");
+};
+
+const formatBreakLogDisplay = (breaks = []) => {
+  if (!breaks.length) return "--";
+  return breaks
+    .map((item) => {
+      const start = item.breakStart ? format(parseISO(item.breakStart), "hh:mm a") : "--";
+      const end = item.breakEnd ? format(parseISO(item.breakEnd), "hh:mm a") : "Live";
+      return `${start} - ${end}\n${formatMinutesSummary(item.breakDurationMinutes || 0)}`;
+    })
+    .join("\n\n");
+};
+
+const renderBreakLogEntries = (breaks = []) => {
+  if (!breaks.length) {
+    return <span className="admin-break-log-empty">--</span>;
+  }
+
+  return (
+    <div className="admin-break-log-list">
+      {breaks.map((item, index) => {
+        const start = item.breakStart ? format(parseISO(item.breakStart), "hh:mm a") : "--";
+        const end = item.breakEnd ? format(parseISO(item.breakEnd), "hh:mm a") : "Live";
+        return (
+          <div
+            key={item._id || `${item.breakStart || "break"}-${index}`}
+            className="admin-break-log-entry"
+          >
+            <span className="admin-break-log-time">{start} - {end}</span>
+            <span className="admin-break-log-duration">{formatMinutesSummary(item.breakDurationMinutes || 0)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const LiveTimer = ({ startTime, totalBreakDurationMinutes = 0, currentBreakStart, isOnBreak }) => {
   const [elapsed, setElapsed] = useState("");
 
   const update = useCallback(() => {
     if (!startTime) return;
     const start = new Date(startTime);
     const now = new Date();
-    const diffMs = now - start;
+    const ongoingBreakMinutes = isOnBreak && currentBreakStart
+      ? Math.max(0, (now - new Date(currentBreakStart)) / 60000)
+      : 0;
+    const diffMs = Math.max(0, (now - start) - ((totalBreakDurationMinutes + ongoingBreakMinutes) * 60000));
     if (diffMs < 0) { setElapsed("00:00:00"); return; }
     
     const hrs = Math.floor(diffMs / 3600000);
     const mins = Math.floor((diffMs % 3600000) / 60000);
     const secs = Math.floor((diffMs % 60000) / 1000);
     setElapsed(`${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
-  }, [startTime]);
+  }, [currentBreakStart, isOnBreak, startTime, totalBreakDurationMinutes]);
 
   useEffect(() => {
     update();
@@ -60,13 +115,12 @@ export default function AdminAttendanceDashboard() {
   const [snapshot, setSnapshot] = useState(null);
   const [pending, setPending] = useState({ pendingLeaves: [], pendingRegularizations: [] });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
   
   // Filters & State
   const [filter, setFilter] = useState("all");
   const [deptFilter, setDeptFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("stats");
   const [processingId, setProcessingId] = useState(null);
   const [actionSuccess, setActionSuccess] = useState({}); // { id: 'approved' | 'rejected' }
 
@@ -148,33 +202,33 @@ export default function AdminAttendanceDashboard() {
       </div>
 
       {/* SECTION A: Metrics Snapshot */}
-      <div className="snap-metrics-grid">
-        <div className={`snap-card ${filter === 'present' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+      <div className="snap-metrics-grid admin-status-grid">
+        <div className={`snap-card admin-status-card ${filter === 'present' ? 'active' : ''}`} onClick={() => setFilter('all')}>
           <div className="snap-card-icon" style={{color: '#86efac'}}><Users size={20} /></div>
           <span className="snap-card-val">{snapshot?.presentCount || 0}</span>
           <span className="snap-card-lab">Present Today</span>
         </div>
-        <div className="snap-card" onClick={() => setFilter('present')}> 
+        <div className="snap-card admin-status-card" onClick={() => setFilter('present')}> 
           <div className="snap-card-icon" style={{color: '#60a5fa'}}><Clock size={20} /></div>
           <span className="snap-card-val">{snapshot?.clockedInCount || 0}</span>
           <span className="snap-card-lab">Active Now</span>
         </div>
-        <div className={`snap-card ${filter === 'late' ? 'active' : ''}`} onClick={() => setFilter('late')}>
+        <div className={`snap-card admin-status-card ${filter === 'late' ? 'active' : ''}`} onClick={() => setFilter('late')}>
           <div className="snap-card-icon" style={{color: '#fbbf24'}}><AlertCircle size={20} /></div>
           <span className="snap-card-val">{snapshot?.lateCount || 0}</span>
           <span className="snap-card-lab">Late Arrivals</span>
         </div>
-        <div className={`snap-card ${filter === 'on_leave' ? 'active' : ''}`} onClick={() => setFilter('on_leave')}>
+        <div className={`snap-card admin-status-card ${filter === 'on_leave' ? 'active' : ''}`} onClick={() => setFilter('on_leave')}>
           <div className="snap-card-icon" style={{color: '#c7d2fe'}}><Umbrella size={20} /></div>
           <span className="snap-card-val">{snapshot?.onLeaveCount || 0}</span>
           <span className="snap-card-lab">On Leave</span>
         </div>
-        <div className={`snap-card ${filter === 'absent' ? 'active' : ''}`} onClick={() => setFilter('absent')}>
+        <div className={`snap-card admin-status-card ${filter === 'absent' ? 'active' : ''}`} onClick={() => setFilter('absent')}>
           <div className="snap-card-icon" style={{color: '#fca5a5'}}><UserX size={20} /></div>
           <span className="snap-card-val">{snapshot?.absentCount || 0}</span>
           <span className="snap-card-lab">Absent</span>
         </div>
-        <div className={`snap-card ${filter === 'overtime' ? 'active' : ''}`} onClick={() => setFilter('overtime')}>
+        <div className={`snap-card admin-status-card ${filter === 'overtime' ? 'active' : ''}`} onClick={() => setFilter('overtime')}>
           <div className="snap-card-icon" style={{color: '#f472b6'}}><Zap size={20} /></div>
           <span className="snap-card-val">{snapshot?.overtimeCount || 0}</span>
           <span className="snap-card-lab">Overtime</span>
@@ -184,11 +238,11 @@ export default function AdminAttendanceDashboard() {
       <div className="dashboard-grid-layout" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
         
         {/* SECTION B: Live Employee Table */}
-        <div className="nc-panel glass-panel">
+        <div className="nc-panel glass-panel admin-table-panel">
           <div className="section-header-row">
             <h3 className="nc-section-title">Workforce Status</h3>
-            <div className="nc-controls-left">
-              <div className="search-box glass-card">
+            <div className="nc-controls-left admin-table-filters">
+              <div className="search-box glass-card admin-att-search">
                 <Search size={16} />
                 <input 
                   type="text" 
@@ -213,7 +267,7 @@ export default function AdminAttendanceDashboard() {
           </div>
 
           <div className="att-table-wrap">
-            <table className="att-table">
+            <table className="att-table admin-att-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -222,21 +276,25 @@ export default function AdminAttendanceDashboard() {
                   <th>Punch In</th>
                   <th>Punch Out</th>
                   <th>Duration</th>
+                  <th>Break Duration</th>
+                  <th>Net Work</th>
+                  <th>Overtime</th>
+                  <th>Break Log</th>
                   <th>Late By</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmployees.map(emp => (
                   <tr key={emp.userId}>
-                    <td className="emp-cell">
+                    <td className="emp-cell" data-label="Employee">
                       <div className="emp-avatar">{emp.name[0]}</div>
                       <div className="emp-info">
                         <div className="emp-name">{emp.name}</div>
                         <div className="emp-role">{emp.role}</div>
                       </div>
                     </td>
-                    <td><span className="dept-tag">{emp.department}</span></td>
-                    <td>
+                    <td data-label="Department"><span className="dept-tag">{emp.department}</span></td>
+                    <td data-label="Status">
                       <span 
                         className={`badge ${STATUS_BADGE[emp.status]?.cls || ""}`}
                         title={emp.status === 'on_leave' && emp.leaveDates ? `Leave: ${format(parseISO(emp.leaveDates.from), "dd MMM")} - ${format(parseISO(emp.leaveDates.to), "dd MMM")}` : ""}
@@ -251,10 +309,23 @@ export default function AdminAttendanceDashboard() {
                     <td>{emp.punchOut ? format(parseISO(emp.punchOut), "hh:mm a") : "—"}</td>
                     <td>
                       {emp.punchIn && !emp.punchOut ? (
-                        <LiveTimer startTime={emp.punchIn} />
+                        <LiveTimer
+                          startTime={emp.punchIn}
+                          totalBreakDurationMinutes={emp.totalBreakDurationMinutes}
+                          currentBreakStart={emp.currentBreakStart}
+                          isOnBreak={emp.isOnBreak}
+                        />
                       ) : (
-                        emp.workingHours > 0 ? `${emp.workingHours.toFixed(2)}h` : "—"
+                        emp.netWorkDurationMinutes > 0
+                          ? formatMinutesSummary(emp.netWorkDurationMinutes)
+                          : (emp.workingHours > 0 ? `${emp.workingHours.toFixed(2)}h` : "—")
                       )}
+                    </td>
+                    <td>{formatMinutesSummary(emp.totalBreakDurationMinutes || 0)}</td>
+                    <td>{emp.netWorkDurationMinutes > 0 ? formatMinutesSummary(emp.netWorkDurationMinutes) : "—"}</td>
+                    <td>{emp.overtimeMinutes > 0 ? formatMinutesSummary(emp.overtimeMinutes) : (emp.overtimeHours > 0 ? `${emp.overtimeHours.toFixed(2)}h` : "—")}</td>
+                    <td className="admin-break-log-cell" title={formatBreakLogDisplay(emp.breaks)}>
+                      {renderBreakLogEntries(emp.breaks)}
                     </td>
                     <td>{emp.isLate ? `${emp.lateByMinutes}m` : "—"}</td>
                   </tr>

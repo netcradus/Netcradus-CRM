@@ -1,5 +1,30 @@
 const mongoose = require("mongoose");
 
+const taskHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["pending", "in_progress", "completed", "reviewed"],
+      required: true,
+    },
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    note: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -10,38 +35,65 @@ const taskSchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true,
+      default: "",
     },
-    status: {
-      type: String,
-      enum: ["Not Started", "In Progress", "Completed", "Deferred"],
-      default: "Not Started",
-    },
-    priority: {
-      type: String,
-      enum: ["Low", "Normal", "High", "Urgent"],
-      default: "Normal",
-    },
-    dueDate: {
-      type: Date,
-    },
-    owner: {
+    assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // user responsible for task
+      ref: "User",
+      required: true,
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // assigned user
+      ref: "User",
+      required: true,
     },
-    associatedAccount: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Account", // related CRM account
+    role: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
     },
-    associatedLead: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Lead", // related CRM lead
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high", "urgent"],
+      default: "medium",
+    },
+    status: {
+      type: String,
+      enum: ["pending", "in_progress", "completed", "reviewed"],
+      default: "pending",
+    },
+    dueDate: {
+      type: Date,
+      required: true,
+    },
+    estimatedDuration: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    completionTime: {
+      type: Date,
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    reminderSentAt: {
+      type: Date,
+      default: null,
+    },
+    statusHistory: {
+      type: [taskHistorySchema],
+      default: [],
     },
   },
   { timestamps: true }
 );
+
+taskSchema.index({ assignedTo: 1, status: 1 });
+taskSchema.index({ role: 1, priority: 1, dueDate: 1 });
+taskSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Task", taskSchema);

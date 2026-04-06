@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Kanban, Plus, Columns3, Sparkles } from "lucide-react";
+import { Kanban, Plus, Columns3, Clock3 } from "lucide-react";
 import "./TechDashboard.css";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 
@@ -17,6 +17,8 @@ function TechDashboard({ preview = false, isAdmin = false }) {
   const [data, setData] = useState(initialData);
   const [newCard, setNewCard] = useState({});
   const [newProject, setNewProject] = useState("");
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "it";
 
   const addCard = (column) => {
     if (newCard[column] && newCard[column].trim() !== "") {
@@ -41,27 +43,34 @@ function TechDashboard({ preview = false, isAdmin = false }) {
       {/* 🔥 HERO (hidden in preview) */}
       {!preview && (
         <div className="nc-hero">
-          <div>
+          <div className="nc-hero-copy">
             <div className="nc-badge">
               <Kanban size={14} />
               <span>Netcradus IT Workspace</span>
             </div>
             <h1 className="nc-hero-title">
-              Tech <span className="nc-gradient-text">Delivery Board</span>
+              Welcome, <span className="nc-gradient-text">{userName}</span>
             </h1>
-            <p className="nc-hero-subtitle">
+            <p className="nc-role-line">
+              Role: <strong>{userRole}</strong>
+            </p>
+            <div className="nc-attendance-brief">
+              <p className="nc-attendance-kicker">
+                <Clock3 size={14} />
+                Attendance System
+              </p>
+              <h2 className="nc-attendance-heading">Attendance system live for your shift</h2>
+              <p className="nc-attendance-copy">
+                The panel on the right keeps your work timer and break controls visible while you manage tasks.
+              </p>
+            </div>
+            <p className="nc-hero-note">
               Track initiatives, bugs, and improvements with a clean kanban workflow built for production teams.
             </p>
           </div>
 
           <div className="nc-hero-actions">
-            <span className="nc-pill">
-              <Sparkles size={16} />
-              Live Board
-            </span>
-            <div style={{ marginTop: '12px' }}>
-              <AttendanceWidget />
-            </div>
+            <AttendanceWidget />
           </div>
         </div>
       )}

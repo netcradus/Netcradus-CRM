@@ -41,7 +41,7 @@
 
 /* Main content styles */
 .crm-main-content {
-  margin-left: 220px;
+  /* margin-left: 220px; */
   flex: 1;
   padding: 25px;
   background: radial-gradient(circle at bottom right, rgba(255, 75, 43, 0.05), #0f0f0f) fixed;

@@ -3,6 +3,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  min-width: 0;
   padding: 0 20px 0 24px;
   background: radial-gradient(circle at top left, rgba(255, 79, 154, 0.25), rgba(15, 23, 42, 0.98));
   border-radius: 18px;
@@ -17,6 +19,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
 .topbar-logo-mark {
@@ -55,6 +58,7 @@
 .topbar-title {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .topbar-product {
@@ -76,6 +80,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .topbar-search {
@@ -83,7 +89,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  min-width: 260px;
+  min-width: 220px;
+  width: min(320px, 100%);
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.96));
@@ -131,6 +138,10 @@
     border-radius: 14px;
   }
 
+  .topbar-left {
+    max-width: calc(100% - 120px);
+  }
+
   .topbar-subtitle {
     display: none;
   }
@@ -138,4 +149,7 @@
   .topbar-search {
     display: none;
   }
+  .topbar-product {
+  font-size: 14px;
+}
 }
