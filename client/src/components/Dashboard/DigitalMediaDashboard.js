@@ -8,34 +8,44 @@ import {
   DollarSign,
   Users,
   Globe,
-  BadgeCheck,
+  Clock3,
 } from "lucide-react";
 
 function DigitalMediaDashboard({ preview }) {
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "digital_media";
+
   return (
     <div className="nc-page digital-page">
       <div className="nc-hero">
-        <div>
+        <div className="nc-hero-copy">
           <div className="nc-badge">
             <Megaphone size={14} />
             <span>Netcradus Digital Media</span>
           </div>
           <h1 className="nc-hero-title">
-            Growth <span className="nc-gradient-text">Performance</span> Dashboard
+            Welcome, <span className="nc-gradient-text">{userName}</span>
           </h1>
-          <p className="nc-hero-subtitle">
+          <p className="nc-role-line">
+            Role: <strong>{String(userRole).replace(/[_-]/g, " ")}</strong>
+          </p>
+          <div className="nc-attendance-brief">
+            <p className="nc-attendance-kicker">
+              <Clock3 size={14} />
+              Attendance System
+            </p>
+            <h2 className="nc-attendance-heading">Attendance system live for your shift</h2>
+            <p className="nc-attendance-copy">
+              Use the live panel on the right for work time, punch status, and break controls during the day.
+            </p>
+          </div>
+          <p className="nc-hero-note">
             Track social impact, spend efficiency, and campaign delivery in one premium control panel.
           </p>
         </div>
 
         <div className="nc-hero-actions">
-          <span className="nc-pill">
-            <BadgeCheck size={16} />
-            Campaigns Healthy
-          </span>
-          <div style={{ marginTop: '12px' }}>
-            <AttendanceWidget />
-          </div>
+          <AttendanceWidget />
         </div>
       </div>
 

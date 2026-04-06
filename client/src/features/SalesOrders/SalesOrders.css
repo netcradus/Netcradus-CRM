@@ -69,7 +69,7 @@ body, html {
 
 .salesorders-container {
   padding: var(--spacing-2xl);
-  padding-left: calc(max(var(--spacing-2xl), 220px + var(--spacing-2xl)));
+  /* padding-left: calc(max(var(--spacing-2xl), 220px + var(--spacing-2xl))); */
   color: var(--text-primary);
   min-height: 100vh;
   font-family: inherit;

@@ -7,6 +7,11 @@ const attendanceRecordSchema = new mongoose.Schema({
   punchOut: { type: Date },
   workingHours: { type: Number, default: 0 },        // calculated on punch-out
   overtimeHours: { type: Number, default: 0 },
+  totalBreakDurationMinutes: { type: Number, default: 0 },
+  netWorkDurationMinutes: { type: Number, default: 0 },
+  overtimeMinutes: { type: Number, default: 0 },
+  isOnBreak: { type: Boolean, default: false },
+  currentBreakStart: { type: Date, default: null },
   lateByMinutes: { type: Number, default: 0 },
   isLate: { type: Boolean, default: false },
   isEarlyDeparture: { type: Boolean, default: false },

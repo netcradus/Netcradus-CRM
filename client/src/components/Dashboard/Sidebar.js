@@ -55,7 +55,7 @@ const roleMenus = {
         { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
-        // { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
     { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
         // { label: "Calls", path: "/calls", icon: <PhoneCall size={16} /> },
       ],
@@ -145,6 +145,7 @@ const roleMenus = {
     { label: "Cases", path: "/cases", icon: <BriefcaseBusiness size={18} /> },
     { label: "Solutions", path: "/solutions", icon: <BookOpen size={18} /> },
     { label: "Contacts", path: "/contacts", icon: <Phone size={18} /> },
+    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
     { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
   ],
 
@@ -153,6 +154,7 @@ const roleMenus = {
     { label: "Leads", path: "/leads", icon: <Users size={18} /> },
     { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
     { label: "Accounts", path: "/accounts", icon: <Building2 size={18} /> },
+    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
     { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
      { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
     { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={18} /> },
@@ -185,26 +187,28 @@ const roleMenus = {
   it: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     {
-      label: "IT Management",
-      icon: <Settings2 size={18} />,
-      children: [
-        { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
-        { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
-        { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
-      ],
+        label: "IT Management",
+        icon: <Settings2 size={18} />,
+        children: [
+          { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
+          { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+          { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
+          { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
+        ],
     },
   ],
 
   digital_media: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     {
-      label: "Campaigns",
-      icon: <MessageCircle size={18} />,
-      children: [
-        { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
-        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
-        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
-        { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
+        label: "Campaigns",
+        icon: <MessageCircle size={18} />,
+        children: [
+          { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
+          { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+          { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
+          { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
+          { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
       ],
     },
   ],

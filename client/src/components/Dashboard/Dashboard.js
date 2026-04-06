@@ -1,14 +1,11 @@
 import React from "react";
-import Sidebar from "./Sidebar";
 import AdminDashboard from "./AdminDashboard";
 import SalesDashboard from "./SalesDashboard";
 import SupportDashboard from "./SupportDashboard";
 import HRDashboard from "./HRDashboard";
 import TechDashboard from "./TechDashboard";
-import NotificationButton from "../NotificationButton";
-
-import "./Dashboard.css";
 import DigitalMediaDashboard from "./DigitalMediaDashboard";
+import "./Dashboard.css";
 
 function Dashboard() {
   const userRole = localStorage.getItem("userRole");
@@ -39,9 +36,6 @@ function Dashboard() {
   return (
     <div className="dashboard-container">
       <div className="dashboard-main">
-        <header className="dashboard-header">
-          <NotificationButton />
-        </header>
         <main className="dashboard-content">{renderDashboard()}</main>
       </div>
     </div>

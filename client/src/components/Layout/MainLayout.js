@@ -1,30 +1,7 @@
-// // src/components/Layout/MainLayout.js
-
-// import React from "react";
-// import Sidebar from "../Sidebar"; // Adjust the path if needed
-// import "./MainLayout.css"; // Optional: for layout styling
-
-// const MainLayout = ({ children }) => {
-//   return (
-//     <div className="dashboard-container">
-//       <Sidebar />
-//       <div className="dashboard">
-//         {children}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default MainLayout;
-
-
-
-
-// src/components/Layout/Layout.js
-
 import React from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "../Dashboard/Sidebar"; // ✅ Fixed path
+import Sidebar from "../Dashboard/Sidebar";
+import Topbar from "../Topbar/Topbar";
 import "./MainLayout.css";
 
 const MainLayout = () => {
@@ -32,7 +9,10 @@ const MainLayout = () => {
     <div className="layout">
       <Sidebar />
       <div className="main-content">
-        <Outlet />
+        <Topbar />
+        <div className="page-shell">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

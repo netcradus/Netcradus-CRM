@@ -36,6 +36,7 @@
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.10",
     "slugify": "^1.6.8",
+    "socket.io": "^4.8.3",
     "ua-parser-js": "^2.0.9"
   },
   "description": ""

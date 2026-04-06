@@ -4,7 +4,7 @@ import {
   Search,
   Plus,
   Download,
-  CheckCircle2,
+  Clock3,
   BadgeDollarSign,
   CircleDashed,
   BriefcaseBusiness,
@@ -102,7 +102,7 @@ const SalesDashboard = ({ preview }) => {
     <div className="sales-dashboard">
       {/* HERO */}
       <div className="sales-hero">
-        <div>
+        <div className="sales-hero-copy">
           <div className="sales-badge">
             <TrendingUp size={14} />
             <span>SALES DASHBOARD</span>
@@ -115,14 +115,21 @@ const SalesDashboard = ({ preview }) => {
           <p className="sales-subtitle">
             Role: <strong>{userRole}</strong>
           </p>
+
+          <div className="nc-attendance-brief">
+            <p className="nc-attendance-kicker">
+              <Clock3 size={14} />
+              Attendance System
+            </p>
+            <h2 className="nc-attendance-heading">Attendance system live for your shift</h2>
+            <p className="nc-attendance-copy">
+              Your work timer, punch status, and break controls are available in the live panel on the right.
+            </p>
+          </div>
         </div>
 
         <div className="sales-hero-status">
-          <div className="live-dot" />
-          <span>Sales System Active</span>
-          <div style={{ marginTop: '12px' }}>
-            <AttendanceWidget />
-          </div>
+          <AttendanceWidget />
         </div>
       </div>
 

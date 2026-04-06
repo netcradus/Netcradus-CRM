@@ -9,7 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.11.0",
     "chart.js": "^4.5.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "^2.30.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.11.0",
@@ -21,6 +21,7 @@
     "react-router-dom": "^7.7.0",
     "react-scripts": "5.0.1",
     "recharts": "^3.1.2",
+    "socket.io-client": "^4.8.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

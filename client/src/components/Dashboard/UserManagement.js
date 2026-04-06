@@ -131,15 +131,15 @@ const UserManagement = () => {
     }
   };
 
-  // Update User Details
+  // Update User Info
   const onUpdateUser = async (user, field, value) => {
     try {
-      await axios.put(
+      await axios.patch(
         apiUrl(`/api/auth/users/${user._id}`),
         { [field]: value },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSuccess(`${field} updated successfully`);
+      setSuccess(`${field} updated for ${user.name}`);
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || "Update failed");

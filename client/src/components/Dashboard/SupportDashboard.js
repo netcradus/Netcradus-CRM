@@ -1,35 +1,45 @@
 import React from "react";
-import { Headset, Search, Plus, Download } from "lucide-react";
+import { Headset, Search, Plus, Download, Clock3 } from "lucide-react";
 import "./SupportDashboard.css";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 
 
 function SupportDashboard({ preview }) {
+  const userName = localStorage.getItem("userName") || "User";
+  const userRole = localStorage.getItem("userRole") || "support";
+
   return (
     <div className="nc-page support-page">
        {!preview && (
         <div className="nc-hero">
-          <div>
+          <div className="nc-hero-copy">
             <div className="nc-badge">
               <Headset size={14} />
               <span>Netcradus Support Desk</span>
             </div>
             <h1 className="nc-hero-title">
-              Support <span className="nc-gradient-text">Command Center</span>
+              Welcome, <span className="nc-gradient-text">{userName}</span>
             </h1>
-            <p className="nc-hero-subtitle">
+            <p className="nc-role-line">
+              Role: <strong>{userRole}</strong>
+            </p>
+            <div className="nc-attendance-brief">
+              <p className="nc-attendance-kicker">
+                <Clock3 size={14} />
+                Attendance System
+              </p>
+              <h2 className="nc-attendance-heading">Attendance system live for your shift</h2>
+              <p className="nc-attendance-copy">
+                Watch your work timer and manage break time from the live panel placed on the right.
+              </p>
+            </div>
+            <p className="nc-hero-note">
               Triage tickets, monitor response time, and resolve issues.
             </p>
           </div>
 
           <div className="nc-hero-actions">
-            <span className="nc-pill">
-              <span className="support-live-dot" />
-              System Active
-            </span>
-            <div style={{ marginTop: '12px' }}>
-              <AttendanceWidget />
-            </div>
+            <AttendanceWidget />
           </div>
         </div>
       )}

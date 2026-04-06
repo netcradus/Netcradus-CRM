@@ -6,7 +6,10 @@ const rateLimit = require('express-rate-limit');
 const {
   punchIn,
   punchOut,
+  breakStart,
+  breakEnd,
   getToday,
+  getCurrentStatus,
   getMyAttendance,
   getUserAttendance,
   getTeamAttendance,
@@ -40,9 +43,12 @@ router.use(authMiddleware);
 // Punch In / Out
 router.post('/punch-in', punchLimiter, punchIn);
 router.post('/punch-out', punchLimiter, punchOut);
+router.post('/break-start', punchLimiter, breakStart);
+router.post('/break-end', punchLimiter, breakEnd);
 
 // Personal attendance
 router.get('/today', getToday);
+router.get('/current-status', getCurrentStatus);
 router.get('/my', getMyAttendance);
 
 // Admin / HR — any employee's records

@@ -1,6 +1,6 @@
 .admin-panel {
   padding: 25px;
-  padding-left: calc(max(25px, 220px + 25px));
+  /* padding-left: calc(max(25px, 220px + 25px)); */
   color: #f5f5f5;
   min-height: 100vh;
   box-sizing: border-box;
