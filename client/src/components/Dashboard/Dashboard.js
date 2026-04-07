@@ -1,6 +1,7 @@
 import React from "react";
 import SuperUserDashboard from "./SuperUserDashboard";
 import ManagementDashboard from "./ManagementDashboard";
+import AdminDashboard from "./AdminDashboard";
 import "./Dashboard.css";
 
 function Dashboard() {
