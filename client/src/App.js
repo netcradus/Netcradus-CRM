@@ -15,9 +15,9 @@ import MainLayout from "./components/Layout/MainLayout";
 
 /* ========== Dashboards ========== */
 import Dashboard from "./components/Dashboard/Dashboard";
+import SuperUserDashboard from "./components/Dashboard/SuperUserDashboard";
 import AdminDashboard from "./components/Dashboard/AdminDashboard";
-import SupportDashboard from "./components/Dashboard/SupportDashboard";
-import SalesDashboard from "./components/Dashboard/SalesDashboard";
+import ManagementDashboard from "./components/Dashboard/ManagementDashboard";
 import HRDashboard from "./components/Dashboard/HRDashboard";
 import TechDashboard from "./components/Dashboard/TechDashboard";
 
@@ -56,6 +56,7 @@ import LeavePage from "./features/Attendance/LeavePage";
 import HolidaysPage from "./features/Attendance/HolidaysPage";
 import AttendanceReportsPage from "./features/Attendance/AttendanceReportsPage";
 import AdminAttendanceDashboard from "./features/Attendance/AdminAttendanceDashboard";
+import TicketsPage from "./features/Tickets/TicketsPage";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -92,12 +93,10 @@ function App() {
           {/* ---- Dashboards ---- */}
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/admin-dashboard" element={<RoleRoute roles="admin"><Dashboard /></RoleRoute>} />
-
           <Route
             path="/user-management"
             element={
-              <RoleRoute roles="admin">
+              <RoleRoute roles="super_user">
                 <UserManagement />
               </RoleRoute>
             }
@@ -106,21 +105,13 @@ function App() {
           <Route
             path="/admin/devices"
             element={
-              <RoleRoute roles="admin">
+              <RoleRoute roles="super_user">
                 <AdminDevices />
               </RoleRoute>
             }
           />
 
-          <Route path="/support-dashboard" element={<RoleRoute roles="support"><Dashboard /></RoleRoute>} />
-
-          <Route path="/sales-dashboard" element={<RoleRoute roles="sales"><Dashboard /></RoleRoute>} />
-
-          <Route path="/hr-dashboard" element={<RoleRoute roles="hr"><Dashboard /></RoleRoute>} />
-
-          <Route path="/tech-dashboard" element={<RoleRoute roles="it"><Dashboard /></RoleRoute>} />
-
-          <Route path="/digital-media-dashboard" element={<RoleRoute roles="digital_media"><Dashboard /></RoleRoute>} />
+          <Route path="/tickets" element={<TicketsPage />} />
 
           {/* ---- All Other Modules ---- */}
           <Route path="/leads" element={<Leads />} />

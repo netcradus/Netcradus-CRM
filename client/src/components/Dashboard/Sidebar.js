@@ -43,10 +43,10 @@ import { useNavigate } from "react-router-dom";
 
 // ─── Menu config ─────────────────────────────────────────────────────────────
 const roleMenus = {
-  admin: [
+  super_user: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
-    // { label: "Device Security", path: "/admin/devices", icon: <Wrench size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "CRM",
       icon: <Layers3 size={18} />,
@@ -56,65 +56,22 @@ const roleMenus = {
         { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-    { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-        // { label: "Calls", path: "/calls", icon: <PhoneCall size={16} /> },
+        { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
       ],
     },
     {
-      label: "Sales",
+      label: "Sales & Marketing",
       icon: <BarChart3 size={18} />,
       children: [
-        // { label: "Products", path: "/products", icon: <Boxes size={16} /> },
-        // { label: "Quotes", path: "/quotes", icon: <Receipt size={16} /> },
         { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={16} /> },
-        // { label: "Purchase Orders", path: "/purchase-orders", icon: <Truck size={16} /> },
-        // { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
-        // { label: "Sales Inbox", path: "/sales-inbox", icon: <Inbox size={16} /> },
-        // { label: "Price Books", path: "/price-books", icon: <BookOpen size={16} /> },
-        // { label: "Vendors", path: "/vendors", icon: <UserCircle2 size={16} /> },
-      ],
-    },
-    {
-      label: "Marketing",
-      icon: <MessageCircle size={18} />,
-      children: [
-        // { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
-        // { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
         { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
       ],
     },
-    // {
-    //   label: "Support",
-    //   icon: <BriefcaseBusiness size={18} />,
-    //   children: [
-    //     { label: "Cases", path: "/cases", icon: <BriefcaseBusiness size={16} /> },
-    //     { label: "Solutions", path: "/solutions", icon: <BookOpen size={16} /> },
-    //     { label: "Documents", path: "/documents", icon: <FileText size={16} /> },
-    //     { label: "Forecasts", path: "/forecasts", icon: <BarChart3 size={16} /> },
-    //   ],
-    // },
-    {
-      label: "Operations",
-      icon: <Settings2 size={18} />,
-      children: [
-        // { label: "Services", path: "/services", icon: <Settings2 size={16} /> },
-        { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
-        // { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
-        // { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
-        // { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
-      ],
-    },
-
     {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
-        { 
-          label: "Team Dashboard", 
-          path: "/admin/attendance", 
-          icon: <BarChart3 size={16} />,
-          badge: true // Mark for badge rendering
-        },
+        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
         { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
@@ -129,86 +86,49 @@ const roleMenus = {
     },
   ],
 
-  user: [
+  admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Leads", path: "/leads", icon: <Users size={18} /> },
-    { label: "Contacts", path: "/contacts", icon: <Phone size={18} /> },
-    { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
-    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
-    { label: "Calls", path: "/calls", icon: <PhoneCall size={18} /> },
-    { label: "Attendance", path: "/attendance", icon: <Clock size={18} /> },
-    { label: "Leave", path: "/leave", icon: <UmbrellaOff size={18} /> },
-  ],
-
-  support: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Cases", path: "/cases", icon: <BriefcaseBusiness size={18} /> },
-    { label: "Solutions", path: "/solutions", icon: <BookOpen size={18} /> },
-    { label: "Contacts", path: "/contacts", icon: <Phone size={18} /> },
-    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
-    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
-  ],
-
-  sales: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Leads", path: "/leads", icon: <Users size={18} /> },
-    { label: "Deals", path: "/deals", icon: <Handshake size={18} /> },
-    { label: "Accounts", path: "/accounts", icon: <Building2 size={18} /> },
-    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
-    { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-     { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
-    { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={18} /> },
-  ],
-
-  hr: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Employees", path: "/contacts", icon: <Users size={18} /> },
-    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={18} /> },
-    { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-    { label: "Reports", path: "/reports", icon: <BarChart3 size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
-      label: "Attendance",
+      label: "CRM",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
+        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
+        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+      ],
+    },
+    {
+      label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { 
-          label: "Team Dashboard", 
-          path: "/admin/attendance", 
-          icon: <BarChart3 size={16} />,
-          badge: true
-        },
-        { label: "Leave Manager", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
+        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
       ],
     },
   ],
 
-  it: [
+  management: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
-        label: "IT Management",
-        icon: <Settings2 size={18} />,
-        children: [
-          { label: "Projects", path: "/projects", icon: <Workflow size={16} /> },
-          { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-          { label: "CT", path: "/ct", icon: <Wrench size={16} /> },
-          { label: "CRM Teamspaces", path: "/crm-teamspaces", icon: <Users size={16} /> },
-        ],
+      label: "My CRM",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
+        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+      ],
     },
-  ],
-
-  digital_media: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     {
-        label: "Campaigns",
-        icon: <MessageCircle size={18} />,
-        children: [
-          { label: "Campaigns", path: "/campaigns", icon: <MessageCircle size={16} /> },
-          { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-          { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
-          { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
-          { label: "Reports", path: "/reports", icon: <BarChart3 size={16} /> },
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
       ],
     },
   ],

@@ -3,11 +3,18 @@ const express = require("express");
 const router = express.Router();
 const contactsController = require("../controllers/contactsController");
 
-// Routes
-router.get("/", contactsController.getContacts);          // Get all contacts
-router.post("/", contactsController.createContact);      // Create a new contact
-router.get("/:id", contactsController.getContactById);   // Get a contact by ID
-router.put("/:id", contactsController.updateContact);    // Update a contact by ID
-router.delete("/:id", contactsController.deleteContact); // Delete a contact by ID
+const authMiddleware = require("../middleware/authMiddleware");
+const rbac = require("../middleware/rbac");
+const { checkReAuthToken } = require("../controllers/authController");
+
+// Public access (with role hierarchy)
+router.get("/", authMiddleware, contactsController.getContacts);
+router.post("/", authMiddleware, rbac(["admin"]), contactsController.createContact);
+router.get("/:id", authMiddleware, contactsController.getContactById);
+router.put("/:id", authMiddleware, rbac(["admin"]), contactsController.updateContact);
+router.delete("/:id", authMiddleware, rbac(["admin"]), contactsController.deleteContact);
+
+// Sensitive Information Access (Requires re-auth and admin/super_user)
+router.get("/:id/sensitive", authMiddleware, rbac(["admin"]), checkReAuthToken, contactsController.getContactSensitive);
 
 module.exports = router;

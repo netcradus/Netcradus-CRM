@@ -114,6 +114,9 @@ app.use("/api/holidays", holidayRoutes);
 const visitRoutes = require("./routes/visitRoutes");
 app.use("/api/visits", visitRoutes);
 
+const ticketRoutes = require("./routes/ticketRoutes");
+app.use("/api/tickets", ticketRoutes);
+
 const { registerCronJobs, getCronLastRun } = require("./cron");
 registerCronJobs();
 

@@ -1,0 +1,145 @@
+.tickets-container {
+    padding: 24px;
+    background: #0a0a0c;
+    min-height: calc(100vh - 60px);
+    color: #e2e8f0;
+}
+
+.tickets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.tickets-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ff8a00;
+}
+
+.tickets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.ticket-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 20px;
+    transition: transform 0.2s, background 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.ticket-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 138, 0, 0.3);
+}
+
+.ticket-id {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.priority-high, .priority-urgent { color: #f87171; font-weight: 700; }
+.priority-medium { color: #fbbf24; }
+.priority-low { color: #34d399; }
+
+.ticket-main h3 {
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+}
+
+.ticket-main p {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.ticket-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    gap: 15px;
+}
+
+.ticket-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    background: rgba(255, 138, 0, 0.1);
+    color: #ff8a00;
+}
+
+.ticket-comments {
+    margin-top: 20px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.comment, .info-update {
+    background: rgba(0,0,0,0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.info-update {
+    border-left: 3px solid #3b82f6;
+    color: #93c5fd;
+}
+
+.comment-box {
+    margin-top: 15px;
+}
+
+.input-flex {
+    display: flex;
+    gap: 8px;
+}
+
+.input-flex input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: white;
+}
+
+.input-flex button {
+    background: #ff8a00;
+    border: none;
+    border-radius: 8px;
+    width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+}
+
+.modal-content.wide { max-width: 800px; }
+.grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.full-width-buttons { grid-column: span 2; display: flex; gap: 10px; margin-top: 10px; }

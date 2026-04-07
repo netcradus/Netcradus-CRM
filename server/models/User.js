@@ -19,13 +19,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  role: {
-    type: String,
-    enum: ["admin", "sales", "support", "hr", "it", "digital_media"],
-    default: "sales",
-    trim: true,
-    lowercase: true
-  },
+    role: {
+      type: String,
+      enum: ["super_user", "admin", "management"],
+      default: "management",
+      trim: true,
+      lowercase: true
+    },
   department: {
     type: String,
     trim: true,

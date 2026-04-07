@@ -13,43 +13,43 @@ const seedAdmin = async () => {
         await mongoose.connect(process.env.MONGO_URI);
         console.log("Connected to MongoDB.");
 
-        const username = process.env.ADMIN_SEED_USERNAME || "admin@netcradus.com";
-        const plainPassword = process.env.ADMIN_SEED_PASSWORD;
+        const username = process.env.SUPER_USER_SEED_USERNAME || "info@netcradus.com";
+        const plainPassword = process.env.SUPER_USER_SEED_PASSWORD;
 
         if (!plainPassword) {
-            console.error("Error: ADMIN_SEED_PASSWORD is not set in .env");
+            console.error("Error: SUPER_USER_SEED_PASSWORD is not set in .env");
             process.exit(1);
         }
 
         const email = username.includes("@") ? username.toLowerCase() : `${username.toLowerCase()}@netcradus.com`;
 
-        const existingAdmin = await User.findOne({ role: "admin" });
-        if (existingAdmin) {
-            console.log(`Admin user already exists (found user: ${existingAdmin.email}). Only one admin is allowed.`);
+        const existingSuperUser = await User.findOne({ role: "super_user" });
+        if (existingSuperUser) {
+            console.log(`Super User already exists (found user: ${existingSuperUser.email}). Only one super_user is allowed via seed.`);
             process.exit(0);
         }
 
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-        // Generate userId (admin_001)
-        const uniqueId = `admin_001`;
+        // Generate userId (superuser_001)
+        const uniqueId = `superuser_001`;
 
-        const admin = new User({
+        const superUser = new User({
             userId: uniqueId,
             name: username.split("@")[0],
             email,
             password: hashedPassword,
-            role: "admin",
+            role: "super_user",
             lastPasswordChange: new Date(),
             lastWeeklyVerification: new Date()
         });
 
-        await admin.save();
+        await superUser.save();
 
-        console.log("Admin seeded successfully:");
-        console.log(`- UserID: ${admin.userId}`);
-        console.log(`- Email: ${admin.email}`);
-        console.log(`- Role: ${admin.role}`);
+        console.log("Super User seeded successfully:");
+        console.log(`- UserID: ${superUser.userId}`);
+        console.log(`- Email: ${superUser.email}`);
+        console.log(`- Role: ${superUser.role}`);
 
         process.exit(0);
     } catch (error) {

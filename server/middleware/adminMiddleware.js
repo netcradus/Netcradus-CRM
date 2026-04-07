@@ -3,8 +3,8 @@ const adminMiddleware = (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ message: "Only admins can perform this action" });
+  if (req.user.role !== "admin" && req.user.role !== "super_user") {
+    return res.status(403).json({ message: "Only administrators can perform this action" });
   }
 
   next();

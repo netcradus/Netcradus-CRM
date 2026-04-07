@@ -24,8 +24,8 @@ const { differenceInMinutes } = require('date-fns');
 exports.punchIn = async (req, res) => {
   try {
     const userId = req.user._id;
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    if (req.user.role === 'super_user') {
+      return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const coords = req.body.coords || null;
@@ -40,8 +40,8 @@ exports.punchIn = async (req, res) => {
 exports.punchOut = async (req, res) => {
   try {
     const userId = req.user._id;
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    if (req.user.role === 'super_user') {
+      return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const coords = req.body.coords || null;
@@ -71,8 +71,8 @@ exports.getToday = async (req, res) => {
 // POST /api/attendance/break-start
 exports.breakStart = async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    if (req.user.role === 'super_user') {
+      return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
 
     const breakType = req.body.breakType || 'lunch';
@@ -92,8 +92,8 @@ exports.breakStart = async (req, res) => {
 // POST /api/attendance/break-end
 exports.breakEnd = async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    if (req.user.role === 'super_user') {
+      return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
 
     const { record, breakEntry } = await endBreak(req.user._id);
@@ -112,8 +112,8 @@ exports.breakEnd = async (req, res) => {
 // GET /api/attendance/current-status
 exports.getCurrentStatus = async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from attendance tracking.' });
+    if (req.user.role === 'super_user') {
+      return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
 
     const status = await getCurrentAttendanceStatus(req.user._id);
@@ -326,8 +326,8 @@ exports.getTodaySnapshot = async (req, res) => {
     const isWknd = isWeekend(shiftDate, settings.weekends, settings.timezone);
     const isHldy = isHoliday(shiftDate, holidays);
 
-    // Fetch all active non-admin users
-    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'admin' } })
+    // Fetch all active non-super_user users
+    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } })
       .select('name email role department')
       .lean();
 

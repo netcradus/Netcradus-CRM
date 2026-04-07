@@ -1,10 +1,6 @@
 import React from "react";
-import AdminDashboard from "./AdminDashboard";
-import SalesDashboard from "./SalesDashboard";
-import SupportDashboard from "./SupportDashboard";
-import HRDashboard from "./HRDashboard";
-import TechDashboard from "./TechDashboard";
-import DigitalMediaDashboard from "./DigitalMediaDashboard";
+import SuperUserDashboard from "./SuperUserDashboard";
+import ManagementDashboard from "./ManagementDashboard";
 import "./Dashboard.css";
 
 function Dashboard() {
@@ -12,22 +8,16 @@ function Dashboard() {
 
   const renderDashboard = () => {
     switch (userRole) {
+      case "super_user":
+        return <SuperUserDashboard />;
       case "admin":
         return <AdminDashboard />;
-      case "sales":
-        return <SalesDashboard />;
-      case "support":
-        return <SupportDashboard />;
-      case "hr":
-        return <HRDashboard />;
-      case "it":
-        return <TechDashboard />;
-      case "digital_media":
-        return <DigitalMediaDashboard />;
+      case "management":
+        return <ManagementDashboard />;
       default:
         return (
           <div className="role-fallback">
-            <p>Unknown role. Please contact admin.</p>
+            <p>Welcome to Netcradus CRM. Your dashboard is being configured.</p>
           </div>
         );
     }

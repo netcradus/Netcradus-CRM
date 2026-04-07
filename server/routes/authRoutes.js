@@ -11,10 +11,11 @@ const {
     verifyPasswordChange,
     requestForgotPasswordOTP,
     resetPasswordWithOTP,
-    verifyAdminDevice,
     getAdminDevices,
     revokeAdminDevice,
-    updateUserByAdmin
+    updateUserByAdmin,
+    verifyPasswordForReAuth,
+    checkReAuthToken
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");
@@ -32,6 +33,9 @@ router.post("/otp/verify-security", loginLimiter, verifySecurityOTP);
 router.post("/otp/verify-password", loginLimiter, verifyPasswordChange);
 router.post("/password/forgot-request", otpRequestLimiter, requestForgotPasswordOTP);
 router.post("/password/forgot-reset", loginLimiter, resetPasswordWithOTP);
+
+// NEW Re-authentication gate for sensitive fields
+router.post("/verify-password-reauth", authMiddleware, verifyPasswordForReAuth);
 
 // Admin device management
 router.get("/admin/devices", authMiddleware, adminMiddleware, getAdminDevices);
