@@ -15,7 +15,8 @@ const {
     revokeAdminDevice,
     updateUserByAdmin,
     verifyPasswordForReAuth,
-    checkReAuthToken
+    checkReAuthToken,
+    verifyAdminDevice
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 const adminMiddleware = require("../middleware/adminMiddleware");
