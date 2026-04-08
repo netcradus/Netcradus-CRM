@@ -8,7 +8,9 @@ export function getNotificationSocket(token) {
 
   if (!socketInstance) {
     socketInstance = io(API_BASE_URL, {
-      transports: ["websocket", "polling"],
+      transports: ["polling"],
+      reconnection: false,
+      timeout: 5000,
       auth: { token },
     });
   }

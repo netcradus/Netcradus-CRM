@@ -1,10 +1,131 @@
 const LeaveBalance = require('../models/LeaveBalance');
 const LeaveApplication = require('../models/LeaveApplication');
 const LeaveType = require('../models/LeaveType');
+const User = require('../models/User');
 const { getSettings } = require('../config/attendanceSettings');
 const { getHolidaysForYear } = require('./holidayService');
 const { getWorkingDaysBetween } = require('../utils/dateUtils');
 const { addDays, startOfDay } = require('date-fns');
+
+const DEFAULT_LEAVE_TYPES = [
+  {
+    name: 'Casual Leave',
+    code: 'CL',
+    defaultDaysPerYear: 12,
+    noticePeriodDays: 0,
+    allowHalfDay: true,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+  {
+    name: 'Sick Leave',
+    code: 'SL',
+    defaultDaysPerYear: 12,
+    noticePeriodDays: 0,
+    allowHalfDay: true,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+  {
+    name: 'Earned Leave',
+    code: 'EL',
+    defaultDaysPerYear: 15,
+    noticePeriodDays: 3,
+    allowHalfDay: false,
+    isCarryForward: true,
+    maxCarryForwardDays: 30,
+    isActive: true,
+  },
+  {
+    name: 'Unpaid Leave',
+    code: 'UL',
+    defaultDaysPerYear: 365,
+    noticePeriodDays: 0,
+    allowHalfDay: false,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+  {
+    name: 'Compensatory Off',
+    code: 'CO',
+    defaultDaysPerYear: 0,
+    noticePeriodDays: 0,
+    allowHalfDay: true,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+  {
+    name: 'Maternity Leave',
+    code: 'ML',
+    defaultDaysPerYear: 182,
+    noticePeriodDays: 7,
+    allowHalfDay: false,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+  {
+    name: 'Paternity Leave',
+    code: 'PL',
+    defaultDaysPerYear: 15,
+    noticePeriodDays: 3,
+    allowHalfDay: false,
+    isCarryForward: false,
+    maxCarryForwardDays: 0,
+    isActive: true,
+  },
+];
+
+async function ensureDefaultLeaveTypes() {
+  const existingCount = await LeaveType.countDocuments({ isActive: true });
+  if (existingCount > 0) {
+    return LeaveType.find({ isActive: true }).sort({ name: 1 }).lean();
+  }
+
+  await Promise.all(
+    DEFAULT_LEAVE_TYPES.map((leaveType) =>
+      LeaveType.findOneAndUpdate(
+        { code: leaveType.code },
+        { $setOnInsert: leaveType },
+        { upsert: true, new: true }
+      )
+    )
+  );
+
+  return LeaveType.find({ isActive: true }).sort({ name: 1 }).lean();
+}
+
+async function ensureUserLeaveBalances(userId, year) {
+  const leaveTypes = await ensureDefaultLeaveTypes();
+
+  await Promise.all(
+    leaveTypes.map((leaveType) => {
+      const allocated = leaveType.code === 'EL' ? 0 : leaveType.defaultDaysPerYear;
+      return LeaveBalance.findOneAndUpdate(
+        { userId, year, leaveTypeId: leaveType._id },
+        {
+          $setOnInsert: {
+            userId,
+            year,
+            leaveTypeId: leaveType._id,
+            allocated,
+            used: 0,
+            pending: 0,
+            remaining: allocated,
+            carried: 0,
+          },
+        },
+        { upsert: true }
+      );
+    })
+  );
+
+  return leaveTypes;
+}
 
 /**
  * Count working days for a leave application, excluding weekends and holidays
@@ -37,7 +158,9 @@ async function checkOverlap(userId, from, to, excludeId = null) {
  * Apply for leave — validates balance, notice period, overlap
  */
 async function applyLeave(userId, { leaveTypeId, from, to, isHalfDay, halfDaySession, reason, documents }) {
+  await ensureDefaultLeaveTypes();
   const leaveType = await LeaveType.findById(leaveTypeId);
+  const user = await User.findById(userId).select('role');
   if (!leaveType || !leaveType.isActive) throw new Error('Invalid or inactive leave type.');
 
   const fromDate = new Date(from);
@@ -61,7 +184,9 @@ async function applyLeave(userId, { leaveTypeId, from, to, isHalfDay, halfDaySes
 
   // Balance check (for non-unlimited types like UL)
   const year = fromDate.getFullYear();
-  if (leaveType.code !== 'UL') {
+  const skipBalanceCheck = ['admin', 'super_user'].includes(user?.role);
+  if (leaveType.code !== 'UL' && !skipBalanceCheck) {
+    await ensureUserLeaveBalances(userId, year);
     const balance = await LeaveBalance.findOne({ userId, year, leaveTypeId });
     if (!balance || balance.remaining < totalDays) {
       throw new Error(`Insufficient leave balance. Available: ${balance ? balance.remaining : 0} day(s).`);
@@ -174,8 +299,32 @@ async function cancelLeave(applicationId, userId) {
  * Get leave balance breakdown for a user for a given year
  */
 async function getLeaveBalance(userId, year) {
+  await ensureUserLeaveBalances(userId, year);
   const balances = await LeaveBalance.find({ userId, year }).populate('leaveTypeId').lean();
-  return balances;
+  if (balances.length) {
+    return balances;
+  }
+
+  const leaveTypes = await ensureDefaultLeaveTypes();
+  return leaveTypes.map((leaveType) => ({
+    userId,
+    year,
+    leaveTypeId: leaveType,
+    allocated: 0,
+    used: 0,
+    pending: 0,
+    remaining: 0,
+  }));
 }
 
-module.exports = { applyLeave, approveLeave, rejectLeave, cancelLeave, countLeaveDays, checkOverlap, getLeaveBalance };
+module.exports = {
+  applyLeave,
+  approveLeave,
+  rejectLeave,
+  cancelLeave,
+  countLeaveDays,
+  checkOverlap,
+  getLeaveBalance,
+  ensureDefaultLeaveTypes,
+  ensureUserLeaveBalances,
+};

@@ -2,9 +2,9 @@ const TaskNotification = require("../models/TaskNotification");
 const User = require("../models/User");
 const { emitToUsers } = require("../socket");
 
-const REVIEWER_ROLES = ["admin", "hr"];
+const REVIEWER_ROLES = ["super_user", "hr"];
 
-async function createNotifications({ taskId, userIds, message }) {
+async function createNotifications({ taskId = null, userIds, message, targetPath = "" }) {
   const uniqueUserIds = [...new Set((userIds || []).filter(Boolean).map(String))];
 
   if (!uniqueUserIds.length || !message) {
@@ -16,12 +16,14 @@ async function createNotifications({ taskId, userIds, message }) {
       taskId,
       userId,
       message,
+      targetPath,
     }))
   );
 
   emitToUsers(uniqueUserIds, "notification:new", {
-    taskId: String(taskId),
+    taskId: taskId ? String(taskId) : null,
     message,
+    targetPath,
   });
 
   return notifications;

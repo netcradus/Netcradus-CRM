@@ -69,7 +69,7 @@ function BreakLog({ breaks, expanded, onToggle }) {
 
 export default function AttendanceWidget() {
   const userRole = localStorage.getItem("userRole");
-  const isAdminSummary = userRole === "admin";
+  const isAdminSummary = ["super_user", "admin"].includes(userRole);
   const [snapshot, setSnapshot] = useState(null);
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(true);

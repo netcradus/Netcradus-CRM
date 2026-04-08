@@ -2,19 +2,37 @@ const LeaveApplication = require('../models/LeaveApplication');
 const LeaveBalance = require('../models/LeaveBalance');
 const LeaveType = require('../models/LeaveType');
 const AuditLog = require('../models/AuditLog');
-const { applyLeave, approveLeave, rejectLeave, cancelLeave, getLeaveBalance } = require('../services/leaveService');
+const User = require('../models/User');
+const {
+  applyLeave,
+  approveLeave,
+  rejectLeave,
+  cancelLeave,
+  getLeaveBalance,
+  ensureDefaultLeaveTypes,
+} = require('../services/leaveService');
+const { createNotifications } = require('../services/taskNotificationService');
 
 // POST /api/leave/apply
 exports.applyLeave = async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
-      return res.status(403).json({ success: false, message: 'Admins are exempt from leave applications.' });
-    }
     const { leaveTypeId, from, to, isHalfDay, halfDaySession, reason, documents } = req.body;
     if (!leaveTypeId || !from || !to || !reason) {
       return res.status(400).json({ success: false, message: 'leaveTypeId, from, to, and reason are required.' });
     }
     const application = await applyLeave(req.user._id, { leaveTypeId, from, to, isHalfDay, halfDaySession, reason, documents });
+
+    try {
+      const reviewers = await User.find({ role: { $in: ['super_user', 'admin', 'hr'] } }).select('_id').lean();
+      await createNotifications({
+        userIds: reviewers.map((user) => user._id),
+        message: `${req.user.name || 'A team member'} applied for leave`,
+        targetPath: '/leave',
+      });
+    } catch (notificationError) {
+      console.error('Leave Notification Error:', notificationError);
+    }
+
     res.status(201).json({ success: true, data: application });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -30,6 +48,27 @@ exports.getMyLeaves = async (req, res) => {
       getLeaveBalance(req.user._id, year),
     ]);
     res.status(200).json({ success: true, data: { applications, balances } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/leave/types
+exports.getLeaveTypes = async (req, res) => {
+  try {
+    const leaveTypes = await ensureDefaultLeaveTypes();
+
+    res.status(200).json({
+      success: true,
+      data: leaveTypes.map((leaveType) => ({
+        _id: leaveType._id,
+        name: leaveType.name,
+        code: leaveType.code,
+        allowHalfDay: leaveType.allowHalfDay,
+        defaultDaysPerYear: leaveType.defaultDaysPerYear,
+        noticePeriodDays: leaveType.noticePeriodDays,
+      })),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -84,6 +123,17 @@ exports.approveLeave = async (req, res) => {
       targetModel: 'LeaveApplication',
       details: { forUser: application.userId, days: application.totalDays },
     });
+
+    try {
+      await createNotifications({
+        userIds: [application.userId],
+        message: 'Your leave request has been approved.',
+        targetPath: '/leave',
+      });
+    } catch (notificationError) {
+      console.error('Leave Approval Notification Error:', notificationError);
+    }
+
     res.status(200).json({ success: true, data: application });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -101,6 +151,17 @@ exports.rejectLeave = async (req, res) => {
       targetModel: 'LeaveApplication',
       details: { forUser: application.userId },
     });
+
+    try {
+      await createNotifications({
+        userIds: [application.userId],
+        message: 'Your leave request has been rejected.',
+        targetPath: '/leave',
+      });
+    } catch (notificationError) {
+      console.error('Leave Rejection Notification Error:', notificationError);
+    }
+
     res.status(200).json({ success: true, data: application });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

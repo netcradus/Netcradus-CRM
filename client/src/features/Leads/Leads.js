@@ -143,7 +143,7 @@ function Leads() {
   }, [token]);
 
   useEffect(() => {
-    if (userRole === "admin") {
+    if (userRole === "super_user") {
       fetchUsers();
     }
   }, [userRole, fetchUsers]);
@@ -693,7 +693,7 @@ function Leads() {
         <div className="results-summary">
           Found <strong>{pagination.totalLeads}</strong> total leads
         </div>
-        {userRole === "admin" && !loading && leads.length > 0 && (
+        {userRole === "super_user" && !loading && leads.length > 0 && (
           <div className="bulk-action-bar">
             <button className="btn-delete-page" onClick={() => openConfirm("page")}>
               🗑 Delete This Page ({activeLeads.length})
@@ -706,7 +706,7 @@ function Leads() {
       </div>
 
       {/* Floating selection bar appears when rows are checked */}
-      {userRole === "admin" && selectedLeads.size > 0 && (
+      {userRole === "super_user" && selectedLeads.size > 0 && (
         <div className="selection-bar">
           <span className="selection-count">
             ✅ <strong>{selectedLeads.size}</strong> of {pagination.totalLeads} selected
@@ -734,7 +734,7 @@ function Leads() {
             <table>
               <thead>
                 <tr>
-                  {userRole === "admin" && (
+                  {userRole === "super_user" && (
                     <th className="col-checkbox">
                       <input
                         type="checkbox"
@@ -763,7 +763,7 @@ function Leads() {
                 ) : (
                   activeLeads.map((lead, index) => (
                     <tr key={lead._id} className={selectedLeads.has(lead._id) ? "row-selected" : ""}>
-                      {userRole === "admin" && (
+                      {userRole === "super_user" && (
                         <td className="col-checkbox">
                           <input
                             type="checkbox"
@@ -817,7 +817,7 @@ function Leads() {
                           ✏️ Edit
                         </button>
 
-                        {userRole === "admin" && (
+                        {userRole === "super_user" && (
                           <button
                             className="btn-delete"
                             onClick={() => handleDeleteLead(lead._id)}
@@ -1029,7 +1029,7 @@ function Leads() {
                 </div>
               </div>
 
-              {userRole === "admin" && (
+              {userRole === "super_user" && (
                 <div className="form-row">
                   <div className="form-group">
                     <label>Assign To</label>

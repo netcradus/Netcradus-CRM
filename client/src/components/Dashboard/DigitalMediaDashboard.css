@@ -4,6 +4,13 @@
   margin-top: 16px;
 }
 
+.digital-metric-meta {
+  margin-top: 10px;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .digital-metric-head {
   display: flex;
   align-items: center;
@@ -23,7 +30,7 @@
   flex-shrink: 0;
 }
 
-.digital-platforms {
+.digital-highlights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
@@ -31,10 +38,17 @@
   margin-bottom: 16px;
 }
 
-.digital-platform {
+.digital-highlight-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.digital-highlight-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .digital-platform-title {
@@ -44,8 +58,19 @@
 }
 
 .digital-platform-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: rgba(148, 163, 184, 0.95);
   font-size: 13px;
+}
+
+.digital-highlight-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(203, 213, 225, 0.82);
+  font-size: 12px;
 }
 
 .digital-table-head {
@@ -63,8 +88,17 @@
   color: rgba(255, 241, 232, 0.92);
 }
 
+.digital-page .nc-section {
+  margin-top: 18px;
+}
+
 @media (max-width: 768px) {
   .digital-table-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .digital-highlight-top {
     flex-direction: column;
     align-items: stretch;
   }

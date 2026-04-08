@@ -52,26 +52,26 @@ router.get('/current-status', getCurrentStatus);
 router.get('/my', getMyAttendance);
 
 // Admin / HR — any employee's records
-router.get('/team', rbac(['admin', 'hr']), getTeamAttendance);
-router.get('/user/:userId', rbac(['admin', 'hr']), getUserAttendance);
+router.get('/team', rbac(['super_user', 'admin', 'hr']), getTeamAttendance);
+router.get('/user/:userId', rbac(['super_user', 'admin', 'hr']), getUserAttendance);
 
 // Regularization
 router.post('/regularize', applyRegularization);
-router.get('/regularize', rbac(['admin', 'hr']), getRegularizations);
-router.patch('/regularize/:id/approve', rbac(['admin', 'hr']), approveRegularization);
-router.patch('/regularize/:id/reject', rbac(['admin', 'hr']), rejectRegularization);
+router.get('/regularize', rbac(['super_user', 'hr']), getRegularizations);
+router.patch('/regularize/:id/approve', rbac(['super_user', 'hr']), approveRegularization);
+router.patch('/regularize/:id/reject', rbac(['super_user', 'hr']), rejectRegularization);
 
-// Settings (admin only)
-router.get('/settings', rbac(['admin']), getAttendanceSettings);
-router.patch('/settings', rbac(['admin']), updateAttendanceSettings);
+// Settings (super user only)
+router.get('/settings', rbac(['super_user']), getAttendanceSettings);
+router.patch('/settings', rbac(['super_user']), updateAttendanceSettings);
 
 // Reports
 router.get('/report/monthly', monthlyReport);
-router.get('/report/export', rbac(['admin', 'hr']), exportReport);
-router.get('/report/summary', rbac(['admin']), yearlySummary);
+router.get('/report/export', rbac(['super_user', 'hr']), exportReport);
+router.get('/report/summary', rbac(['super_user']), yearlySummary);
 
 // Admin / HR Management Dashboard APIs
-router.get('/admin/today-snapshot', rbac(['admin', 'hr']), getTodaySnapshot);
-router.get('/admin/pending-actions', rbac(['admin', 'hr']), getPendingActions);
+router.get('/admin/today-snapshot', rbac(['super_user', 'admin', 'hr']), getTodaySnapshot);
+router.get('/admin/pending-actions', rbac(['super_user', 'admin', 'hr']), getPendingActions);
 
 module.exports = router;

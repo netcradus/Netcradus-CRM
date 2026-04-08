@@ -104,9 +104,11 @@ const roleMenus = {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        // { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
       ],
     },
   ],
@@ -129,6 +131,126 @@ const roleMenus = {
       children: [
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
+                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
+      ],
+    },
+  ],
+
+  sales: [
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Sales Workspace",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
+        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        { label: "Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
+        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
+      ],
+    },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
+      ],
+    },
+  ],
+
+  support: [
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Support Workspace",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        // { label: "Calls", path: "/calls", icon: <Phone size={16} /> },
+        { label: "Cases", path: "/cases", icon: <Handshake size={16} /> },
+      ],
+    },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
+                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
+      ],
+    },
+  ],
+
+  hr: [
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "HR Workspace",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
+        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
+        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+      ],
+    },
+  ],
+
+  it: [
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "IT Workspace",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        { label: "Projects", path: "/projects", icon: <CalendarClock size={16} /> },
+        { label: "Documents", path: "/documents", icon: <Phone size={16} /> },
+      ],
+    },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
+                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
+      ],
+    },
+  ],
+
+  digital_media: [
+    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Media Workspace",
+      icon: <Layers3 size={18} />,
+      children: [
+        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
+        { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
+        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
+        { label: "Reports", path: "/reports", icon: <FileBarChart2 size={16} /> },
+      ],
+    },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
+        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+
       ],
     },
   ],
@@ -224,7 +346,7 @@ function Sidebar() {
 
   const fetchPendingCount = useCallback(async () => {
     const role = localStorage.getItem("userRole");
-    if (role !== "admin" && role !== "hr") return;
+    if (!["super_user", "admin", "hr"].includes(role)) return;
     try {
       const { data } = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000/api"}/attendance/admin/pending-actions`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
@@ -257,7 +379,11 @@ function Sidebar() {
     : null;
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("passwordExpiryWarning");
     navigate("/login");
   };
 

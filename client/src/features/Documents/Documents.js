@@ -46,7 +46,7 @@ const AccessDenied = () => (
       <h2>Restricted Area</h2>
       <p>
         The Documents vault is only accessible to <strong>HR</strong> and{" "}
-        <strong>Admin</strong> users. Please contact your administrator if you
+        <strong>Super User</strong> users. Please contact your administrator if you
         need access to a specific file.
       </p>
     </div>
@@ -97,8 +97,8 @@ const Documents = () => {
   const userRole = localStorage.getItem("userRole");
   const token    = localStorage.getItem("token");
 
-  // Only admin and hr may use this page
-  const isAllowed = userRole === "admin" || userRole === "hr";
+  // Only super user and hr may use this page
+  const isAllowed = userRole === "super_user" || userRole === "hr";
 
   const [documents, setDocuments]               = useState([]);
   const [loading, setLoading]                   = useState(false);
@@ -265,7 +265,7 @@ const Documents = () => {
             <span>NETCRADUS DOCUMENT VAULT</span>
           </div>
           <h1>Document Management</h1>
-          <p>Secure file storage for HR &amp; Admin. All uploads are private and role-restricted.</p>
+          <p>Secure file storage for HR &amp; Super User. All uploads are private and role-restricted.</p>
         </div>
         <div className="doc-hero-meta">
           <div className="doc-stat">

@@ -18,12 +18,30 @@ function isReviewer(user) {
   return REVIEWER_ROLES.includes(user?.role);
 }
 
-function isAdmin(user) {
+function canAssignTasks(user) {
+  return ["super_user", "admin"].includes(user?.role);
+}
+
+function canLoadAssignableUsers(user) {
+  return ["super_user", "admin", "hr"].includes(user?.role);
+}
+
+function canViewAllTasks(user) {
+  return user?.role === "super_user" || isReviewer(user);
+}
+
+function isAdminScopedManager(user) {
   return user?.role === "admin";
 }
 
+function canManageTask(user, task) {
+  if (user?.role === "super_user") return true;
+  if (!isAdminScopedManager(user)) return false;
+  return String(task.assignedBy) === String(user._id);
+}
+
 function canAccessTask(user, task) {
-  if (isReviewer(user)) return true;
+  if (canViewAllTasks(user)) return true;
   const assignedToId = task?.assignedTo?._id || task?.assignedTo;
   const assignedById = task?.assignedBy?._id || task?.assignedBy;
 
@@ -34,33 +52,53 @@ function canAccessTask(user, task) {
 
 function buildTaskQuery(query = {}, currentUser, options = {}) {
   const filter = {};
+  const andFilters = [];
   const { status, role, priority, search, startDate, endDate } = query;
 
-  if (options.onlyMine || !isReviewer(currentUser)) {
-    filter.assignedTo = currentUser._id;
+  if (options.onlyMine) {
+    andFilters.push({ assignedTo: currentUser._id });
+  } else if (isAdminScopedManager(currentUser)) {
+    andFilters.push({
+      $or: [
+        { assignedTo: currentUser._id },
+        { assignedBy: currentUser._id },
+      ],
+    });
+  } else if (!canViewAllTasks(currentUser)) {
+    andFilters.push({ assignedTo: currentUser._id });
   }
 
-  if (status) filter.status = { $in: status.split(",").filter(Boolean) };
-  if (role) filter.role = { $in: role.split(",").filter(Boolean) };
-  if (priority) filter.priority = { $in: priority.split(",").filter(Boolean) };
+  if (status) andFilters.push({ status: { $in: status.split(",").filter(Boolean) } });
+  if (role) andFilters.push({ role: { $in: role.split(",").filter(Boolean) } });
+  if (priority) andFilters.push({ priority: { $in: priority.split(",").filter(Boolean) } });
 
   if (startDate || endDate) {
-    filter.dueDate = {};
+    const dueDateFilter = {};
     if (startDate) {
-      filter.dueDate.$gte = new Date(`${startDate}T00:00:00.000Z`);
+      dueDateFilter.$gte = new Date(`${startDate}T00:00:00.000Z`);
     }
     if (endDate) {
       const nextDay = new Date(`${endDate}T00:00:00.000Z`);
       nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-      filter.dueDate.$lt = nextDay;
+      dueDateFilter.$lt = nextDay;
     }
+    andFilters.push({ dueDate: dueDateFilter });
   }
 
   if (search) {
-    filter.$or = [
+    andFilters.push({
+      $or: [
       { title: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
-    ];
+      ],
+    });
+  }
+
+  if (andFilters.length === 1) {
+    return andFilters[0];
+  }
+  if (andFilters.length > 1) {
+    filter.$and = andFilters;
   }
 
   return filter;
@@ -91,8 +129,8 @@ function validateDueDate(dueDate) {
 
 async function createTask(req, res) {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, message: "Only admins can create tasks" });
+    if (!canAssignTasks(req.user)) {
+      return res.status(403).json({ success: false, message: "Only Super Users and Administrators can create tasks" });
     }
 
     const { title, description, assignedTo, priority, dueDate, status } = req.body;
@@ -197,6 +235,24 @@ async function getMyTasks(req, res) {
   }
 }
 
+async function getAssignableUsers(req, res) {
+  try {
+    if (!canLoadAssignableUsers(req.user)) {
+      return res.status(403).json({ success: false, message: "You are not allowed to load assignable users" });
+    }
+
+    const users = await User.find({ role: { $ne: "super_user" } })
+      .select("_id name email role")
+      .sort({ name: 1, email: 1 })
+      .lean();
+
+    return res.json({ success: true, data: users });
+  } catch (error) {
+    console.error("Get Assignable Users Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch assignable users", error: error.message });
+  }
+}
+
 async function getTaskById(req, res) {
   try {
     const task = await findTaskOr404(req.params.id, res);
@@ -216,12 +272,12 @@ async function getTaskById(req, res) {
 
 async function updateTask(req, res) {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, message: "Only admins can update tasks" });
-    }
-
     const task = await findTaskOr404(req.params.id, res);
     if (!task) return;
+
+    if (!canManageTask(req.user, task)) {
+      return res.status(403).json({ success: false, message: "You can only update tasks that you assigned" });
+    }
 
     const { title, description, dueDate, priority, status } = req.body;
 
@@ -277,12 +333,12 @@ async function updateTask(req, res) {
 
 async function deleteTask(req, res) {
   try {
-    if (!isAdmin(req.user)) {
-      return res.status(403).json({ success: false, message: "Only admins can delete tasks" });
-    }
-
     const task = await findTaskOr404(req.params.id, res);
     if (!task) return;
+
+    if (!canManageTask(req.user, task)) {
+      return res.status(403).json({ success: false, message: "You can only delete tasks that you assigned" });
+    }
 
     await Promise.all([
       Task.findByIdAndDelete(task._id),
@@ -367,7 +423,7 @@ async function completeTask(req, res) {
 async function reviewTask(req, res) {
   try {
     if (!isReviewer(req.user)) {
-      return res.status(403).json({ success: false, message: "Only admins or managers can review tasks" });
+      return res.status(403).json({ success: false, message: "Only Super Users or HR can review tasks" });
     }
 
     const task = await findTaskOr404(req.params.id, res);
@@ -411,23 +467,25 @@ async function addTaskComment(req, res) {
       comment: commentText,
     });
 
+    const isAssigneeCommenter = String(task.assignedTo) === String(req.user._id);
+
     task.statusHistory.push({
       status: task.status,
       changedBy: req.user._id,
-      note: isReviewer(req.user) ? "Review comment added" : "Assignee comment added",
+      note: isAssigneeCommenter ? "Assignee comment added" : "Review comment added",
     });
     await task.save();
 
     try {
       let notificationUserIds = [];
 
-      if (isReviewer(req.user)) {
+      if (!isAssigneeCommenter) {
         notificationUserIds = [task.assignedTo];
       } else {
-        const adminUsers = await User.find({ role: "admin" }).select("_id").lean();
+        const reviewerUserIds = await getReviewerUserIds();
         notificationUserIds = [
           task.assignedBy,
-          ...adminUsers.map((user) => user._id),
+          ...reviewerUserIds,
         ];
       }
 
@@ -478,6 +536,7 @@ module.exports = {
   createTask,
   getTasks,
   getMyTasks,
+  getAssignableUsers,
   getTaskById,
   updateTask,
   deleteTask,

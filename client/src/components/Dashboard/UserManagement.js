@@ -4,6 +4,13 @@ import axios from "axios";
 import { apiUrl } from "../../config/api";
 import "./UserManagement.css";
 
+const formatRoleLabel = (role = "") =>
+  role === "admin"
+    ? "Administrator"
+    : String(role)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,11 +91,6 @@ const UserManagement = () => {
   // Create User
   const onCreateUser = async (e) => {
     e.preventDefault();
-
-    if (form.role.toLowerCase() === "admin") {
-      setError("Creation of additional admin users is forbidden");
-      return;
-    }
 
     try {
       const res = await axios.post(
@@ -209,7 +211,7 @@ const UserManagement = () => {
   return (
     <div className="admin-panel">
       <h2 className="admin-panel-title">
-        <FaUsersCog /> Admin User Management
+        <FaUsersCog /> Administrator User Management
       </h2>
 
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
@@ -221,7 +223,7 @@ const UserManagement = () => {
         <section className="admin-card">
           <h3>Create New User</h3>
           <p className="admin-warning-note">
-            <strong>Note:</strong> For security, only one primary Admin account is permitted.
+            <strong>Note:</strong> For security, only one primary Administrator account is permitted.
           </p>
 
           <form onSubmit={onCreateUser} className="admin-form">
@@ -257,6 +259,8 @@ const UserManagement = () => {
               value={form.role}
               onChange={onChange}
             >
+              <option value="admin">Administrator</option>
+              <option value="management">Management</option>
               <option value="sales">Sales</option>
               <option value="support">Support</option>
               <option value="hr">HR</option>
@@ -298,7 +302,7 @@ const UserManagement = () => {
 
                         <td data-label="Role">
                           <span className={`role-badge role-${user.role}`}>
-                            {user.role}
+                            {formatRoleLabel(user.role)}
                           </span>
                         </td>
 
@@ -321,7 +325,7 @@ const UserManagement = () => {
                         </td>
 
                         <td data-label="Actions">
-                          {user.role !== "admin" && (
+                          {user.role !== "super_user" && (
                             <button
                               className="btn-delete"
                               onClick={() => onDeleteUser(user._id)}

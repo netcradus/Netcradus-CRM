@@ -5,6 +5,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 router.use(authMiddleware);
 
+router.get("/assignable-users", tasksController.getAssignableUsers);
 router.get("/my-tasks", tasksController.getMyTasks);
 router.patch("/:id/timing", tasksController.setTaskTiming);
 router.patch("/:id/complete", tasksController.completeTask);

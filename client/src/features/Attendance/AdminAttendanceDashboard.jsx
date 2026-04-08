@@ -112,6 +112,8 @@ const LiveTimer = ({ startTime, totalBreakDurationMinutes = 0, currentBreakStart
 
 // ─── Main Admin Dashboard ──────────────────────────────────────────────────
 export default function AdminAttendanceDashboard() {
+  const userRole = localStorage.getItem("userRole");
+  const canManagePendingActions = ["super_user", "admin", "hr"].includes(userRole);
   const [snapshot, setSnapshot] = useState(null);
   const [pending, setPending] = useState({ pendingLeaves: [], pendingRegularizations: [] });
   const [loading, setLoading] = useState(true);
@@ -349,7 +351,7 @@ export default function AdminAttendanceDashboard() {
                   <div key={l._id} className="pending-item">
                     <div className="pending-info">
                       <strong>{l.userId?.name}</strong>
-                      <div className="sub-text">{l.leaveType} | {format(parseISO(l.from), "MMM dd")} - {format(parseISO(l.to), "MMM dd")} ({l.days} days)</div>
+                      <div className="sub-text">{l.leaveTypeId?.name || "Leave"} | {format(parseISO(l.from), "MMM dd")} - {format(parseISO(l.to), "MMM dd")} ({l.totalDays || 0} days)</div>
                       <div className="reason-text">"{l.reason}"</div>
                     </div>
                     <div className="action-btns">
@@ -357,11 +359,13 @@ export default function AdminAttendanceDashboard() {
                          <span className={`action-confirmation ${actionSuccess[l._id]}`}>
                            {actionSuccess[l._id] === 'approve' ? "✓ Approved by You" : "✗ Rejected by You"}
                          </span>
-                      ) : (
+                      ) : canManagePendingActions ? (
                         <>
                           <button className="btn-approve" onClick={() => handleAction('leave', l._id, 'approve')} disabled={!!processingId}>Approve</button>
                           <button className="btn-reject" onClick={() => handleAction('leave', l._id, 'reject')} disabled={!!processingId}>Reject</button>
                         </>
+                      ) : (
+                        <span className="action-confirmation">View only</span>
                       )}
                     </div>
                   </div>
@@ -389,11 +393,13 @@ export default function AdminAttendanceDashboard() {
                          <span className={`action-confirmation ${actionSuccess[r._id]}`}>
                            {actionSuccess[r._id] === 'approve' ? "✓ Approved by You" : "✗ Rejected by You"}
                          </span>
-                      ) : (
+                      ) : canManagePendingActions ? (
                         <>
                           <button className="btn-approve" onClick={() => handleAction('reg', r._id, 'approve')} disabled={!!processingId}>Approve</button>
                           <button className="btn-reject" onClick={() => handleAction('reg', r._id, 'reject')} disabled={!!processingId}>Reject</button>
                         </>
+                      ) : (
+                        <span className="action-confirmation">View only</span>
                       )}
                     </div>
                   </div>

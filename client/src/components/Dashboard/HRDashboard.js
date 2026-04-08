@@ -28,75 +28,64 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 
-const leaveRequests = [
-  {
-    id: 1,
-    photo: "SJ",
-    name: "Sarah Jenkins",
-    dept: "HR",
-    requestDate: "09/10/2023",
-    leaveType: "Leave Type",
-    dates: "Dec 10 - Dec 25",
-    status: "Approved",
-  },
-  {
-    id: 2,
-    photo: "SJ",
-    name: "Sarah Jenkins",
-    dept: "Engineer",
-    requestDate: "09/01/2023",
-    leaveType: "Leave Typicit",
-    dates: "Dec 18 - Dec 26",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    photo: "SJ",
-    name: "Sarah Jenkins",
-    dept: "Dept.",
-    requestDate: "09/01/2023",
-    leaveType: "Leave Type",
-    dates: "Dec 18 - Dec 23",
-    status: "Rejected",
-  },
-];
-
-const anniversaries = [
-  { name: "Sarah Jenkins", date: "06/10/2023", dept: "Sales" },
-  { name: "Sarah Jenkins", date: "06/10/2023", dept: "Depts" },
-];
-
-const quickTasks = [
-  { icon: "Checklist", text: "Review Candidate Profiles" },
-  { icon: "Payroll", text: "Complete Payroll" },
-  { icon: "Policies", text: "Update Policies" },
-];
-
 const DEPARTMENT_COLORS = ["#ff8a00", "#ff5f3d", "#ff2d8f", "#ffb347", "#ff6b57", "#c084fc"];
+
+const formatRoleLabel = (value = "") =>
+  String(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const formatShortDate = (value) => {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+};
+
+const formatDateRange = (fromDate, toDate) => {
+  if (!fromDate || !toDate) return "--";
+  return `${formatShortDate(fromDate)} - ${formatShortDate(toDate)}`;
+};
+
+const getInitials = (name = "NA") =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
 
 const HRDashboard = ({ preview }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("Today snapshot");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
+  const [leaveApplications, setLeaveApplications] = useState([]);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName") || "User";
   const userRole = localStorage.getItem("userRole") || "hr";
 
   useEffect(() => {
-    const fetchAttendance = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setAttendanceSnapshot(res.data.data);
+        const headers = { Authorization: `Bearer ${token}` };
+        const [attendanceRes, leaveRes] = await Promise.all([
+          axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers }),
+          axios.get(apiUrl("/api/leave/applications"), { headers }),
+        ]);
+
+        setAttendanceSnapshot(attendanceRes.data.data);
+        setLeaveApplications(leaveRes.data.data || []);
       } catch (err) {
-        console.error("Error fetching attendance snapshot:", err);
+        setAttendanceSnapshot(null);
+        setLeaveApplications([]);
       }
     };
 
-    fetchAttendance();
-    const interval = setInterval(fetchAttendance, 60000);
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 60000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -128,13 +117,55 @@ const HRDashboard = ({ preview }) => {
     }));
   }, [attendanceSnapshot]);
 
+  const pendingLeaves = useMemo(
+    () => leaveApplications.filter((application) => application.status === "pending"),
+    [leaveApplications]
+  );
+
+  const filteredLeaveRequests = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const sortedItems = [...leaveApplications].sort(
+      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+    );
+
+    if (!query) {
+      return sortedItems.slice(0, 6);
+    }
+
+    return sortedItems
+      .filter((application) => {
+        const values = [
+          application.userId?.name,
+          application.userId?.department,
+          application.leaveTypeId?.name,
+          application.status,
+        ];
+
+        return values.some((value) => String(value || "").toLowerCase().includes(query));
+      })
+      .slice(0, 6);
+  }, [leaveApplications, searchTerm]);
+
+  const onLeaveEmployees = useMemo(
+    () =>
+      (attendanceSnapshot?.employees || [])
+        .filter((employee) => employee.status === "on_leave")
+        .slice(0, 5),
+    [attendanceSnapshot]
+  );
+
+  const departmentWatchlist = useMemo(
+    () => [...departmentData].sort((a, b) => b.value - a.value).slice(0, 4),
+    [departmentData]
+  );
+
   const getStatusClass = (status) => {
     switch (status) {
-      case "Approved":
+      case "approved":
         return "status-approved";
-      case "Pending":
+      case "pending":
         return "status-pending";
-      case "Rejected":
+      case "rejected":
         return "status-rejected";
       default:
         return "";
@@ -147,7 +178,7 @@ const HRDashboard = ({ preview }) => {
         <div className="hr-hero-left">
           <div className="hr-badge">NETCRADUS HR COMMAND CENTER</div>
           <h1 className="hr-title">Welcome, {userName}</h1>
-          <p className="hr-role-line">Role: <strong>{userRole}</strong></p>
+          <p className="hr-role-line">Role: <strong>{formatRoleLabel(userRole)}</strong></p>
           <div className="nc-attendance-brief hr-attendance-brief">
             <p className="nc-attendance-kicker">
               <Clock3 size={14} />
@@ -169,7 +200,13 @@ const HRDashboard = ({ preview }) => {
       </div>
 
       <div className="header-right hr-header-actions hr-toolbar">
-          <span className="header-date">October 26, 2023</span>
+          <span className="header-date">
+            {new Date().toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
           <div className="search-box glass-card">
             <Search size={16} className="search-icon" />
             <input
@@ -259,7 +296,7 @@ const HRDashboard = ({ preview }) => {
         </div>
       )}
 
-      <div className="metrics-grid">
+      {/* <div className="metrics-grid">
         <div className="metric-card net-card gradient-orange">
           <div className="metric-icon metric-orange">
             <Users size={22} />
@@ -267,7 +304,8 @@ const HRDashboard = ({ preview }) => {
           <div className="metric-content">
             <div className="metric-label">Total Employees</div>
             <div className="metric-value">
-              1,250 <span className="metric-change positive">+3%</span>
+              {attendanceSnapshot?.employees?.length || 0}
+              <span className="metric-subtext"> tracked today</span>
             </div>
           </div>
         </div>
@@ -277,9 +315,10 @@ const HRDashboard = ({ preview }) => {
             <BriefcaseBusiness size={22} />
           </div>
           <div className="metric-content">
-            <div className="metric-label">Open Positions</div>
+            <div className="metric-label">Active Workforce</div>
             <div className="metric-value">
-              45 <span className="metric-subtext">12 new this month</span>
+              {attendanceSnapshot?.clockedInCount || 0}
+              <span className="metric-subtext"> currently punched in</span>
             </div>
           </div>
         </div>
@@ -289,9 +328,10 @@ const HRDashboard = ({ preview }) => {
             <ArrowRightLeft size={22} />
           </div>
           <div className="metric-content">
-            <div className="metric-label">Employee Turnover</div>
+            <div className="metric-label">Late Arrivals</div>
             <div className="metric-value">
-              4.8% <span className="metric-change negative">-1.1%</span>
+              {attendanceSnapshot?.lateCount || 0}
+              <span className="metric-subtext"> need follow-up</span>
             </div>
           </div>
         </div>
@@ -303,11 +343,12 @@ const HRDashboard = ({ preview }) => {
           <div className="metric-content">
             <div className="metric-label">Pending Leave Requests</div>
             <div className="metric-value">
-              68 <span className="metric-subtext">25 awaiting review</span>
+              {pendingLeaves.length}
+              <span className="metric-subtext"> awaiting review</span>
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="charts-section">
         <div className="chart-card large net-panel">
@@ -401,7 +442,9 @@ const HRDashboard = ({ preview }) => {
         <div className="table-card net-panel">
           <div className="section-header-row">
             <h3 className="table-title">Recent Leave Requests</h3>
-            <button className="section-action-btn">Manage Requests</button>
+            <button className="section-action-btn" onClick={() => navigate("/leave")}>
+              Manage Requests
+            </button>
           </div>
 
           <div className="table-wrapper">
@@ -413,34 +456,41 @@ const HRDashboard = ({ preview }) => {
                   <th>Dept</th>
                   <th>Request Date</th>
                   <th>Leave Type</th>
-                  <th>Dates</th>
+                  {/* <th>Dates</th> */}
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {leaveRequests.map((request) => (
-                  <tr key={request.id}>
+                {filteredLeaveRequests.map((request) => (
+                  <tr key={request._id}>
                     <td data-label="Photo">
-                      <div className="photo-circle">{request.photo}</div>
+                      <div className="photo-circle">{getInitials(request.userId?.name)}</div>
                     </td>
-                    <td data-label="Name">{request.name}</td>
-                    <td data-label="Dept">{request.dept}</td>
-                    <td data-label="Request Date">{request.requestDate}</td>
-                    <td data-label="Leave Type">{request.leaveType}</td>
-                    <td data-label="Dates">{request.dates}</td>
+                    <td data-label="Name">{request.userId?.name || "Unknown User"}</td>
+                    <td data-label="Dept">{request.userId?.department || "General"}</td>
+                    <td data-label="Request Date">{formatShortDate(request.createdAt)}</td>
+                    <td data-label="Leave Type">{request.leaveTypeId?.name || request.leaveType || "--"}</td>
+                    {/* <td data-label="Dates">{formatDateRange(request.fromDate, request.toDate)}</td> */}
                     <td data-label="Status">
                       <span className={`status-badge ${getStatusClass(request.status)}`}>
-                        {request.status}
+                        {formatRoleLabel(request.status || "pending")}
                       </span>
                     </td>
                     <td data-label="Actions">
-                      <button className="action-btn">
+                      <button className="action-btn" onClick={() => navigate("/leave")}>
                         View <ArrowRight size={14} />
                       </button>
                     </td>
                   </tr>
                 ))}
+                {!filteredLeaveRequests.length && (
+                  <tr>
+                    <td data-label="Empty" colSpan="8" style={{ textAlign: "center", padding: "24px" }}>
+                      No live leave requests found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -448,33 +498,47 @@ const HRDashboard = ({ preview }) => {
 
         <div className="sidebar-cards">
           <div className="sidebar-card net-panel">
-            <h3 className="sidebar-title">Upcoming Work Anniversaries</h3>
+            <h3 className="sidebar-title">Employees On Leave Today</h3>
             <div className="anniversary-list">
               <div className="anniversary-header">
                 <span>Names</span>
-                <span>Dates</span>
+                <span>Status</span>
                 <span>Depts</span>
               </div>
-              {anniversaries.map((person, index) => (
+              {onLeaveEmployees.map((person, index) => (
                 <div key={index} className="anniversary-item">
                   <span>{person.name}</span>
-                  <span>{person.date}</span>
-                  <span>{person.dept}</span>
+                  <span>On Leave</span>
+                  <span>{person.department || "General"}</span>
                 </div>
               ))}
+              {!onLeaveEmployees.length && (
+                <div className="anniversary-item">
+                  <span>No one</span>
+                  <span>Clear</span>
+                  <span>Today</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="sidebar-card net-panel">
-            <h3 className="sidebar-title">Quick Access Tasks</h3>
+            <h3 className="sidebar-title">Department Watchlist</h3>
             <div className="quick-tasks">
-              {quickTasks.map((task, index) => (
+              {departmentWatchlist.map((task, index) => (
                 <div key={index} className="task-item">
-                  <span className="task-icon">{task.icon}</span>
-                  <span className="task-text">{task.text}</span>
-                  <span className="task-arrow">{">"}</span>
+                  <span className="task-icon">{task.value}</span>
+                  <span className="task-text">{task.name}</span>
+                  <span className="task-arrow">tracked</span>
                 </div>
               ))}
+              {!departmentWatchlist.length && (
+                <div className="task-item">
+                  <span className="task-icon">0</span>
+                  <span className="task-text">No department data yet</span>
+                  <span className="task-arrow">live</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

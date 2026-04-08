@@ -1,20 +1,20 @@
-const rbac = (allowedRoles) => {
-  const roleHierarchy = {
-    'super_user': 3,
-    'admin': 2,
-    'management': 1
-  };
+const rbac = (allowedRoles = []) => {
+  const normalizedAllowedRoles = allowedRoles.map((role) => String(role).trim().toLowerCase());
 
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+      return res.status(401).json({ success: false, message: "Unauthorized", code: "UNAUTHORIZED" });
     }
 
-    const userRoleValue = roleHierarchy[req.user.role] || 0;
-    const isAllowed = allowedRoles.some(role => userRoleValue >= (roleHierarchy[role] || 0));
+    const currentRole = String(req.user.role || "").trim().toLowerCase();
+    const isAllowed = normalizedAllowedRoles.includes(currentRole);
 
     if (!isAllowed) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Insufficient privileges', code: 'FORBIDDEN' });
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Insufficient privileges",
+        code: "FORBIDDEN",
+      });
     }
 
     next();

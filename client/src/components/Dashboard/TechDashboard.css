@@ -25,6 +25,72 @@
   padding: 0;
 }
 
+.tech-live-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tech-live-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+  background: radial-gradient(circle at top right, rgba(255, 138, 61, 0.18), rgba(2, 6, 23, 0.96) 58%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: var(--nc-shadow-soft);
+}
+
+.tech-live-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 138, 61, 0.12);
+  color: rgba(255, 214, 190, 0.95);
+  flex-shrink: 0;
+}
+
+.tech-live-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.tech-live-value {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  color: rgba(255, 241, 232, 0.98);
+}
+
+.tech-live-meta {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(203, 213, 225, 0.72);
+  line-height: 1.45;
+}
+
+.tech-board-error {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.18);
+  color: rgba(254, 202, 202, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ============================= */
 /* BOARD CONTAINER */
 /* ============================= */
@@ -114,6 +180,57 @@
   border-color: rgba(255, 138, 61, 0.35);
 }
 
+.tech-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tech-card-title-row strong {
+  color: rgba(255, 241, 232, 0.96);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tech-card-progress {
+  flex-shrink: 0;
+  min-width: 46px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255, 186, 127, 0.95);
+}
+
+.tech-card-desc {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(203, 213, 225, 0.8);
+}
+
+.tech-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.tech-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tech-empty-card {
+  color: rgba(203, 213, 225, 0.72);
+  font-style: italic;
+}
+
 /* ============================= */
 /* ADD CARD */
 /* ============================= */
@@ -162,6 +279,10 @@
     padding: 25px;
   }
 
+  .tech-live-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cards {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
@@ -173,6 +294,11 @@
     min-width: 0;
     width: 100%;
   }
+
+  .tech-live-grid {
+    grid-template-columns: 1fr;
+  }
+
   .board-container {
     gap: 15px;
   }

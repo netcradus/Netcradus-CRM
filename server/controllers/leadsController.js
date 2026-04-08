@@ -141,7 +141,7 @@ const createLead = async (req, res) => {
     }
 };
 
-// Update lead (Owner, Assigned user, and Admin can update)
+// Update lead (Owner or Super User can update)
 const updateLead = async (req, res) => {
     try {
         const leadId = req.params.id;
@@ -151,8 +151,8 @@ const updateLead = async (req, res) => {
             return res.status(404).json({ message: "Lead not found" });
         }
 
-        // Check authorization: creator or admin can update
-        if (lead.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        // Check authorization: creator or super user can update
+        if (lead.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'super_user') {
             return res.status(403).json({ message: "You don't have permission to update this lead" });
         }
 
@@ -182,14 +182,14 @@ const updateLead = async (req, res) => {
     }
 };
 
-// Delete lead (Admin only)
+// Delete lead (Super User only)
 const deleteLead = async (req, res) => {
     try {
         const leadId = req.params.id;
 
-        // Check if user is admin
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ message: "Only admins can delete leads" });
+        // Check if user is super user
+        if (req.user.role !== 'super_user') {
+            return res.status(403).json({ message: "Only Super Users can delete leads" });
         }
 
         const deletedLead = await Lead.findByIdAndDelete(leadId);
@@ -205,11 +205,11 @@ const deleteLead = async (req, res) => {
     }
 };
 
-// Bulk delete leads by IDs (Admin only)
+// Bulk delete leads by IDs (Super User only)
 const bulkDeleteLeads = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ message: "Only admins can bulk delete leads" });
+        if (req.user.role !== 'super_user') {
+            return res.status(403).json({ message: "Only Super Users can bulk delete leads" });
         }
 
         const { ids } = req.body;
@@ -239,8 +239,8 @@ const bulkDeleteLeads = async (req, res) => {
 // Delete all leads matching filters (Admin only) — used for "delete all filtered" / "delete all"
 const deleteAllLeads = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ message: "Only admins can delete leads" });
+        if (req.user.role !== 'super_user') {
+            return res.status(403).json({ message: "Only Super Users can delete leads" });
         }
 
         // Build the same query as getLeads for consistency

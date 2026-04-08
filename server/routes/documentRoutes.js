@@ -9,8 +9,8 @@ const { uploadRateLimiter } = require('../middleware/rateLimiter');
 // All routes require authentication
 router.use(authMiddleware);
 
-// HR & Admin only guard
-const hrAdminOnly = rbac(['admin', 'hr']);
+// HR & Super User only guard
+const hrAdminOnly = rbac(['super_user', 'hr']);
 
 // ── GET /api/documents  — list all documents
 router.get('/', hrAdminOnly, documentController.getAllDocuments);
