@@ -20,13 +20,13 @@ router.post("/", upload.array("attachments", 5), createTicket);
 // Get Tickets (Role-scoped visibility inside controller)
 router.get("/", getTickets);
 
-// Add Comment (Super User & Admin ONLY)
-router.post("/:id/comment", rbac(["admin"]), addComment);
+// Add Comment (Super User only)
+router.post("/:id/comment", rbac(["super_user"]), addComment);
 
 // Add Info (Raiser ONLY - logic in controller)
 router.post("/:id/info", addInfo);
 
-// Update Status (Super User & Admin ONLY)
-router.patch("/:id/status", rbac(["admin"]), updateTicketStatus);
+// Update Status (Super User only)
+router.patch("/:id/status", rbac(["super_user"]), updateTicketStatus);
 
 module.exports = router;

@@ -9,20 +9,20 @@ const WelcomeAnimation = () => {
     const userRole = localStorage.getItem("userRole") || "user";
 
     useEffect(() => {
+        const token = localStorage.getItem("token");
         const warning = localStorage.getItem("passwordExpiryWarning");
         if (warning === "true") {
             setShowWarning(true);
             localStorage.removeItem("passwordExpiryWarning");
         }
 
+        if (!token) {
+            navigate("/login", { replace: true });
+            return undefined;
+        }
+
         const timer = setTimeout(() => {
-            if (userRole === "admin") navigate("/admin-dashboard");
-            else if (userRole === "support") navigate("/support-dashboard");
-            else if (userRole === "sales") navigate("/sales-dashboard");
-            else if (userRole === "it") navigate("/tech-dashboard");
-            else if (userRole === "hr") navigate("/hr-dashboard");
-            else if (userRole === "digital-media") navigate("/digital-media-dashboard");
-            else navigate("/dashboard");
+            navigate("/dashboard", { replace: true });
         }, 2800);
 
         return () => clearTimeout(timer);

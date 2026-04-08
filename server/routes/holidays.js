@@ -12,8 +12,8 @@ const {
 router.use(authMiddleware);
 
 router.get('/', getHolidays);
-router.post('/', rbac(['admin']), createHoliday);
-router.patch('/:id', rbac(['admin']), updateHoliday);
-router.delete('/:id', rbac(['admin']), deleteHoliday);
+router.post('/', rbac(['super_user']), createHoliday);
+router.patch('/:id', rbac(['super_user']), updateHoliday);
+router.delete('/:id', rbac(['super_user']), deleteHoliday);
 
 module.exports = router;

@@ -25,10 +25,12 @@ const purgeExpiredTokens = () => {
   }
 };
 
-// Create user (admin only)
+// Create user (super user only)
 const createUserByAdmin = async (req, res) => {
   try {
     const { email, password, role, department: manualDept, name } = req.body;
+    const normalizedRole = String(role || "").trim().toLowerCase();
+    const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media"];
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -36,9 +38,9 @@ const createUserByAdmin = async (req, res) => {
       });
     }
 
-    if (role.toLowerCase() === "admin") {
-      return res.status(403).json({
-        message: "Creation of additional admin users is forbidden"
+    if (!allowedRoles.includes(normalizedRole)) {
+      return res.status(400).json({
+        message: "Invalid role selected"
       });
     }
 
@@ -55,10 +57,10 @@ const createUserByAdmin = async (req, res) => {
     const firstName = name || normalizedEmail.split("@")[0].split(".")[0];
 
     // Department prefix
-    const department = role.toLowerCase().replace("_", "");
+    const department = normalizedRole.replace("_", "");
 
     // Count existing users in same department
-    const count = await User.countDocuments({ role });
+    const count = await User.countDocuments({ role: normalizedRole });
 
     // Generate sequential number (001, 002, 003...)
     const number = String(count + 1).padStart(3, "0");
@@ -72,7 +74,7 @@ const createUserByAdmin = async (req, res) => {
       name: firstName,
       email: normalizedEmail,
       password: hashedPassword,
-      role: role.toLowerCase(),
+      role: normalizedRole,
       department: manualDept || department,
     });
 
@@ -390,7 +392,7 @@ const resetPasswordWithOTP = async (req, res) => {
   }
 };
 
-// Get all users (for admin to assign leads)
+// Get all users (for super user management and privileged assignment flows)
 const getUsers = async (req, res) => {
   try {
     const users = await User.find()
@@ -402,7 +404,7 @@ const getUsers = async (req, res) => {
   }
 };
 
-// Delete user (admin only)
+// Delete user (super user only)
 const deleteUserByAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -412,8 +414,8 @@ const deleteUserByAdmin = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.role === "admin") {
-      return res.status(403).json({ message: "Admin users cannot be deleted" });
+    if (user.role === "super_user") {
+      return res.status(403).json({ message: "Super User accounts cannot be deleted" });
     }
 
     await user.deleteOne();
@@ -424,7 +426,7 @@ const deleteUserByAdmin = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-// Admin change password of created user
+// Super user changes password of managed users
 const adminChangeUserPassword = async (req, res) => {
   try {
     const { id } = req.params;
@@ -454,12 +456,12 @@ const adminChangeUserPassword = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Admin Change Password Error:", err);
+    console.error("Managed User Password Change Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Update user general info (admin only)
+// Update user general info (super user only)
 const updateUserByAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -467,13 +469,13 @@ const updateUserByAdmin = async (req, res) => {
 
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.role === "admin" && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Cannot update primary admin" });
+    if (user.role === "super_user" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Cannot update the primary Super User" });
     }
 
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase().trim();
-    if (role && role !== "admin") user.role = role.toLowerCase();
+    if (role && role !== "super_user") user.role = role.toLowerCase();
     if (department) user.department = department;
 
     await user.save();

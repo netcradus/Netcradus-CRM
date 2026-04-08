@@ -15,6 +15,7 @@ const TicketsPage = () => {
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("userId");
     const token = localStorage.getItem("token");
+    const canManageTickets = userRole === "super_user";
 
     const fetchTickets = async () => {
         try {
@@ -114,7 +115,7 @@ const TicketsPage = () => {
 
                         <div className="ticket-actions">
                             <div className="status-badge">{ticket.status}</div>
-                            {["super_user", "admin"].includes(userRole) && (
+                            {canManageTickets && (
                                 <select value={ticket.status} onChange={(e) => updateStatus(ticket._id, e.target.value)}>
                                     <option value="open">Open</option>
                                     <option value="in-progress">In Progress</option>
@@ -138,7 +139,7 @@ const TicketsPage = () => {
                         </div>
 
                         <div className="comment-box">
-                            {["super_user", "admin"].includes(userRole) ? (
+                            {canManageTickets ? (
                                 <div className="input-flex">
                                     <input placeholder="Add a resolution comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} />
                                     <button onClick={() => handleAddComment(ticket._id)}><FaComment /></button>

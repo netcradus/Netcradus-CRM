@@ -6,7 +6,7 @@ import "./Attendance.css";
 const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const userRole  = localStorage.getItem("userRole");
-const isAdmin   = userRole === "admin";
+const canManageHolidays = userRole === "super_user";
 
 const TYPE_BADGE = {
   national:   { label: "National",   cls: "badge-present" },
@@ -96,7 +96,7 @@ export default function HolidaysPage() {
           <h1 className="att-title">Holiday Calendar</h1>
           <p className="att-subtitle">Company & national holidays for {now.getFullYear()}</p>
         </div>
-        {isAdmin && (
+        {canManageHolidays && (
           <button className="btn-primary" onClick={openAdd}>+ Add Holiday</button>
         )}
       </div>
@@ -142,7 +142,7 @@ export default function HolidaysPage() {
                     </span>
                     {h.description && <div className="holiday-desc">{h.description}</div>}
                   </div>
-                  {isAdmin && (
+                  {canManageHolidays && (
                     <div className="holiday-actions">
                       <button className="btn-icon" onClick={() => openEdit(h)} title="Edit">✏️</button>
                       <button className="btn-icon btn-icon-danger" onClick={() => handleDelete(h._id)} title="Delete">🗑️</button>

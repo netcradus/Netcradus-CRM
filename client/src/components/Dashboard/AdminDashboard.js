@@ -26,36 +26,22 @@ import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
 
 const formatRoleLabel = (role = "general") =>
-  role
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  role === "admin"
+    ? "Administrator"
+    : role
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const previewRef = useRef(null);
   const [search, setSearch] = useState("");
-  const [users, setUsers] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const userName = localStorage.getItem("userName") || "User";
-  const userRole = localStorage.getItem("userRole") || "Admin";
+  const userRole = localStorage.getItem("userRole") || "admin";
   const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get(apiUrl("/api/auth/users"), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(res.data);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      }
-    };
-
-    fetchUsers();
-  }, [token]);
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -82,6 +68,17 @@ const AdminDashboard = () => {
       });
     }
   }, [selectedRole, selectedUser]);
+
+  const users = useMemo(
+    () =>
+      (attendanceSnapshot?.employees || []).map((employee) => ({
+        _id: employee.userId,
+        name: employee.name || "Unknown User",
+        email: employee.email || "",
+        role: employee.role || "",
+      })),
+    [attendanceSnapshot]
+  );
 
   const totalUsers = users.length;
   const trackedEmployees = attendanceSnapshot?.employees?.length || 0;
@@ -127,12 +124,13 @@ const AdminDashboard = () => {
 
   const handleSearch = () => {
     const searchValue = search.toLowerCase().trim();
+    if (!searchValue) return;
 
     const foundUser = users.find(
       (user) =>
-        user.name.toLowerCase().includes(searchValue) ||
-        user.email.toLowerCase().includes(searchValue) ||
-        user.role.toLowerCase().includes(searchValue)
+        user.name?.toLowerCase().includes(searchValue) ||
+        user.email?.toLowerCase().includes(searchValue) ||
+        user.role?.toLowerCase().includes(searchValue)
     );
 
     if (foundUser) {
@@ -168,13 +166,13 @@ const AdminDashboard = () => {
         <div className="admin-hero-left">
           <div className="admin-badge netcradus-badge">
             <FaUserShield />
-            <span>NETCRADUS Admin Panel</span>
+            <span>NETCRADUS Administrator Panel</span>
           </div>
           <h1>
             Welcome, <span>{userName}</span>
           </h1>
           <p>
-            Role: <strong>{userRole}</strong> - Monitor users, analytics and system
+            Role: <strong>{formatRoleLabel(userRole)}</strong> - Monitor users, analytics and system
             performance in real time.
           </p>
         </div>

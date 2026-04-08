@@ -538,6 +538,7 @@ function Login() {
       const { token, user, passwordExpiryWarning } = res.data;
 
       localStorage.setItem("token", token);
+      localStorage.setItem("userId", user.id);
       localStorage.setItem("userRole", user.role);
       localStorage.setItem("userName", user.name);
 
@@ -637,6 +638,7 @@ function Login() {
         setError("Password reset! Please login.");
       } else {
         localStorage.setItem("token", res.data.token);
+        localStorage.setItem("userId", res.data.user.id);
         localStorage.setItem("userRole", res.data.user.role);
         localStorage.setItem("userName", res.data.user.name);
         setSecurityAction(null);

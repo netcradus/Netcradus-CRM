@@ -18,12 +18,15 @@ const STATUS_OPTIONS = ["pending", "in_progress", "completed", "reviewed"];
 const PRIORITY_OPTIONS = ["low", "medium", "high", "urgent"];
 
 const authConfig = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
-const prettify = (value) => String(value || "").split("_").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+const prettify = (value) => {
+  if (value === "admin") return "Administrator";
+  return String(value || "").split("_").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+};
 const formatDateOnly = (value) => value ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Not set";
 const formatDateTime = (value) => value ? new Date(value).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Not set";
 const getInitials = (name) => String(name || "U").split(" ").slice(0, 2).map((p) => p.charAt(0)).join("").toUpperCase();
 const getCommentRoleTone = (role) => {
-  if (role === "admin") return "admin";
+  if (role === "super_user" || role === "admin") return "admin";
   if (role === "hr") return "reviewer";
   return "assignee";
 };
@@ -157,7 +160,7 @@ function DetailModal({ task, comments, canReview, canComment, commentText, setCo
           </div>
           {canComment && (
             <div className="tasks-comment-form">
-              <textarea className="nc-input tasks-textarea" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={canReview ? "Share review feedback or next steps." : "Ask for a due-date update, mention blockers, or share suggestions for the admin."} />
+              <textarea className="nc-input tasks-textarea" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={canReview ? "Share review feedback or next steps." : "Ask for a due-date update, mention blockers, or share suggestions for the reviewer."} />
               <button type="button" className="nc-btn nc-btn--primary" onClick={onPostComment} disabled={commentSaving}>{commentSaving ? "Posting..." : canReview ? "Post Comment" : "Send Comment"}</button>
             </div>
           )}
@@ -186,8 +189,9 @@ export default function Tasks() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("userRole");
   const currentUserId = localStorage.getItem("userId");
-  const canCreate = role === "admin";
-  const canReview = ["admin", "hr"].includes(role);
+  const canCreate = ["super_user", "admin"].includes(role);
+  const canReview = ["super_user", "hr"].includes(role);
+  const canViewBoard = canCreate || canReview;
   const taskParam = searchParams.get("task");
 
   const [tasks, setTasks] = useState([]);
@@ -216,8 +220,8 @@ export default function Tasks() {
   const fetchUsers = useCallback(async () => {
     if (!canCreate) return;
     try {
-      const { data } = await axios.get(apiUrl("/api/auth/users"), requestConfig);
-      setUsers(data || []);
+      const { data } = await axios.get(apiUrl("/api/tasks/assignable-users"), requestConfig);
+      setUsers(data.data || []);
     } catch (fetchError) {
       console.error("Failed to fetch users", fetchError);
     }
@@ -226,7 +230,7 @@ export default function Tasks() {
   const fetchTasks = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      if (canReview) {
+      if (canViewBoard) {
         const { data } = await axios.get(apiUrl("/api/tasks"), {
           ...requestConfig,
           params: {
@@ -252,7 +256,7 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  }, [canReview, filters, pagination.limit, requestConfig, showMessage]);
+  }, [canViewBoard, filters, pagination.limit, requestConfig, showMessage]);
 
   const openTaskDetails = useCallback(async (taskId) => {
     try {
@@ -375,14 +379,20 @@ export default function Tasks() {
   const activeTasks = useMemo(() => tasks.filter((task) => !["completed", "reviewed"].includes(task.status)), [tasks]);
   const completedTasks = useMemo(() => tasks.filter((task) => ["completed", "reviewed"].includes(task.status)), [tasks]);
   const canComment = Boolean(detailTask) && (canReview || !canReview || detailTask.assignedTo?._id === currentUserId);
+  const canManageTask = useCallback((task) => {
+    if (role === "super_user") return true;
+    if (role === "admin") return task.assignedBy?._id === currentUserId;
+    return false;
+  }, [currentUserId, role]);
+  const isOwnAssignedTask = useCallback((task) => task.assignedTo?._id === currentUserId, [currentUserId]);
 
   return (
     <div className="nc-page tasks-page">
       <section className="nc-hero">
         <div>
-          <span className="nc-badge">{canReview ? "Task Control Center" : "My Task Queue"}</span>
+          <span className="nc-badge">{canViewBoard ? "Task Control Center" : "My Task Queue"}</span>
           <h1 className="nc-hero-title"><span className="nc-gradient-text">Tasks</span> that move work forward</h1>
-          <p className="nc-hero-subtitle">{canReview ? "Assign work, track execution, review outcomes, and keep deadlines visible across the team." : "Check what is assigned to you, update timing, and close work with clear handoff status."}</p>
+          <p className="nc-hero-subtitle">{canViewBoard ? "Assign work, track execution, review outcomes, and keep deadlines visible across the team." : "Check what is assigned to you, update timing, and close work with clear handoff status."}</p>
         </div>
         <div className="nc-hero-actions">
           <span className="nc-pill"><ClipboardCheck size={16} />{tasks.length} task(s)</span>
@@ -392,7 +402,7 @@ export default function Tasks() {
 
       {(error || success) && <div className={`tasks-banner ${error ? "tasks-banner--error" : "tasks-banner--success"}`}><span>{error || success}</span><button type="button" onClick={() => { setError(""); setSuccess(""); }}>x</button></div>}
 
-      {canReview ? (
+      {canViewBoard ? (
         <>
           <section className="nc-panel nc-section tasks-filters-panel">
             <div className="tasks-filters-header">
@@ -427,7 +437,23 @@ export default function Tasks() {
                       <td><span className={`tasks-pill tasks-pill--${task.priority}`}>{prettify(task.priority)}</span></td>
                       <td><span className={`tasks-pill tasks-pill--${task.status}`}>{prettify(task.status)}</span></td>
                       <td>{formatDateOnly(task.dueDate)}</td>
-                      <td><div className="tasks-action-row" onClick={(e) => e.stopPropagation()}><button type="button" className="tasks-icon-btn" aria-label="View task" onClick={() => openTaskDetails(task._id)}><FaEye /></button>{canCreate && <><button type="button" className="tasks-icon-btn" aria-label="Edit task" onClick={() => { setIsEditMode(true); setActiveTask(task); setTaskForm({ title: task.title || "", description: task.description || "", assignedTo: task.assignedTo?._id || "", priority: task.priority || "medium", dueDate: toInputDateTime(task.dueDate) }); setIsTaskModalOpen(true); }}><FaPencilAlt /></button><button type="button" className="tasks-icon-btn tasks-icon-btn--danger" aria-label="Delete task" onClick={() => handleDeleteTask(task._id)}><FaTrashAlt /></button></>}</div></td>
+                      <td>
+                        <div className="tasks-action-row" onClick={(e) => e.stopPropagation()}>
+                          <button type="button" className="tasks-icon-btn" aria-label="View task" onClick={() => openTaskDetails(task._id)}><FaEye /></button>
+                          {canManageTask(task) && (
+                            <>
+                              <button type="button" className="tasks-icon-btn" aria-label="Edit task" onClick={() => { setIsEditMode(true); setActiveTask(task); setTaskForm({ title: task.title || "", description: task.description || "", assignedTo: task.assignedTo?._id || "", priority: task.priority || "medium", dueDate: toInputDateTime(task.dueDate) }); setIsTaskModalOpen(true); }}><FaPencilAlt /></button>
+                              <button type="button" className="tasks-icon-btn tasks-icon-btn--danger" aria-label="Delete task" onClick={() => handleDeleteTask(task._id)}><FaTrashAlt /></button>
+                            </>
+                          )}
+                          {isOwnAssignedTask(task) && !["completed", "reviewed"].includes(task.status) && (
+                            <>
+                              <button type="button" className="nc-btn" onClick={() => { setTimingTask(task); setTimingValue(task.estimatedDuration || ""); }}>Set Timing</button>
+                              <button type="button" className="nc-btn nc-btn--primary" onClick={() => handleCompleteTask(task._id)}>Complete</button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   )) : <tr><td colSpan="7">No tasks found for the current filters.</td></tr>}
                 </tbody>

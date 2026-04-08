@@ -29,7 +29,7 @@ const SalesDashboard = ({ preview }) => {
     assignedTo: "",
   });
   const userName = localStorage.getItem("userName") || "User";
-  const userRole = localStorage.getItem("userRole") || "Admin";
+  const userRole = localStorage.getItem("userRole") || "Administrator";
 
   // 🔥 FETCH DEALS
   const fetchDeals = async () => {

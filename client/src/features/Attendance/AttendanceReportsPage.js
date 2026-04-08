@@ -6,7 +6,7 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const userRole  = localStorage.getItem("userRole");
 const userId    = localStorage.getItem("userId");
-const isHRAdmin = ["admin", "hr"].includes(userRole);
+const isHRAdmin = ["super_user", "hr"].includes(userRole);
 
 const now = new Date();
 

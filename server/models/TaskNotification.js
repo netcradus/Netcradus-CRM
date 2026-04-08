@@ -5,7 +5,7 @@ const taskNotificationSchema = new mongoose.Schema(
     taskId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Task",
-      required: true,
+      default: null,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +16,11 @@ const taskNotificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    targetPath: {
+      type: String,
+      trim: true,
+      default: "",
     },
     isRead: {
       type: Boolean,

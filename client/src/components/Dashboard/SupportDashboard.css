@@ -36,6 +36,28 @@
   gap: 16px;
 }
 
+.support-live-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.support-metric-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: rgba(255, 186, 127, 0.95);
+}
+
+.support-graphs {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 16px;
+}
+
+.support-graph-card {
+  min-height: 360px;
+}
+
 .support-card-header {
   display: flex;
   align-items: center;
@@ -68,6 +90,8 @@
     width: 100%;
   }
 
+  .support-live-stats,
+  .support-graphs,
   .support-bottom {
     grid-template-columns: 1fr;
   }

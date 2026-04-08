@@ -15,11 +15,6 @@ import MainLayout from "./components/Layout/MainLayout";
 
 /* ========== Dashboards ========== */
 import Dashboard from "./components/Dashboard/Dashboard";
-import SuperUserDashboard from "./components/Dashboard/SuperUserDashboard";
-import AdminDashboard from "./components/Dashboard/AdminDashboard";
-import ManagementDashboard from "./components/Dashboard/ManagementDashboard";
-import HRDashboard from "./components/Dashboard/HRDashboard";
-import TechDashboard from "./components/Dashboard/TechDashboard";
 
 /* ========== Modules ========== */
 import Contacts from "./features/Contacts/Contacts";
@@ -61,7 +56,8 @@ import TicketsPage from "./features/Tickets/TicketsPage";
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
   const token = localStorage.getItem("token");
-  return token ? <MainLayout /> : <Navigate to="/login" replace />;
+  const userRole = localStorage.getItem("userRole");
+  return token && userRole ? <MainLayout /> : <Navigate to="/login" replace />;
 }
 
 function RoleRoute({ roles, children }) {
@@ -146,7 +142,7 @@ function App() {
           {/* ---- Attendance Module ---- */}
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/admin/attendance" element={
-            <RoleRoute roles={["admin", "hr"]}>
+            <RoleRoute roles={["super_user", "admin", "hr"]}>
               <AdminAttendanceDashboard />
             </RoleRoute>
           } />

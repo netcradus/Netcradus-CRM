@@ -26,9 +26,11 @@ import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
 
 const formatRoleLabel = (role = "general") =>
-  role
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  role === "admin"
+    ? "Administrator"
+    : role
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const SuperUserDashboard = () => {
   const navigate = useNavigate();
@@ -83,10 +85,21 @@ const SuperUserDashboard = () => {
     ];
   }, [attendanceSnapshot]);
 
+  const roleDistributionData = useMemo(() => {
+    const employees = attendanceSnapshot?.employees || [];
+    const groupedRoles = employees.reduce((acc, employee) => {
+      const roleLabel = formatRoleLabel(employee.role || "general");
+      acc[roleLabel] = (acc[roleLabel] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
+  }, [attendanceSnapshot]);
+
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
     switch (role) {
-      case "admin": return <p>Admin oversight active</p>;
+      case "admin": return <p>Administrator oversight active</p>;
       case "sales": return <SalesDashboard preview={!selectedUser} />;
       case "support": return <SupportDashboard preview={!selectedUser} />;
       case "hr": return <HRDashboard preview={!selectedUser} />;
@@ -131,12 +144,27 @@ const SuperUserDashboard = () => {
             <h3>Role Distribution</h3>
             <ResponsiveContainer width="100%" height={250}>
                <PieChart>
-                  <Pie data={[{name: 'Admin', value: 1}, {name: 'Management', value: users.length - 1}]} dataKey="value" innerRadius={60} outerRadius={80} fill="#8884d8">
-                     <Cell fill="#ff8a00" /><Cell fill="#ff2d8f" />
+                  <Pie
+                    data={roleDistributionData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    fill="#8884d8"
+                  >
+                    {roleDistributionData.map((entry, index) => (
+                      <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
                   </Pie>
                   <Tooltip />
                </PieChart>
             </ResponsiveContainer>
+            {!roleDistributionData.length && (
+              <p style={{ color: "#9ca3af", fontSize: "0.9rem", marginTop: "12px" }}>
+                No live employee attendance data available yet.
+              </p>
+            )}
          </div>
       </div>
     </div>

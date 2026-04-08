@@ -19,8 +19,19 @@ const {
     verifyAdminDevice
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
-const adminMiddleware = require("../middleware/adminMiddleware");
 const { loginLimiter, otpRequestLimiter } = require("../middleware/rateLimiter");
+
+const superUserOnly = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (req.user.role !== "super_user") {
+        return res.status(403).json({ message: "Only super users can perform this action" });
+    }
+
+    next();
+};
 
 // Login Route + Limiter
 router.post("/login", loginLimiter, login);
@@ -39,15 +50,15 @@ router.post("/password/forgot-reset", loginLimiter, resetPasswordWithOTP);
 router.post("/verify-password-reauth", authMiddleware, verifyPasswordForReAuth);
 
 // Admin device management
-router.get("/admin/devices", authMiddleware, adminMiddleware, getAdminDevices);
-router.delete("/admin/devices/:deviceId", authMiddleware, adminMiddleware, revokeAdminDevice);
+router.get("/admin/devices", authMiddleware, superUserOnly, getAdminDevices);
+router.delete("/admin/devices/:deviceId", authMiddleware, superUserOnly, revokeAdminDevice);
 
 // Admin-only user management
-router.get("/users", authMiddleware, adminMiddleware, getUsers);
-router.post("/users", authMiddleware, adminMiddleware, createUserByAdmin);
-router.delete("/users/:id", authMiddleware, adminMiddleware, deleteUserByAdmin);
-router.put("/users/:id/password", authMiddleware, adminMiddleware, adminChangeUserPassword);
-router.patch("/users/:id", authMiddleware, adminMiddleware, updateUserByAdmin);
+router.get("/users", authMiddleware, superUserOnly, getUsers);
+router.post("/users", authMiddleware, superUserOnly, createUserByAdmin);
+router.delete("/users/:id", authMiddleware, superUserOnly, deleteUserByAdmin);
+router.put("/users/:id/password", authMiddleware, superUserOnly, adminChangeUserPassword);
+router.patch("/users/:id", authMiddleware, superUserOnly, updateUserByAdmin);
 
 
 module.exports = router;

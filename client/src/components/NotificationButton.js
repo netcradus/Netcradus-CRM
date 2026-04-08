@@ -31,6 +31,7 @@ export default function NotificationButton() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [notificationsAvailable, setNotificationsAvailable] = useState(false);
 
   const authConfig = useMemo(
     () => ({
@@ -47,8 +48,11 @@ export default function NotificationButton() {
       const { data } = await axios.get(apiUrl("/api/notifications?limit=10"), authConfig);
       setNotifications(data.data || []);
       setUnreadCount(data.unreadCount || 0);
+      setNotificationsAvailable(true);
     } catch (error) {
-      console.error("Failed to fetch notifications", error);
+      setNotifications([]);
+      setUnreadCount(0);
+      setNotificationsAvailable(false);
     } finally {
       setLoading(false);
     }
@@ -61,7 +65,7 @@ export default function NotificationButton() {
   }, [fetchNotifications]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!token || !notificationsAvailable) return undefined;
 
     const socket = getNotificationSocket(token);
     if (!socket) return undefined;
@@ -76,7 +80,7 @@ export default function NotificationButton() {
       socket.off("notification:new", handleNewNotification);
       disconnectNotificationSocket();
     };
-  }, [fetchNotifications, token]);
+  }, [fetchNotifications, notificationsAvailable, token]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -94,12 +98,10 @@ export default function NotificationButton() {
       if (!notification.isRead) {
         await axios.patch(apiUrl(`/api/notifications/${notification._id}/read`), {}, authConfig);
       }
-    } catch (error) {
-      console.error("Failed to mark notification as read", error);
     } finally {
       setIsOpen(false);
       fetchNotifications();
-      navigate(notification.taskId?._id ? `/tasks?task=${notification.taskId._id}` : "/tasks");
+      navigate(notification.targetPath || (notification.taskId?._id ? `/tasks?task=${notification.taskId._id}` : "/tasks"));
     }
   };
 
@@ -107,9 +109,7 @@ export default function NotificationButton() {
     try {
       await axios.patch(apiUrl("/api/notifications/read-all"), {}, authConfig);
       fetchNotifications();
-    } catch (error) {
-      console.error("Failed to mark all notifications as read", error);
-    }
+    } catch {}
   };
 
   return (

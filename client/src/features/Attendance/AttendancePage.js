@@ -42,6 +42,13 @@ const formatMinutesSummary = (minutes = 0) => {
   return `${hrs} hr ${mins} min`;
 };
 
+const prettifyRole = (value = "") =>
+  String(value)
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 export default function AttendancePage() {
   const [statusData, setStatusData] = useState(null);
   const [records, setRecords] = useState([]);
@@ -155,7 +162,7 @@ export default function AttendancePage() {
   const isPunchedOut = Boolean(record?.punchOut);
   const isOnBreak = Boolean(record?.isOnBreak);
 
-  if (userRole === "admin") {
+  if (["super_user", "admin"].includes(userRole)) {
     return (
       <div className="att-page">
         <div className="att-header">
@@ -165,7 +172,7 @@ export default function AttendancePage() {
         <div className="att-exempt-card glass-panel">
           <div className="exempt-icon">Shield</div>
           <h2>Exempt Account</h2>
-          <p>As an administrator, you are exempt from attendance tracking. Use the Team Dashboard to monitor staff in real time.</p>
+          <p>As an elevated account, you are exempt from attendance tracking. Use the Team Dashboard to monitor staff in real time.</p>
           <button className="btn-primary" onClick={() => window.location.href = "/admin/attendance"}>
             Go to Team Dashboard
           </button>
@@ -182,7 +189,7 @@ export default function AttendancePage() {
           <h1 className="att-hero-title">
             Welcome, <span>{userName}</span>
           </h1>
-          <p className="att-hero-subtitle">Role: <strong>{userRole}</strong></p>
+          <p className="att-hero-subtitle">Role: <strong>{prettifyRole(userRole)}</strong></p>
           <p className="att-subtitle">{format(new Date(), "EEEE, dd MMMM yyyy")}</p>
         </div>
         <div className="att-hero-side">
@@ -206,6 +213,29 @@ export default function AttendancePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="att-insight-grid">
+        <article className="att-insight-card att-insight-card--status">
+          <span className="att-insight-label">Current Status</span>
+          <strong className="att-insight-value">{STATUS_BADGE[nowStatus]?.label || "Not Marked"}</strong>
+          <small>{isOnBreak ? "Break in progress" : isPunchedOut ? "Shift closed for today" : isPunchedIn ? "Shift is active" : "Ready to start your day"}</small>
+        </article>
+        <article className="att-insight-card">
+          <span className="att-insight-label">Net Work</span>
+          <strong className="att-insight-value">{formatMinutesSummary((record?.netWorkDurationMinutes ?? Math.floor(liveMetrics.workSeconds / 60)) || 0)}</strong>
+          <small>Live working time excluding breaks</small>
+        </article>
+        <article className="att-insight-card">
+          <span className="att-insight-label">Break Taken</span>
+          <strong className="att-insight-value">{formatMinutesSummary(liveMetrics.totalBreakMinutes)}</strong>
+          <small>{breaks.length} recorded break(s) today</small>
+        </article>
+        <article className="att-insight-card">
+          <span className="att-insight-label">Overtime</span>
+          <strong className="att-insight-value">{liveMetrics.overtimeSeconds > 0 ? formatMinutesSummary(liveMetrics.overtimeSeconds / 60) : "None"}</strong>
+          <small>{record?.isLate ? `Late by ${record.lateByMinutes || 0} min` : "On-time trend today"}</small>
+        </article>
       </section>
 
       <div className="att-header">
