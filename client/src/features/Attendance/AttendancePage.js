@@ -163,7 +163,7 @@ export default function AttendancePage() {
   const isPunchedOut = Boolean(record?.punchOut);
   const isOnBreak = Boolean(record?.isOnBreak);
 
-  if (["super_user", "admin"].includes(userRole)) {
+  if (["super_user"].includes(userRole)) {
     return (
       <div className="att-page">
         <div className="att-header">
