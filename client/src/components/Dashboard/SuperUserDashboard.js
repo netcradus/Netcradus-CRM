@@ -96,6 +96,40 @@ const SuperUserDashboard = () => {
     return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
   }, [attendanceSnapshot]);
 
+  useEffect(() => {
+    if (selectedRole && previewRef.current) {
+      previewRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selectedRole, selectedUser]);
+
+  const handleRoleChange = (e) => {
+    const role = e.target.value;
+    setSelectedRole(role);
+    setSelectedUser(null);
+  };
+
+  const handleSearch = () => {
+    const searchValue = search.toLowerCase().trim();
+    if (!searchValue) return;
+
+    const foundUser = users.find(
+      (user) =>
+        user.name?.toLowerCase().includes(searchValue) ||
+        user.email?.toLowerCase().includes(searchValue) ||
+        user.role?.toLowerCase().includes(searchValue)
+    );
+
+    if (foundUser) {
+      setSelectedUser(foundUser);
+      setSelectedRole(foundUser.role);
+    } else {
+      alert("User not found");
+    }
+  };
+
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
     switch (role) {
@@ -104,6 +138,7 @@ const SuperUserDashboard = () => {
       case "support": return <SupportDashboard preview={!selectedUser} />;
       case "hr": return <HRDashboard preview={!selectedUser} />;
       case "it": return <TechDashboard preview={!selectedUser} />;
+      case "digital_media": return <DigitalMediaDashboard preview={!selectedUser} />;
       default: return <p>Select a role to preview</p>;
     }
   };
@@ -127,6 +162,36 @@ const SuperUserDashboard = () => {
            <AttendanceWidget />
         </div>
       </div>
+
+      <div className="admin-controls glass">
+        <input
+          type="text"
+          className="admin-search"
+          placeholder="Search user..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <button onClick={handleSearch} className="btn-primary">
+          Search
+        </button>
+
+        <select className="admin-select" value={selectedRole} onChange={handleRoleChange}>
+          <option value="">Select Role</option>
+          <option value="admin">Administrator</option>
+          <option value="sales">Sales</option>
+          <option value="support">Support</option>
+          <option value="hr">HR</option>
+          <option value="it">IT</option>
+          <option value="digital_media">Digital Media</option>
+        </select>
+      </div>
+
+      {selectedRole && (
+        <div ref={previewRef} className="role-dashboard-preview">
+          {renderSelectedDashboard()}
+        </div>
+      )}
 
       <div className="admin-grid">
          <div className="admin-charts glass netcradus-panel">

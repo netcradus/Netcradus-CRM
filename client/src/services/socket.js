@@ -1,13 +1,14 @@
 import { io } from "socket.io-client";
-import { API_BASE_URL } from "../config/api";
+import { API_URL } from "../config/api";
 
 let socketInstance = null;
+const SOCKET_BASE_URL = API_URL.replace(/\/api$/i, "");
 
 export function getNotificationSocket(token) {
   if (!token) return null;
 
   if (!socketInstance) {
-    socketInstance = io(API_BASE_URL, {
+    socketInstance = io(SOCKET_BASE_URL, {
       transports: ["polling"],
       reconnection: false,
       timeout: 5000,

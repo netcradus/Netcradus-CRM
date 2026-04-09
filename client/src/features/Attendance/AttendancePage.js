@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
 import { Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { API_URL } from "../../config/api";
 import "./Attendance.css";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API = API_URL;
 
 function getAuthHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem("token")}` };

@@ -20,7 +20,7 @@
 
 //   const fetchAccounts = async () => {
 //     try {
-//       const res = await fetch("http://localhost:5000/api/accounts");
+//       const res = await fetch(apiUrl("/api/accounts"));
 //       if (!res.ok) throw new Error("Failed to fetch accounts");
 //       const data = await res.json();
 //       setAccounts(data);
@@ -44,7 +44,7 @@
 //   const handleSubmit = async (e) => {
 //     e.preventDefault();
 //     try {
-//       const res = await fetch("http://localhost:5000/api/accounts", {
+//       const res = await fetch(apiUrl("/api/accounts"), {
 //         method: "POST",
 //         headers: { "Content-Type": "application/json" },
 //         body: JSON.stringify(newAccount),

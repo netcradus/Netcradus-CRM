@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { format, parseISO, isAfter } from "date-fns";
+import { API_URL } from "../../config/api";
 import "./Attendance.css";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const userRole  = localStorage.getItem("userRole");
 const canManageHolidays = userRole === "super_user";
