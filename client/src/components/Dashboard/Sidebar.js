@@ -105,8 +105,7 @@ const roleMenus = {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
-        // { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
+        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 

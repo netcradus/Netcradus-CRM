@@ -7,6 +7,7 @@ import "./Attendance.css";
 
 const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
+const normalizeRole = (value = "") => String(value).trim().toLowerCase().replace(/\s+/g, "_");
 
 const STATUS_MAP = {
   present: { label: "Present", color: "#86efac" },
@@ -69,8 +70,8 @@ function BreakLog({ breaks, expanded, onToggle }) {
 }
 
 export default function AttendanceWidget() {
-  const userRole = localStorage.getItem("userRole");
-  const isAdminSummary = ["super_user", "admin"].includes(userRole);
+  const userRole = normalizeRole(localStorage.getItem("userRole"));
+  const isAdminSummary = ["super_user", "super_admin", "hr"].includes(userRole);
   const [snapshot, setSnapshot] = useState(null);
   const [statusData, setStatusData] = useState(null);
   const [loading, setLoading] = useState(true);

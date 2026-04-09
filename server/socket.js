@@ -3,6 +3,20 @@ const jwt = require("jsonwebtoken");
 const User = require("./models/User");
 
 let ioInstance = null;
+const INVALID_TOKEN_VALUES = new Set(["undefined", "null", ""]);
+
+const normalizeToken = (value) => {
+  if (typeof value !== "string") return null;
+
+  const trimmedValue = value.trim();
+  const token = trimmedValue.replace(/^Bearer\s+/i, "").trim();
+
+  if (!token || INVALID_TOKEN_VALUES.has(token.toLowerCase())) {
+    return null;
+  }
+
+  return token;
+};
 
 function initializeSocket(server) {
   ioInstance = new Server(server, {
@@ -15,8 +29,8 @@ function initializeSocket(server) {
   ioInstance.use(async (socket, next) => {
     try {
       const token =
-        socket.handshake.auth?.token ||
-        socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, "");
+        normalizeToken(socket.handshake.auth?.token) ||
+        normalizeToken(socket.handshake.headers?.authorization);
 
       if (!token) {
         return next(new Error("Unauthorized"));
