@@ -1,12 +1,12 @@
 import React from "react";
-import SuperUserDashboard from "./SuperUserDashboard";
-import ManagementDashboard from "./ManagementDashboard";
-import AdminDashboard from "./AdminDashboard";
-import SalesDashboard from "./SalesDashboard";
-import SupportDashboard from "./SupportDashboard";
-import HRDashboard from "./HRDashboard";
-import TechDashboard from "./TechDashboard";
-import DigitalMediaDashboard from "./DigitalMediaDashboard";
+import SuperUserDashboard from "./SuperUserDashboard.js";
+import ManagementDashboard from "./ManagementDashboard.js";
+import AdminDashboard from "./AdminDashboard.js";
+import SalesDashboard from "./SalesDashboard.js";
+import SupportDashboard from "./SupportDashboard.js";
+import HRDashboard from "./HRDashboard.js";
+import TechDashboard from "./TechDashboard.js";
+import DigitalMediaDashboard from "./DigitalMediaDashboard.js";
 import "./Dashboard.css";
 
 function Dashboard() {
