@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./Contacts.css";
 import { apiUrl } from "../../config/api";
-import { FaPhone, FaLock, FaLockOpen, FaRegFilePdf } from "react-icons/fa";
+import { FaLock, FaLockOpen, FaPhone, FaRegFilePdf } from "react-icons/fa";
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
@@ -12,7 +12,8 @@ function Contacts() {
   const [selectedContactId, setSelectedContactId] = useState(null);
   const [sensitiveData, setSensitiveData] = useState(null);
   const [reAuthToken, setReAuthToken] = useState(null);
-  
+  const [reAuthError, setReAuthError] = useState("");
+
   const [newContact, setNewContact] = useState({
     name: "",
     email: "",
@@ -25,16 +26,27 @@ function Contacts() {
     contactNumber: "",
     address: "",
     salary: "",
-    leaves: 0
+    leaves: 0,
   });
 
-  const userRole = localStorage.getItem("userRole");
-  const isElevated = ["super_user", "admin"].includes(userRole);
+  const userRole = String(localStorage.getItem("userRole") || "")
+    .trim()
+    .toLowerCase();
+  const canUnlockSensitive = ["super_user", "admin", "hr"].includes(userRole);
+  const canAddContact = userRole === "admin";
+
+  const getInitials = (name = "NA") =>
+    String(name)
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("");
 
   const fetchContacts = async () => {
     try {
       const res = await fetch(apiUrl("/api/contacts"), {
-        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
@@ -50,14 +62,15 @@ function Contacts() {
 
   const handleReAuth = async (e) => {
     e.preventDefault();
+    setReAuthError("");
     try {
       const res = await fetch(apiUrl("/api/auth/verify-password-reauth"), {
         method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ password: reAuthPassword })
+        body: JSON.stringify({ password: reAuthPassword }),
       });
       const data = await res.json();
       if (data.success) {
@@ -66,37 +79,66 @@ function Contacts() {
         setReAuthPassword("");
         fetchSensitiveData(selectedContactId, data.reAuthToken);
       } else {
-        alert("Invalid Password");
+        setReAuthError(data.message || "Invalid password");
       }
     } catch (err) {
       console.error(err);
+      setReAuthError("Verification failed. Please try again.");
     }
   };
 
   const fetchSensitiveData = async (contactId, token) => {
     try {
       const res = await fetch(apiUrl(`/api/contacts/${contactId}/sensitive`), {
-        headers: { 
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-            "X-ReAuth-Token": token
-        }
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "X-ReAuth-Token": token,
+        },
       });
       if (res.ok) {
         const data = await res.json();
         setSensitiveData(data);
+        return;
       }
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data.triggerReAuth) {
+        setSensitiveData(null);
+        setSelectedContactId(contactId);
+        setShowReAuthModal(true);
+        setReAuthError(data.message || "Please verify your password to continue.");
+        return;
+      }
+      setReAuthError(data.message || "Unable to unlock sensitive details.");
     } catch (err) {
       console.error(err);
+      setReAuthError("Unable to unlock sensitive details.");
     }
   };
 
   const openReAuth = (contactId) => {
+    if (!canUnlockSensitive) return;
+
+    if (sensitiveData && sensitiveData._id === contactId) {
+      setSensitiveData(null);
+      setSelectedContactId(null);
+      return;
+    }
+
     setSelectedContactId(contactId);
+    setReAuthError("");
+
+    if (reAuthToken) {
+      fetchSensitiveData(contactId, reAuthToken);
+      return;
+    }
+
     setShowReAuthModal(true);
   };
 
-  const filteredContacts = contacts.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
+  const filteredContacts = contacts.filter((contact) =>
+    `${contact.name || ""} ${contact.email || ""} ${contact.department || ""} ${contact.designation || ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
   const handleSubmit = async (e) => {
@@ -104,27 +146,72 @@ function Contacts() {
     try {
       const res = await fetch(apiUrl("/api/contacts"), {
         method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(newContact),
       });
       if (res.ok) {
         fetchContacts();
         setShowModal(false);
-        setNewContact({ name: "", email: "", status: "Prospect", department: "", designation: "", joiningDate: "", leavingDate: "", interviewSchedule: "", contactNumber: "", address: "", salary: "", leaves: 0 });
+        setNewContact({
+          name: "",
+          email: "",
+          status: "Prospect",
+          department: "",
+          designation: "",
+          joiningDate: "",
+          leavingDate: "",
+          interviewSchedule: "",
+          contactNumber: "",
+          address: "",
+          salary: "",
+          leaves: 0,
+        });
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  const downloadSalarySlip = async (contactId, index, filename) => {
+    try {
+      const res = await fetch(apiUrl(`/api/contacts/${contactId}/salary-slips/${index}/download`), {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setReAuthError(data.message || "Unable to download salary slip.");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename || `salary-slip-${index + 1}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      setReAuthError("Unable to download salary slip.");
+    }
+  };
+
   return (
     <div className="contacts-container">
       <div className="contacts-header-flex">
-        <h2 className="contacts-heading"><FaPhone /> Contacts Management</h2>
-        {isElevated && <button className="btn-primary" onClick={() => setShowModal(true)}>Add Employee/Contact</button>}
+        <h2 className="contacts-heading">
+          <FaPhone /> Contacts Management
+        </h2>
+        {canAddContact && (
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            Add Employee/Contact
+          </button>
+        )}
       </div>
 
       <div className="contacts-actions">
@@ -142,64 +229,162 @@ function Contacts() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Dept / Design.</th>
+              <th>Department</th>
+              <th>Designation</th>
               <th>Status</th>
               <th>Joining Date</th>
               <th>Details</th>
             </tr>
           </thead>
           <tbody>
-            {filteredContacts.map((contact) => (
-              <tr key={contact._id} className={!contact.isActive ? "inactive-row" : ""}>
-                <td>
+            {filteredContacts.length > 0 ? (
+              filteredContacts.map((contact) => (
+                <tr key={contact._id} className={!contact.isActive ? "inactive-row" : ""}>
+                  <td data-label="Name">
                     <div className="name-cell">
+                      <div className="contact-avatar">{getInitials(contact.name)}</div>
+                      <div className="contact-meta">
                         <strong>{contact.name}</strong>
-                        <span>{contact.email}</span>
+                        <span className="contact-email">{contact.email}</span>
+                      </div>
                     </div>
-                </td>
-                <td>{contact.department || "N/A"} / {contact.designation || "N/A"}</td>
-                <td>
-                  <span className={`badge ${contact.status.toLowerCase()}`}>
-                    {contact.status}
-                  </span>
-                  {!contact.isActive && <span className="badge ex-employee">Former Employee</span>}
-                </td>
-                <td>{contact.joiningDate ? new Date(contact.joiningDate).toLocaleDateString() : "N/A"}</td>
-                <td>
-                   <button className="btn-icon" onClick={() => openReAuth(contact._id)}>
-                     {sensitiveData && sensitiveData._id === contact._id ? <FaLockOpen color="#10b981" /> : <FaLock />}
-                   </button>
+                  </td>
+                  <td data-label="Department">
+                    <span className="table-chip">{contact.department || "N/A"}</span>
+                  </td>
+                  <td data-label="Designation">
+                    <span className="table-subtle">{contact.designation || "N/A"}</span>
+                  </td>
+                  <td data-label="Status">
+                    <span className={`badge ${String(contact.status || "").toLowerCase()}`}>
+                      {contact.status || "Employee"}
+                    </span>
+                    {!contact.isActive && (
+                      <span className="badge ex-employee">Former Employee</span>
+                    )}
+                  </td>
+                  <td data-label="Joining Date">
+                    <span className="table-subtle">
+                      {contact.joiningDate
+                        ? new Date(contact.joiningDate).toLocaleDateString()
+                        : "N/A"}
+                    </span>
+                  </td>
+                  <td data-label="Details">
+                    <button
+                      className="btn-icon"
+                      onClick={() => openReAuth(contact._id)}
+                      disabled={!canUnlockSensitive}
+                      title={
+                        canUnlockSensitive
+                          ? "Unlock sensitive details"
+                          : "Only HR and super users can unlock details"
+                      }
+                    >
+                      {sensitiveData && sensitiveData._id === contact._id ? (
+                        <FaLockOpen color="#10b981" />
+                      ) : (
+                        <FaLock />
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="empty-state-cell">
+                  No employees found for this search.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Sensitive Data Overlay (Shown after re-auth) */}
       {sensitiveData && (
-          <div className="sensitive-data-panel">
-              <div className="panel-content">
-                  <h3>Sensitive Information: {sensitiveData.name}</h3>
-                  <div className="grid-2">
-                      <p><strong>Salary:</strong> ₹{sensitiveData.salary}</p>
-                      <p><strong>Leaves:</strong> {sensitiveData.leaves}</p>
-                      <p><strong>Contact:</strong> {sensitiveData.contactNumber}</p>
-                      <p><strong>Address:</strong> {sensitiveData.address}</p>
-                  </div>
-                  <h4>Salary Slips</h4>
-                  <div className="slips-list">
-                      {sensitiveData.salarySlips?.map((slip, i) => (
-                          <div key={i} className="slip-item"><FaRegFilePdf /> {slip.filename}</div>
-                      ))}
-                      {(!sensitiveData.salarySlips || sensitiveData.salarySlips.length === 0) && <p>No slips uploaded</p>}
-                  </div>
-                  <button className="btn-cancel" onClick={() => setSensitiveData(null)}>Close</button>
+        <div className="sensitive-data-panel">
+          <div className="panel-content">
+            <div className="panel-head">
+              <div>
+                <p className="panel-kicker">Sensitive Employee Details</p>
+                <h3>{sensitiveData.name}</h3>
+                <p className="panel-subtitle">
+                  {sensitiveData.department || "General"} •{" "}
+                  {sensitiveData.designation || "Employee"}
+                </p>
               </div>
+              <button className="btn-cancel" onClick={() => setSensitiveData(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="grid-2 sensitive-grid">
+              <div className="detail-card">
+                <span className="detail-label">Salary</span>
+                <strong className="detail-value">Rs. {sensitiveData.salary ?? "N/A"}</strong>
+              </div>
+              <div className="detail-card">
+                <span className="detail-label">Leaves</span>
+                <strong className="detail-value">{sensitiveData.leaves ?? 0}</strong>
+              </div>
+              <div className="detail-card">
+                <span className="detail-label">Leaving Date</span>
+                <strong className="detail-value">
+                  {sensitiveData.leavingDate
+                    ? new Date(sensitiveData.leavingDate).toLocaleDateString()
+                    : "Active Employee"}
+                </strong>
+              </div>
+              <div className="detail-card">
+                <span className="detail-label">Contact Number</span>
+                <strong className="detail-value">
+                  {sensitiveData.contactNumber || "N/A"}
+                </strong>
+              </div>
+              <div className="detail-card detail-card-wide">
+                <span className="detail-label">Address</span>
+                <strong className="detail-value detail-text">
+                  {sensitiveData.address || "N/A"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="slips-section">
+              <h4>Salary Slips</h4>
+              <p className="panel-subtitle">
+                Private files visible after password verification.
+              </p>
+            </div>
+            <div className="slips-list">
+              {sensitiveData.salarySlips?.map((slip, i) => (
+                <div key={i} className="slip-item">
+                  <div className="slip-item-copy">
+                    <span>
+                      <FaRegFilePdf /> {slip.filename}
+                    </span>
+                    <small className="table-subtle">
+                      {slip.uploadedAt
+                        ? new Date(slip.uploadedAt).toLocaleDateString()
+                        : "Private file"}
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-secondary-sm"
+                    onClick={() => downloadSalarySlip(sensitiveData._id, i, slip.filename)}
+                  >
+                    Download
+                  </button>
+                </div>
+              ))}
+              {(!sensitiveData.salarySlips || sensitiveData.salarySlips.length === 0) && (
+                <p>No slips uploaded</p>
+              )}
+            </div>
           </div>
+        </div>
       )}
 
-      {/* Re-Auth Modal */}
       {showReAuthModal && (
         <div className="modal">
           <div className="modal-content">
@@ -213,16 +398,28 @@ function Contacts() {
                 onChange={(e) => setReAuthPassword(e.target.value)}
                 required
               />
+              {reAuthError && <p className="error-message">{reAuthError}</p>}
               <div className="modal-buttons">
-                <button type="submit" className="btn-primary">Verify</button>
-                <button type="button" onClick={() => setShowReAuthModal(false)} className="btn-cancel">Cancel</button>
+                <button type="submit" className="btn-primary">
+                  Verify
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReAuthModal(false);
+                    setReAuthError("");
+                    setReAuthPassword("");
+                  }}
+                  className="btn-cancel"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Add Contact Modal */}
       {showModal && (
         <div className="modal">
           <div className="modal-content wide">
@@ -230,34 +427,72 @@ function Contacts() {
             <form onSubmit={handleSubmit} className="grid-form">
               <div className="form-group">
                 <label>Full Name</label>
-                <input type="text" name="name" value={newContact.name} onChange={(e) => setNewContact({...newContact, name: e.target.value})} required />
+                <input
+                  type="text"
+                  name="name"
+                  value={newContact.name}
+                  onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                  required
+                />
               </div>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="email" value={newContact.email} onChange={(e) => setNewContact({...newContact, email: e.target.value})} required />
+                <input
+                  type="email"
+                  name="email"
+                  value={newContact.email}
+                  onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                  required
+                />
               </div>
               <div className="form-group">
-                 <label>Status</label>
-                 <select value={newContact.status} onChange={(e) => setNewContact({...newContact, status: e.target.value})}>
-                    <option>Prospect</option><option>Lead</option><option>Customer</option><option>Employee</option>
-                 </select>
+                <label>Status</label>
+                <select
+                  value={newContact.status}
+                  onChange={(e) => setNewContact({ ...newContact, status: e.target.value })}
+                >
+                  <option>Prospect</option>
+                  <option>Lead</option>
+                  <option>Customer</option>
+                  <option>Employee</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>Department</label>
-                <input type="text" value={newContact.department} onChange={(e) => setNewContact({...newContact, department: e.target.value})} />
+                <input
+                  type="text"
+                  value={newContact.department}
+                  onChange={(e) => setNewContact({ ...newContact, department: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label>Designation</label>
-                <input type="text" value={newContact.designation} onChange={(e) => setNewContact({...newContact, designation: e.target.value})} />
+                <input
+                  type="text"
+                  value={newContact.designation}
+                  onChange={(e) => setNewContact({ ...newContact, designation: e.target.value })}
+                />
               </div>
               <div className="form-group">
                 <label>Joining Date</label>
-                <input type="date" value={newContact.joiningDate} onChange={(e) => setNewContact({...newContact, joiningDate: e.target.value})} />
+                <input
+                  type="date"
+                  value={newContact.joiningDate}
+                  onChange={(e) => setNewContact({ ...newContact, joiningDate: e.target.value })}
+                />
               </div>
-              
+
               <div className="full-width-buttons">
-                <button type="submit" className="btn-primary">Save Profile</button>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel">Cancel</button>
+                <button type="submit" className="btn-primary">
+                  Save Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="btn-cancel"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

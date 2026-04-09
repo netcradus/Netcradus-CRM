@@ -132,6 +132,10 @@ body,
   align-items: stretch;
 }
 
+.lp-mobile-brand {
+  display: none;
+}
+
 .lp-card {
   position: relative;
   overflow: hidden;
@@ -613,6 +617,15 @@ body,
     margin: 18px auto;
   }
 
+  .lp-mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 4px 0;
+    order: 0;
+  }
+
   .lp-brand-panel {
     order: 2;
   }
@@ -627,6 +640,11 @@ body,
     width: calc(100vw - 22px);
     margin: 12px auto;
     gap: 16px;
+  }
+
+  .lp-mobile-brand {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .lp-brand-panel,

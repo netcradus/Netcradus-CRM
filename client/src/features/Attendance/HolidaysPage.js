@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { format, parseISO, isAfter } from "date-fns";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const userRole  = localStorage.getItem("userRole");
 const canManageHolidays = userRole === "super_user";
@@ -31,7 +29,7 @@ export default function HolidaysPage() {
   const fetchHolidays = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${API}/holidays`, { headers: getHeaders() });
+      const { data } = await axios.get(apiUrl("/api/holidays"), { headers: getHeaders() });
       setHolidays(data.data || []);
     } catch(e) {
       setError("Failed to load holidays.");
@@ -54,10 +52,10 @@ export default function HolidaysPage() {
     setSaving(true); setError(""); setSuccess("");
     try {
       if (editId) {
-        await axios.patch(`${API}/holidays/${editId}`, form, { headers: getHeaders() });
+        await axios.patch(apiUrl(`/api/holidays/${editId}`), form, { headers: getHeaders() });
         setSuccess("✅ Holiday updated.");
       } else {
-        await axios.post(`${API}/holidays`, form, { headers: getHeaders() });
+        await axios.post(apiUrl("/api/holidays"), form, { headers: getHeaders() });
         setSuccess("✅ Holiday added.");
       }
       setShowForm(false);
@@ -73,7 +71,7 @@ export default function HolidaysPage() {
     if (!window.confirm("Delete this holiday?")) return;
     setError(""); setSuccess("");
     try {
-      await axios.delete(`${API}/holidays/${id}`, { headers: getHeaders() });
+      await axios.delete(apiUrl(`/api/holidays/${id}`), { headers: getHeaders() });
       setSuccess("✅ Holiday deleted.");
       fetchHolidays();
     } catch(e) {

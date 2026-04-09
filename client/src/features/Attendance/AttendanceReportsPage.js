@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const userRole  = localStorage.getItem("userRole");
 const userId    = localStorage.getItem("userId");
@@ -24,7 +22,7 @@ export default function AttendanceReportsPage() {
   // Fetch user list for HR/Admin select
   useEffect(() => {
     if (!isHRAdmin) return;
-    axios.get(`${API}/auth/users`, { headers: getHeaders() })
+    axios.get(apiUrl("/api/auth/users"), { headers: getHeaders() })
       .then(r => setUsers(r.data.data || r.data || []))
       .catch(() => {});
   }, []);
@@ -36,7 +34,7 @@ export default function AttendanceReportsPage() {
     setLoading(true); setError(""); setReport(null);
     try {
       const { data } = await axios.get(
-        `${API}/attendance/report/monthly?userId=${uid}&month=${month}&year=${year}`,
+        apiUrl(`/api/attendance/report/monthly?userId=${uid}&month=${month}&year=${year}`),
         { headers: getHeaders() }
       );
       setReport(data.data);
@@ -54,7 +52,7 @@ export default function AttendanceReportsPage() {
     try {
       const uid = isHRAdmin ? targetUserId : userId;
       const response = await axios.get(
-        `${API}/attendance/report/export?userId=${uid}&month=${month}&year=${year}`,
+        apiUrl(`/api/attendance/report/export?userId=${uid}&month=${month}&year=${year}`),
         { headers: getHeaders(), responseType: "blob" }
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));

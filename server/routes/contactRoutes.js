@@ -13,8 +13,16 @@ router.post("/", authMiddleware, rbac(["admin"]), contactsController.createConta
 router.get("/:id", authMiddleware, contactsController.getContactById);
 router.put("/:id", authMiddleware, rbac(["admin"]), contactsController.updateContact);
 router.delete("/:id", authMiddleware, rbac(["admin"]), contactsController.deleteContact);
+router.get("/:id/salary-slips", authMiddleware, contactsController.getSalarySlipList);
+router.get("/:id/salary-slips/:index/download", authMiddleware, contactsController.downloadSalarySlip);
 
-// Sensitive Information Access (Requires re-auth and admin/super_user)
-router.get("/:id/sensitive", authMiddleware, rbac(["admin"]), checkReAuthToken, contactsController.getContactSensitive);
+// Sensitive Information Access (Requires re-auth)
+router.get(
+  "/:id/sensitive",
+  authMiddleware,
+  rbac(["admin", "super_user", "hr"]),
+  checkReAuthToken,
+  contactsController.getContactSensitive
+);
 
 module.exports = router;

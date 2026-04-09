@@ -2,10 +2,8 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
 import { Clock, Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 const normalizeRole = (value = "") => String(value).trim().toLowerCase().replace(/\s+/g, "_");
 
@@ -85,10 +83,10 @@ export default function AttendanceWidget() {
   const fetchData = useCallback(async () => {
     try {
       if (isAdminSummary) {
-        const { data } = await axios.get(`${API}/attendance/admin/today-snapshot`, { headers: getHeaders() });
+        const { data } = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers: getHeaders() });
         setSnapshot(data.data);
       } else {
-        const { data } = await axios.get(`${API}/attendance/current-status`, { headers: getHeaders() });
+        const { data } = await axios.get(apiUrl("/api/attendance/current-status"), { headers: getHeaders() });
         setStatusData(data.data);
       }
     } catch (e) {
@@ -112,7 +110,7 @@ export default function AttendanceWidget() {
     setError("");
     setSuccess("");
     try {
-      const { data } = await axios.post(`${API}/attendance/${endpoint}`, body, { headers: getHeaders() });
+      const { data } = await axios.post(apiUrl(`/api/attendance/${endpoint}`), body, { headers: getHeaders() });
       setSuccess(data.message || fallbackMessage);
       await fetchData();
     } catch (e) {

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
 const STATUS_BADGE = {
@@ -39,9 +37,11 @@ export default function LeavePage() {
     setTypesLoading(true);
     try {
       const [myRes, balRes, typesRes] = await Promise.all([
-        axios.get(`${API}/leave/my`, { headers: getHeaders() }),
-        userId ? axios.get(`${API}/leave/balance/${userId}`, { headers: getHeaders() }) : Promise.resolve({ data: { data: [] } }),
-        axios.get(`${API}/leave/types`, { headers: getHeaders() }),
+        axios.get(apiUrl("/api/leave/my"), { headers: getHeaders() }),
+        userId
+          ? axios.get(apiUrl(`/api/leave/balance/${userId}`), { headers: getHeaders() })
+          : Promise.resolve({ data: { data: [] } }),
+        axios.get(apiUrl("/api/leave/types"), { headers: getHeaders() }),
       ]);
       setMyLeaves(myRes.data.data?.applications || []);
       setBalances(balRes.data.data || []);
@@ -62,7 +62,7 @@ export default function LeavePage() {
       );
 
       if (canReviewLeaves) {
-        const allRes = await axios.get(`${API}/leave/applications`, { headers: getHeaders() });
+        const allRes = await axios.get(apiUrl("/api/leave/applications"), { headers: getHeaders() });
         setAllLeaves(allRes.data.data || []);
       }
     } catch (e) {
@@ -84,7 +84,7 @@ export default function LeavePage() {
       return;
     }
     try {
-      await axios.post(`${API}/leave/apply`, {
+      await axios.post(apiUrl("/api/leave/apply"), {
         leaveTypeId: form.leaveTypeId,
         from: form.from,
         to: form.to,
@@ -105,7 +105,7 @@ export default function LeavePage() {
   const handleAction = async (id, action) => {
     setError(""); setSuccess("");
     try {
-      await axios.patch(`${API}/leave/${id}/${action}`, {}, { headers: getHeaders() });
+      await axios.patch(apiUrl(`/api/leave/${id}/${action}`), {}, { headers: getHeaders() });
       setSuccess(`✅ Leave ${action}d.`);
       fetchAll();
     } catch (e) {

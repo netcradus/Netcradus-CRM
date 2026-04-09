@@ -32,7 +32,9 @@ function Login() {
   const navigate = useNavigate();
 
   const acisLink =
-    process.env.REACT_APP_ACIS_LINK || "https://acis.netcradus.com/";
+    process.env.REACT_APP_EXPLORE_ACIS_LINK ||
+    process.env.REACT_APP_ACIS_LINK ||
+    "https://acis.netcradus.com/";
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -84,6 +86,7 @@ function Login() {
       localStorage.setItem("userId", user.id);
       localStorage.setItem("userRole", user.role);
       localStorage.setItem("userName", user.name);
+      localStorage.setItem("userEmail", user.email || form.email);
 
       if (passwordExpiryWarning) {
         localStorage.setItem("passwordExpiryWarning", "true");
@@ -185,6 +188,7 @@ function Login() {
         localStorage.setItem("userId", response.data.user.id);
         localStorage.setItem("userRole", response.data.user.role);
         localStorage.setItem("userName", response.data.user.name);
+        localStorage.setItem("userEmail", response.data.user.email || form.email);
         setSecurityAction(null);
         navigate("/welcome");
       }
@@ -245,6 +249,17 @@ function Login() {
       </div>
 
       <div className="lp-shell">
+        <div className="lp-mobile-brand">
+          <div className="lp-logo-row">
+            <img src="/sidebar-logo.jpeg" alt="Netcradus" className="lp-logo-img" />
+            <img src="/netcradus.png" alt="Netcradus" className="lp-logo-text" />
+          </div>
+          <div className="lp-secure-mark">
+            <ShieldCheck size={14} />
+            <span>CRM Workspace</span>
+          </div>
+        </div>
+
         <section className="lp-brand-panel">
           <div>
             <div className="lp-brand-top">
