@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaUserShield } from "react-icons/fa";
 import {
   BarChart,
@@ -34,10 +34,6 @@ const formatRoleLabel = (role = "general") =>
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const previewRef = useRef(null);
-  const [search, setSearch] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const userName = localStorage.getItem("userName") || "User";
   const userRole = localStorage.getItem("userRole") || "admin";
@@ -60,27 +56,7 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, [token]);
 
-  useEffect(() => {
-    if (previewRef.current) {
-      previewRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  }, [selectedRole, selectedUser]);
-
-  const users = useMemo(
-    () =>
-      (attendanceSnapshot?.employees || []).map((employee) => ({
-        _id: employee.userId,
-        name: employee.name || "Unknown User",
-        email: employee.email || "",
-        role: employee.role || "",
-      })),
-    [attendanceSnapshot]
-  );
-
-  const totalUsers = users.length;
+  const totalUsers = attendanceSnapshot?.employees?.length || 0;
   const trackedEmployees = attendanceSnapshot?.employees?.length || 0;
 
   const liveAttendanceChartData = useMemo(() => {
@@ -115,50 +91,6 @@ const AdminDashboard = () => {
     (attendanceSnapshot?.absentCount || 0) <= Math.max(1, Math.floor(trackedEmployees * 0.2))
       ? "Good"
       : "Needs Review";
-
-  const handleRoleChange = (e) => {
-    const role = e.target.value;
-    setSelectedRole(role);
-    setSelectedUser(null);
-  };
-
-  const handleSearch = () => {
-    const searchValue = search.toLowerCase().trim();
-    if (!searchValue) return;
-
-    const foundUser = users.find(
-      (user) =>
-        user.name?.toLowerCase().includes(searchValue) ||
-        user.email?.toLowerCase().includes(searchValue) ||
-        user.role?.toLowerCase().includes(searchValue)
-    );
-
-    if (foundUser) {
-      setSelectedUser(foundUser);
-      setSelectedRole(foundUser.role);
-    } else {
-      alert("User not found");
-    }
-  };
-
-  const renderSelectedDashboard = () => {
-    const role = selectedUser ? selectedUser.role : selectedRole;
-
-    switch (role) {
-      case "sales":
-        return <SalesDashboard preview={!selectedUser} />;
-      case "support":
-        return <SupportDashboard preview={!selectedUser} />;
-      case "hr":
-        return <HRDashboard preview={!selectedUser} />;
-      case "it":
-        return <TechDashboard preview={!selectedUser} />;
-      case "digital_media":
-        return <DigitalMediaDashboard preview={!selectedUser} />;
-      default:
-        return <p>No dashboard found</p>;
-    }
-  };
 
   return (
     <div className="admin-dashboard">
@@ -262,29 +194,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      <div className="admin-controls glass">
-        <input
-          type="text"
-          className="admin-search"
-          placeholder="Search user..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <button onClick={handleSearch} className="btn-primary">
-          Search
-        </button>
-
-        <select className="admin-select" onChange={handleRoleChange}>
-          <option value="">Select Role</option>
-          <option value="sales">Sales</option>
-          <option value="support">Support</option>
-          <option value="hr">HR</option>
-          <option value="it">IT</option>
-          <option value="digital_media">Digital Media</option>
-        </select>
-      </div>
-
       <div className="admin-grid">
         <div className="admin-charts glass netcradus-panel">
           <div className="card-header">
@@ -381,11 +290,6 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {selectedRole && (
-        <div ref={previewRef} className="role-dashboard-preview">
-          {renderSelectedDashboard()}
-        </div>
-      )}
     </div>
   );
 };
