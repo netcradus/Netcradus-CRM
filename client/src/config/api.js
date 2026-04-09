@@ -1,4 +1,9 @@
-const API_URL = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
+const RAW_API_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  process.env.REACT_APP_API_URL ||
+  "";
+
+const API_URL = RAW_API_URL.replace(/\/+$/, "");
 
 const apiUrl = (path = "") => {
   if (!path) return API_URL;

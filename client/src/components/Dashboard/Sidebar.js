@@ -38,7 +38,7 @@ import {
   FileBarChart2,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
 
@@ -95,9 +95,9 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
-        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
+        // { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
@@ -120,8 +120,8 @@ const roleMenus = {
       label: "My CRM",
       icon: <Layers3 size={18} />,
       children: [
-        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        // { label: "Leads", path: "/leads", icon: <Users size={16} /> },
+        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
@@ -145,7 +145,7 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
@@ -171,7 +171,7 @@ const roleMenus = {
       label: "Support Workspace",
       icon: <Layers3 size={18} />,
       children: [
-        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         // { label: "Calls", path: "/calls", icon: <Phone size={16} /> },
         { label: "Cases", path: "/cases", icon: <Handshake size={16} /> },
@@ -204,6 +204,8 @@ const roleMenus = {
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
+            { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+
   ],
 
   it: [
@@ -348,7 +350,7 @@ function Sidebar() {
     const role = localStorage.getItem("userRole");
     if (!["super_user", "admin", "hr"].includes(role)) return;
     try {
-      const { data } = await axios.get(`${API_URL}/attendance/admin/pending-actions`, {
+      const { data } = await axios.get(apiUrl("/api/attendance/admin/pending-actions"), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       const count = (data.data?.pendingLeaves?.length || 0) + (data.data?.pendingRegularizations?.length || 0);
@@ -383,6 +385,7 @@ function Sidebar() {
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
     localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
     localStorage.removeItem("passwordExpiryWarning");
     navigate("/login");
   };

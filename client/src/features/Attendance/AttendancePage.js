@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
 import { Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 
 function getAuthHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -69,7 +67,7 @@ export default function AttendancePage() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API}/attendance/current-status`, { headers: getAuthHeaders() });
+      const { data } = await axios.get(apiUrl("/api/attendance/current-status"), { headers: getAuthHeaders() });
       setStatusData(data.data);
     } catch (e) {
       setStatusData(null);
@@ -78,7 +76,7 @@ export default function AttendancePage() {
 
   const fetchRecords = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API}/attendance/my?page=${page}&limit=${LIMIT}`, { headers: getAuthHeaders() });
+      const { data } = await axios.get(apiUrl(`/api/attendance/my?page=${page}&limit=${LIMIT}`), { headers: getAuthHeaders() });
       setRecords(data.data || []);
     } catch (e) {
       setRecords([]);
@@ -102,7 +100,7 @@ export default function AttendancePage() {
     setError("");
     setSuccess("");
     try {
-      const { data } = await axios.post(`${API}/attendance/${type}`, body, { headers: getAuthHeaders() });
+      const { data } = await axios.post(apiUrl(`/api/attendance/${type}`), body, { headers: getAuthHeaders() });
       setSuccess(data.message || "Action completed.");
       if (type === "punch-out") {
         setPunchOutSummary(data.data || null);
@@ -122,7 +120,7 @@ export default function AttendancePage() {
     setError("");
     setSuccess("");
     try {
-      await axios.post(`${API}/attendance/regularize`, regForm, { headers: getAuthHeaders() });
+      await axios.post(apiUrl("/api/attendance/regularize"), regForm, { headers: getAuthHeaders() });
       setSuccess("Regularization request submitted.");
       setShowRegForm(false);
       setRegForm({ date: "", punchIn: "", punchOut: "", reason: "" });

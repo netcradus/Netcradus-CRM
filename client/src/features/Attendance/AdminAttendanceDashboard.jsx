@@ -10,10 +10,8 @@ import {
   Zap, 
   Search
 } from "lucide-react";
-import { API_URL } from "../../config/api";
+import { apiUrl } from "../../config/api";
 import "./Attendance.css";
-
-const API = API_URL;
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
 const STATUS_BADGE = {
@@ -130,8 +128,8 @@ export default function AdminAttendanceDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const [snapRes, pendRes] = await Promise.all([
-        axios.get(`${API}/attendance/admin/today-snapshot`, { headers: getHeaders() }),
-        axios.get(`${API}/attendance/admin/pending-actions`, { headers: getHeaders() })
+        axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers: getHeaders() }),
+        axios.get(apiUrl("/api/attendance/admin/pending-actions"), { headers: getHeaders() })
       ]);
       setSnapshot(snapRes.data.data);
       setPending(pendRes.data.data);
@@ -152,8 +150,8 @@ export default function AdminAttendanceDashboard() {
     setProcessingId(id);
     try {
       const endpoint = type === 'leave' 
-        ? `${API}/leave/${id}/${action}`
-        : `${API}/attendance/regularize/${id}/${action}`;
+        ? apiUrl(`/api/leave/${id}/${action}`)
+        : apiUrl(`/api/attendance/regularize/${id}/${action}`);
       
       await axios.patch(endpoint, { reviewNote: note }, { headers: getHeaders() });
       
