@@ -38,6 +38,7 @@ import {
   FileBarChart2,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { API_URL } from "../../config/api";
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
 
@@ -348,7 +349,7 @@ function Sidebar() {
     const role = localStorage.getItem("userRole");
     if (!["super_user", "admin", "hr"].includes(role)) return;
     try {
-      const { data } = await axios.get(`${process.env.REACT_APP_API_URL || "http://localhost:5000/api"}/attendance/admin/pending-actions`, {
+      const { data } = await axios.get(`${API_URL}/attendance/admin/pending-actions`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       const count = (data.data?.pendingLeaves?.length || 0) + (data.data?.pendingRegularizations?.length || 0);

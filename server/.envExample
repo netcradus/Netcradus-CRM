@@ -1,7 +1,7 @@
 PORT=
 MONGO_URI=
 JWT_SECRET=
-CLIENT_ORIGIN=http://localhost:3000
+CLIENT_ORIGIN=
 
 # Storage
 STORAGE_PROVIDER=drive   # or 'dropbox'

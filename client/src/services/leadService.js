@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { apiUrl } from "../config/api";
 
-const API_URL = apiUrl("/api/leads");
+const API_URL = apiUrl("/leads");
 
 const getToken = () => localStorage.getItem("token");
 
