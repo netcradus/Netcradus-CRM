@@ -47,6 +47,22 @@ const userSchema = new mongoose.Schema({
   accountLockedUntil: {
     type: Date
   },
+  isDisabled: {
+    type: Boolean,
+    default: false
+  },
+  disabledAt: {
+    type: Date
+  },
+  disabledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+  disabledReason: {
+    type: String,
+    trim: true,
+    default: ""
+  },
 
   failedLoginAttempts: {
     type: Number,

@@ -47,7 +47,18 @@ const roleMenus = {
   super_user: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
+            { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
+
+
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Finance",
+      icon: <Receipt size={18} />,
+      children: [
+        { label: "Expenses", path: "/expenses", icon: <Receipt size={16} /> },
+        { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
+      ],
+    },
     {
       label: "CRM",
       icon: <Layers3 size={18} />,
@@ -76,6 +87,7 @@ const roleMenus = {
         { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+        { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
       ],
     },
     {
@@ -89,7 +101,16 @@ const roleMenus = {
 
   admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Finance",
+      icon: <Receipt size={18} />,
+      children: [
+        { label: "Expenses", path: "/expenses", icon: <Receipt size={16} /> },
+        { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
+      ],
+    },
     {
       label: "CRM",
       icon: <Layers3 size={18} />,
@@ -115,6 +136,7 @@ const roleMenus = {
 
   management: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "My CRM",
@@ -139,6 +161,7 @@ const roleMenus = {
 
   sales: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Sales Workspace",
@@ -166,6 +189,7 @@ const roleMenus = {
 
   support: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Support Workspace",
@@ -192,10 +216,13 @@ const roleMenus = {
   hr: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    
     {
       label: "HR Workspace",
       icon: <Clock size={18} />,
       children: [
+        { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
+        { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
         { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
@@ -210,6 +237,7 @@ const roleMenus = {
 
   it: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "IT Workspace",
@@ -234,6 +262,7 @@ const roleMenus = {
 
   digital_media: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Media Workspace",

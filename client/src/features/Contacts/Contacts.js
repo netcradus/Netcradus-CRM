@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import "./Contacts.css";
 import { apiUrl } from "../../config/api";
 import { FaLock, FaLockOpen, FaPhone, FaRegFilePdf } from "react-icons/fa";
@@ -201,6 +202,11 @@ function Contacts() {
     }
   };
 
+  const closeSensitiveModal = () => {
+    setSensitiveData(null);
+    setSelectedContactId(null);
+  };
+
   return (
     <div className="contacts-container">
       <div className="contacts-header-flex">
@@ -301,9 +307,10 @@ function Contacts() {
         </table>
       </div>
 
-      {sensitiveData && (
-        <div className="sensitive-data-panel">
-          <div className="panel-content">
+      {sensitiveData &&
+        createPortal(
+        <div className="sensitive-data-panel" onClick={closeSensitiveModal}>
+          <div className="panel-content" onClick={(event) => event.stopPropagation()}>
             <div className="panel-head">
               <div>
                 <p className="panel-kicker">Sensitive Employee Details</p>
@@ -313,7 +320,7 @@ function Contacts() {
                   {sensitiveData.designation || "Employee"}
                 </p>
               </div>
-              <button className="btn-cancel" onClick={() => setSensitiveData(null)}>
+              <button className="btn-cancel" onClick={closeSensitiveModal}>
                 Close
               </button>
             </div>
@@ -325,7 +332,11 @@ function Contacts() {
               </div>
               <div className="detail-card">
                 <span className="detail-label">Leaves</span>
-                <strong className="detail-value">{sensitiveData.leaves ?? 0}</strong>
+                <strong className="detail-value">
+                  {sensitiveData.leaveToday?.isOnLeave
+                    ? `${sensitiveData.leaveToday.leaveType} Today`
+                    : sensitiveData.leaves ?? 0}
+                </strong>
               </div>
               <div className="detail-card">
                 <span className="detail-label">Leaving Date</span>
@@ -382,47 +393,50 @@ function Contacts() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showReAuthModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Identity Verification Required</h3>
-            <p>Please enter your password to unlock sensitive fields.</p>
-            <form onSubmit={handleReAuth}>
-              <input
-                type="password"
-                placeholder="Enter password"
-                value={reAuthPassword}
-                onChange={(e) => setReAuthPassword(e.target.value)}
-                required
-              />
-              {reAuthError && <p className="error-message">{reAuthError}</p>}
-              <div className="modal-buttons">
-                <button type="submit" className="btn-primary">
-                  Verify
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowReAuthModal(false);
-                    setReAuthError("");
-                    setReAuthPassword("");
-                  }}
-                  className="btn-cancel"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showReAuthModal &&
+        createPortal(
+          <div className="contacts-modal-overlay">
+            <div className="contacts-modal-card">
+              <h3>Identity Verification Required</h3>
+              <p>Please enter your password to unlock sensitive fields.</p>
+              <form onSubmit={handleReAuth}>
+                <input
+                  type="password"
+                  placeholder="Enter password"
+                  value={reAuthPassword}
+                  onChange={(e) => setReAuthPassword(e.target.value)}
+                  required
+                />
+                {reAuthError && <p className="error-message">{reAuthError}</p>}
+                <div className="modal-buttons">
+                  <button type="submit" className="btn-primary">
+                    Verify
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowReAuthModal(false);
+                      setReAuthError("");
+                      setReAuthPassword("");
+                    }}
+                    className="btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {showModal && (
-        <div className="modal">
-          <div className="modal-content wide">
+        <div className="contacts-modal-overlay">
+          <div className="contacts-modal-card contacts-modal-card-wide">
             <h3>Add New Employee / Contact</h3>
             <form onSubmit={handleSubmit} className="grid-form">
               <div className="form-group">

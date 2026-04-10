@@ -52,6 +52,10 @@ import HolidaysPage from "./features/Attendance/HolidaysPage";
 import AttendanceReportsPage from "./features/Attendance/AttendanceReportsPage";
 import AdminAttendanceDashboard from "./features/Attendance/AdminAttendanceDashboard";
 import TicketsPage from "./features/Tickets/TicketsPage";
+import ExpensesPage from "./features/Expenses/ExpensesPage";
+import EmployeeProfilesPage from "./features/EmployeeProfiles/EmployeeProfilesPage";
+import MyProfilePage from "./features/MyProfile/MyProfilePage";
+import InterviewsPage from "./features/Interviews/InterviewsPage";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -107,7 +111,33 @@ function App() {
             }
           />
 
+          <Route
+            path="/expenses"
+            element={
+              <RoleRoute roles={["super_user", "admin"]}>
+                <ExpensesPage />
+              </RoleRoute>
+            }
+          />
+
           <Route path="/tickets" element={<TicketsPage />} />
+          <Route path="/my-profile" element={<MyProfilePage />} />
+          <Route
+            path="/employee-profiles"
+            element={
+              <RoleRoute roles={["super_user", "hr"]}>
+                <EmployeeProfilesPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/interviews"
+            element={
+              <RoleRoute roles={["super_user", "hr"]}>
+                <InterviewsPage />
+              </RoleRoute>
+            }
+          />
 
           {/* ---- All Other Modules ---- */}
           <Route path="/leads" element={<Leads />} />
@@ -133,7 +163,14 @@ function App() {
           <Route path="/purchase-orders" element={<PurchaseOrders />} />
           <Route path="/visits" element={<Visits />} />
           <Route path="/solutions" element={<Solutions />} />
-          <Route path="/invoices" element={<Invoices />} />
+          <Route
+            path="/invoices"
+            element={
+              <RoleRoute roles={["super_user", "admin"]}>
+                <Invoices />
+              </RoleRoute>
+            }
+          />
           <Route path="/sales-inbox" element={<SalesInbox />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/price-books" element={<PriceBooks />} />

@@ -1,12 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Search,
   CircleUserRound,
-  Users,
-  BriefcaseBusiness,
-  ArrowRightLeft,
-  PlaneTakeoff,
-  ArrowRight,
   Clock3,
 } from "lucide-react";
 import {
@@ -21,6 +15,8 @@ import {
   Cell,
   Area,
   AreaChart,
+  BarChart,
+  Bar,
 } from "recharts";
 import "./HRDashboard.css";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
@@ -29,6 +25,11 @@ import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 
 const DEPARTMENT_COLORS = ["#ff8a00", "#ff5f3d", "#ff2d8f", "#ffb347", "#ff6b57", "#c084fc"];
+const LEAVE_STATUS_COLORS = {
+  approved: "#ff8a00",
+  pending: "#60a5fa",
+  rejected: "#ff5f3d",
+};
 
 const formatRoleLabel = (value = "") =>
   String(value)
@@ -37,31 +38,16 @@ const formatRoleLabel = (value = "") =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
-const formatShortDate = (value) => {
-  if (!value) return "--";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "--";
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-};
-
-const formatDateRange = (fromDate, toDate) => {
-  if (!fromDate || !toDate) return "--";
-  return `${formatShortDate(fromDate)} - ${formatShortDate(toDate)}`;
-};
-
-const getInitials = (name = "NA") =>
-  name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || "")
-    .join("");
-
 const HRDashboard = ({ preview }) => {
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("Today snapshot");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const [leaveApplications, setLeaveApplications] = useState([]);
+  const [expenseSummary, setExpenseSummary] = useState({
+    totalSpend: 0,
+    totalEntries: 0,
+    categoryBreakdown: [],
+    monthlyTrend: [],
+  });
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName") || "User";
@@ -71,16 +57,31 @@ const HRDashboard = ({ preview }) => {
     const fetchDashboardData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [attendanceRes, leaveRes] = await Promise.all([
+        const [attendanceRes, leaveRes, expenseSummaryRes] = await Promise.all([
           axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers }),
           axios.get(apiUrl("/api/leave/applications"), { headers }),
+          axios.get(apiUrl("/api/expenses/dashboard-summary"), { headers }),
         ]);
 
         setAttendanceSnapshot(attendanceRes.data.data);
         setLeaveApplications(leaveRes.data.data || []);
+        setExpenseSummary(
+          expenseSummaryRes.data || {
+            totalSpend: 0,
+            totalEntries: 0,
+            categoryBreakdown: [],
+            monthlyTrend: [],
+          }
+        );
       } catch (err) {
         setAttendanceSnapshot(null);
         setLeaveApplications([]);
+        setExpenseSummary({
+          totalSpend: 0,
+          totalEntries: 0,
+          categoryBreakdown: [],
+          monthlyTrend: [],
+        });
       }
     };
 
@@ -117,60 +118,58 @@ const HRDashboard = ({ preview }) => {
     }));
   }, [attendanceSnapshot]);
 
-  const pendingLeaves = useMemo(
-    () => leaveApplications.filter((application) => application.status === "pending"),
-    [leaveApplications]
-  );
-
-  const filteredLeaveRequests = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    const sortedItems = [...leaveApplications].sort(
-      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-    );
-
-    if (!query) {
-      return sortedItems.slice(0, 6);
-    }
-
-    return sortedItems
-      .filter((application) => {
-        const values = [
-          application.userId?.name,
-          application.userId?.department,
-          application.leaveTypeId?.name,
-          application.status,
-        ];
-
-        return values.some((value) => String(value || "").toLowerCase().includes(query));
-      })
-      .slice(0, 6);
-  }, [leaveApplications, searchTerm]);
-
-  const onLeaveEmployees = useMemo(
+  const departmentStrengthData = useMemo(
     () =>
-      (attendanceSnapshot?.employees || [])
-        .filter((employee) => employee.status === "on_leave")
-        .slice(0, 5),
-    [attendanceSnapshot]
-  );
-
-  const departmentWatchlist = useMemo(
-    () => [...departmentData].sort((a, b) => b.value - a.value).slice(0, 4),
+      departmentData
+        .map((department) => ({
+          name: department.name,
+          total: department.value,
+          fill: department.color,
+        }))
+        .sort((a, b) => b.total - a.total),
     [departmentData]
   );
 
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "approved":
-        return "status-approved";
-      case "pending":
-        return "status-pending";
-      case "rejected":
-        return "status-rejected";
-      default:
-        return "";
-    }
-  };
+  const leaveStatusData = useMemo(() => {
+    const groupedStatus = leaveApplications.reduce((acc, application) => {
+      const status = String(application.status || "pending").toLowerCase();
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(groupedStatus).map(([name, value]) => ({
+      name: formatRoleLabel(name),
+      value,
+      color: LEAVE_STATUS_COLORS[name] || "#c084fc",
+    }));
+  }, [leaveApplications]);
+
+  const expenseCategoryData = useMemo(
+    () =>
+      (expenseSummary.categoryBreakdown || []).slice(0, 5).map((item, index) => ({
+        name: item.name,
+        totalAmount: Math.round(item.totalAmount || 0),
+        entryCount: item.entryCount || 0,
+        fill: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+      })),
+    [expenseSummary]
+  );
+
+  const expenseTrendData = useMemo(
+    () =>
+      (expenseSummary.monthlyTrend || []).slice(-6).map((item) => ({
+        month: item.month,
+        totalAmount: Math.round(item.totalAmount || 0),
+      })),
+    [expenseSummary]
+  );
+
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
 
   return (
     <div className="hr-dashboard">
@@ -207,16 +206,6 @@ const HRDashboard = ({ preview }) => {
               year: "numeric",
             })}
           </span>
-          <div className="search-box glass-card">
-            <Search size={16} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search employee, leave, role..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
           <div className="user-profile glass-card">
             <CircleUserRound size={26} />
           </div>
@@ -438,109 +427,189 @@ const HRDashboard = ({ preview }) => {
         </div>
       </div>
 
+      <div className="charts-section charts-section-secondary">
+        <div className="chart-card net-panel">
+          <div className="chart-header">
+            <div>
+              <h3>Department Strength</h3>
+              <p className="chart-copy">Live employee count by department.</p>
+            </div>
+            <span className="mini-chip">Headcount</span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart
+              data={departmentStrengthData}
+              layout="vertical"
+              margin={{ top: 10, right: 16, left: 12, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" horizontal={false} />
+              <XAxis type="number" stroke="#b7b7b7" allowDecimals={false} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                stroke="#b7b7b7"
+                width={88}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip
+                cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                formatter={(value) => [value, "Employees"]}
+                contentStyle={{
+                  background: "#111116",
+                  border: "1px solid rgba(255, 138, 0, 0.18)",
+                  borderRadius: "12px",
+                  color: "#fff",
+                }}
+              />
+              <Bar dataKey="total" radius={[0, 10, 10, 0]}>
+                {departmentStrengthData.map((entry, index) => (
+                  <Cell key={`dept-strength-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card net-panel">
+          <div className="chart-header">
+            <div>
+              <h3>Expense by Category</h3>
+              <p className="chart-copy">Live spend summary from saved expense entries.</p>
+            </div>
+            <span className="mini-chip">{expenseSummary.totalEntries || 0} entries</span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart
+              data={expenseCategoryData}
+              layout="vertical"
+              margin={{ top: 10, right: 16, left: 12, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" horizontal={false} />
+              <XAxis type="number" stroke="#b7b7b7" tickFormatter={(value) => `Rs ${value}`} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                stroke="#b7b7b7"
+                width={72}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip
+                cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                formatter={(value) => [formatCurrency(value), "Spend"]}
+                contentStyle={{
+                  background: "#111116",
+                  border: "1px solid rgba(255, 138, 0, 0.18)",
+                  borderRadius: "12px",
+                  color: "#fff",
+                }}
+              />
+              <Bar dataKey="totalAmount" radius={[0, 10, 10, 0]}>
+                {expenseCategoryData.map((entry, index) => (
+                  <Cell key={`expense-category-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="bottom-section">
         <div className="table-card net-panel">
-          <div className="section-header-row">
-            <h3 className="table-title">Recent Leave Requests</h3>
-            <button className="section-action-btn" onClick={() => navigate("/leave")}>
-              Manage Requests
+          <div className="chart-header">
+            <div>
+              <h3 className="table-title">Expense Trend</h3>
+              <p className="chart-copy">Monthly expense movement from your live expense records.</p>
+            </div>
+            <button className="section-action-btn" onClick={() => navigate("/expenses")}>
+              Open Expenses
             </button>
           </div>
 
-          <div className="table-wrapper">
-            <table className="hr-table">
-              <thead>
-                <tr>
-                  <th>Photo</th>
-                  <th>Name</th>
-                  <th>Dept</th>
-                  <th>Request Date</th>
-                  <th>Leave Type</th>
-                  {/* <th>Dates</th> */}
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLeaveRequests.map((request) => (
-                  <tr key={request._id}>
-                    <td data-label="Photo">
-                      <div className="photo-circle">{getInitials(request.userId?.name)}</div>
-                    </td>
-                    <td data-label="Name">{request.userId?.name || "Unknown User"}</td>
-                    <td data-label="Dept">{request.userId?.department || "General"}</td>
-                    <td data-label="Request Date">{formatShortDate(request.createdAt)}</td>
-                    <td data-label="Leave Type">{request.leaveTypeId?.name || request.leaveType || "--"}</td>
-                    {/* <td data-label="Dates">{formatDateRange(request.fromDate, request.toDate)}</td> */}
-                    <td data-label="Status">
-                      <span className={`status-badge ${getStatusClass(request.status)}`}>
-                        {formatRoleLabel(request.status || "pending")}
-                      </span>
-                    </td>
-                    <td data-label="Actions">
-                      <button className="action-btn" onClick={() => navigate("/leave")}>
-                        View <ArrowRight size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {!filteredLeaveRequests.length && (
-                  <tr>
-                    <td data-label="Empty" colSpan="8" style={{ textAlign: "center", padding: "24px" }}>
-                      No live leave requests found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <ResponsiveContainer width="100%" height={340}>
+            <AreaChart data={expenseTrendData}>
+              <defs>
+                <linearGradient id="expenseTrendGradientLarge" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.42} />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="month" stroke="#b7b7b7" tick={{ fontSize: 12 }} />
+              <YAxis stroke="#b7b7b7" tickFormatter={(value) => `Rs ${value}`} tick={{ fontSize: 12 }} />
+              <Tooltip
+                formatter={(value) => [formatCurrency(value), "Spend"]}
+                contentStyle={{
+                  background: "#111116",
+                  border: "1px solid rgba(255, 138, 0, 0.18)",
+                  borderRadius: "12px",
+                  color: "#fff",
+                }}
+              />
+              <Area type="monotone" dataKey="totalAmount" stroke="#60a5fa" fill="url(#expenseTrendGradientLarge)" />
+              <Line
+                type="monotone"
+                dataKey="totalAmount"
+                stroke="#dbeafe"
+                strokeWidth={3}
+                dot={{ fill: "#dbeafe", r: 4 }}
+                activeDot={{ r: 6, fill: "#ffffff" }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="sidebar-cards">
           <div className="sidebar-card net-panel">
-            <h3 className="sidebar-title">Employees On Leave Today</h3>
-            <div className="anniversary-list">
-              <div className="anniversary-header">
-                <span>Names</span>
-                <span>Status</span>
-                <span>Depts</span>
+            <div className="chart-header chart-header-inline">
+              <div>
+                <h3 className="sidebar-title">Leave Status Mix</h3>
+                <p className="chart-copy">Approved, pending and rejected requests.</p>
               </div>
-              {onLeaveEmployees.map((person, index) => (
-                <div key={index} className="anniversary-item">
-                  <span>{person.name}</span>
-                  <span>On Leave</span>
-                  <span>{person.department || "General"}</span>
-                </div>
-              ))}
-              {!onLeaveEmployees.length && (
-                <div className="anniversary-item">
-                  <span>No one</span>
-                  <span>Clear</span>
-                  <span>Today</span>
-                </div>
+              <span className="mini-chip">{leaveApplications.length} total</span>
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={leaveStatusData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={48}
+                  outerRadius={78}
+                  paddingAngle={4}
+                >
+                  {leaveStatusData.map((entry, index) => (
+                    <Cell key={`leave-status-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "#111116",
+                    border: "1px solid rgba(255, 138, 0, 0.18)",
+                    borderRadius: "12px",
+                    color: "#fff",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pie-legend compact-legend">
+              {leaveStatusData.length ? (
+                leaveStatusData.map((item) => (
+                  <div key={item.name} className="legend-item">
+                    <div className="legend-color" style={{ backgroundColor: item.color }} />
+                    <span className="legend-label">{item.name}</span>
+                    <span className="legend-value">{item.value}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="legend-empty">No leave applications yet.</div>
               )}
             </div>
           </div>
 
-          <div className="sidebar-card net-panel">
-            <h3 className="sidebar-title">Department Watchlist</h3>
-            <div className="quick-tasks">
-              {departmentWatchlist.map((task, index) => (
-                <div key={index} className="task-item">
-                  <span className="task-icon">{task.value}</span>
-                  <span className="task-text">{task.name}</span>
-                  <span className="task-arrow">tracked</span>
-                </div>
-              ))}
-              {!departmentWatchlist.length && (
-                <div className="task-item">
-                  <span className="task-icon">0</span>
-                  <span className="task-text">No department data yet</span>
-                  <span className="task-arrow">live</span>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
