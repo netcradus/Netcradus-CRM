@@ -33,7 +33,6 @@ function Login() {
 
   const acisLink =
     process.env.REACT_APP_EXPLORE_ACIS_LINK ||
-    process.env.REACT_APP_ACIS_LINK ||
     "https://acis.netcradus.com/";
 
   useEffect(() => {

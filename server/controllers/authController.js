@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Contact = require("../models/Contact");
 const AdminDevice = require("../models/AdminDevice");
 const { UAParser } = require("ua-parser-js");
 const {
@@ -80,6 +81,23 @@ const createUserByAdmin = async (req, res) => {
 
     await user.save();
 
+    await Contact.findOneAndUpdate(
+      { linkedUser: user._id },
+      {
+        $setOnInsert: {
+          linkedUser: user._id,
+          name: user.name,
+          email: user.email,
+          status: "Employee",
+          department: user.department || "General",
+          designation: formatRoleLabel(user.role || "employee"),
+          joiningDate: user.createdAt,
+          isActive: true,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
     res.status(201).json({
       message: "User created successfully",
       user: {
@@ -152,6 +170,12 @@ const login = async (req, res) => {
         }
       }
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (user.isDisabled) {
+      return res.status(403).json({
+        message: "You can't login. Contact the Administrator."
+      });
     }
 
     // 2. Lock & Compliance Check
@@ -396,7 +420,7 @@ const resetPasswordWithOTP = async (req, res) => {
 const getUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("_id userId name email role createdAt");
+      .select("_id userId name email role createdAt isDisabled disabledAt disabledReason");
 
     res.json(users);
   } catch (err) {
@@ -418,6 +442,7 @@ const deleteUserByAdmin = async (req, res) => {
       return res.status(403).json({ message: "Super User accounts cannot be deleted" });
     }
 
+    await Contact.deleteOne({ linkedUser: user._id });
     await user.deleteOne();
 
     res.json({ message: "User deleted successfully" });
@@ -473,12 +498,27 @@ const updateUserByAdmin = async (req, res) => {
       return res.status(403).json({ message: "Cannot update the primary Super User" });
     }
 
+    const previousEmail = user.email;
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase().trim();
     if (role && role !== "super_user") user.role = role.toLowerCase();
     if (department) user.department = department;
 
     await user.save();
+
+    await Contact.findOneAndUpdate(
+      { $or: [{ linkedUser: user._id }, { email: previousEmail }] },
+      {
+        $set: {
+          linkedUser: user._id,
+          name: user.name,
+          email: user.email,
+          department: user.department,
+          designation: formatRoleLabel(user.role || "employee"),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.json({
       message: `User ${user.name} updated successfully`,
@@ -496,6 +536,51 @@ const updateUserByAdmin = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+const toggleUserAccessByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isDisabled, reason } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "super_user") {
+      return res.status(403).json({ message: "Super User accounts cannot be disabled" });
+    }
+
+    user.isDisabled = Boolean(isDisabled);
+    user.disabledAt = user.isDisabled ? new Date() : null;
+    user.disabledBy = user.isDisabled ? req.user._id : null;
+    user.disabledReason = user.isDisabled ? String(reason || "").trim() : "";
+
+    await user.save();
+
+    res.json({
+      message: user.isDisabled
+        ? `${user.name} has been temporarily disabled`
+        : `${user.name} has been re-enabled`,
+      user: {
+        id: user._id,
+        isDisabled: user.isDisabled,
+        disabledAt: user.disabledAt,
+        disabledReason: user.disabledReason,
+      }
+    });
+  } catch (err) {
+    console.error("Toggle User Access Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const formatRoleLabel = (role = "") =>
+  String(role || "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 
 const requestOTP = async (req, res) => {
   try {
@@ -693,6 +778,7 @@ module.exports = {
   deleteUserByAdmin,
   adminChangeUserPassword,
   updateUserByAdmin,
+  toggleUserAccessByAdmin,
   requestOTP,
   verifySecurityOTP,
   verifyPasswordChange,

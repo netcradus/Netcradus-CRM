@@ -77,6 +77,8 @@ app.use("/api/purchase-orders", purchaseOrderRoutes);
 
 const invoiceRoutes = require("./routes/invoiceRoutes");
 app.use("/api/invoices", invoiceRoutes);
+const interviewRoutes = require("./routes/interviewRoutes");
+app.use("/api/interviews", interviewRoutes);
 
 const salesInboxRoutes = require("./routes/salesInboxRoutes");
 app.use("/api/sales-inbox", salesInboxRoutes);

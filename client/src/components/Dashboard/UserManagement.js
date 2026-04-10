@@ -26,27 +26,10 @@ const UserManagement = () => {
 
   const [pwdUserId, setPwdUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [accessReason, setAccessReason] = useState("");
 
   const token = localStorage.getItem("token");
 
-  const EXPENSE_API = apiUrl("/api/expenses");
-  const [expenses, setExpenses] = useState([]);
-  const [editExpenseId, setEditExpenseId] = useState(null);
-  const [editForm, setEditForm] = useState({
-    title: "",
-    amount: "",
-    category: "",
-    date: "",
-  });
-
-  const [expenseForm, setExpenseForm] = useState({
-    title: "",
-    amount: "",
-    category: "Misc",
-    date: "",
-  });
-
-  // Fetch Users
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -62,22 +45,10 @@ const UserManagement = () => {
     }
   }, [token]);
 
-  // Fetch Expenses
-  const fetchExpenses = useCallback(async () => {
-    try {
-      const res = await axios.get(EXPENSE_API);
-      setExpenses(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [EXPENSE_API]);
-
   useEffect(() => {
     fetchUsers();
-    fetchExpenses();
-  }, [fetchUsers, fetchExpenses]);
+  }, [fetchUsers]);
 
-  // Form Change
   const onChange = (e) => {
     setForm((prev) => ({
       ...prev,
@@ -88,36 +59,27 @@ const UserManagement = () => {
     if (success) setSuccess("");
   };
 
-  // Create User
   const onCreateUser = async (e) => {
     e.preventDefault();
 
     try {
-      const res = await axios.post(
-        apiUrl("/api/auth/users"),
-        form,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await axios.post(apiUrl("/api/auth/users"), form, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setSuccess(res.data?.message || "User created successfully");
-
-      // Reset form properly
       setForm({
         name: "",
         email: "",
         password: "",
         role: "sales",
       });
-
       fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create user");
     }
   };
 
-  // Delete User
   const onDeleteUser = async (id) => {
     if (!window.confirm("Delete this user?")) return;
 
@@ -133,7 +95,6 @@ const UserManagement = () => {
     }
   };
 
-  // Update User Info
   const onUpdateUser = async (user, field, value) => {
     try {
       await axios.patch(
@@ -148,7 +109,6 @@ const UserManagement = () => {
     }
   };
 
-  // Change Password
   const onChangePassword = async (id) => {
     if (!newPassword) {
       setError("New password required");
@@ -170,43 +130,26 @@ const UserManagement = () => {
     }
   };
 
-  // Expense Handlers
-  const handleAddExpense = async (e) => {
-    e.preventDefault();
+  const onToggleUserAccess = async (user) => {
+    const nextDisabledState = !user.isDisabled;
+    const reason = nextDisabledState
+      ? (accessReason || window.prompt(`Reason for disabling ${user.name}?`, "Temporarily disabled by Super Admin") || "")
+      : "";
+
     try {
-      await axios.post(EXPENSE_API, expenseForm);
-      fetchExpenses();
-      setExpenseForm({
-        title: "",
-        amount: "",
-        category: "Misc",
-        date: "",
-      });
+      const res = await axios.patch(
+        apiUrl(`/api/auth/users/${user._id}/access`),
+        { isDisabled: nextDisabledState, reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccess(res.data?.message || "User access updated successfully");
+      setAccessReason("");
+      fetchUsers();
     } catch (err) {
-      console.error(err);
+      setError(err.response?.data?.message || "Failed to update access");
     }
   };
-
-  const handleDeleteExpense = async (id) => {
-    if (!window.confirm("Delete this expense?")) return;
-    try {
-      await axios.delete(`${EXPENSE_API}/${id}`);
-      fetchExpenses();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleUpdateExpense = async (id) => {
-    try {
-      await axios.put(`${EXPENSE_API}/${id}`, editForm);
-      setEditExpenseId(null);
-      fetchExpenses();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
 
   return (
     <div className="admin-panel">
@@ -218,8 +161,6 @@ const UserManagement = () => {
       {success && <div className="admin-alert admin-alert-success">{success}</div>}
 
       <div className="admin-grid">
-
-        {/* CREATE USER SECTION */}
         <section className="admin-card">
           <h3>Create New User</h3>
           <p className="admin-warning-note">
@@ -254,11 +195,7 @@ const UserManagement = () => {
               required
             />
 
-            <select
-              name="role"
-              value={form.role}
-              onChange={onChange}
-            >
+            <select name="role" value={form.role} onChange={onChange}>
               <option value="admin">Administrator</option>
               <option value="management">Management</option>
               <option value="sales">Sales</option>
@@ -272,7 +209,6 @@ const UserManagement = () => {
           </form>
         </section>
 
-        {/* USERS TABLE */}
         <section className="admin-card">
           <h3>All Users</h3>
 
@@ -286,6 +222,7 @@ const UserManagement = () => {
                     <th>User ID</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Access</th>
                     <th>Full Name</th>
                     <th>Created</th>
                     <th>Actions</th>
@@ -297,40 +234,44 @@ const UserManagement = () => {
                     users.map((user) => (
                       <tr key={user._id}>
                         <td data-label="User ID">{user.userId || "-"}</td>
-
                         <td data-label="Email">{user.email}</td>
-
                         <td data-label="Role">
                           <span className={`role-badge role-${user.role}`}>
                             {formatRoleLabel(user.role)}
                           </span>
                         </td>
-
+                        <td data-label="Access">
+                          <span className={`role-badge ${user.isDisabled ? "role-management" : "role-sales"}`}>
+                            {user.isDisabled ? "Disabled" : "Active"}
+                          </span>
+                        </td>
                         <td data-label="Full Name">
-                          <input 
+                          <input
                             className="inline-edit-input"
-                            defaultValue={user.name} 
+                            defaultValue={user.name}
                             onBlur={(e) => {
                               if (e.target.value !== user.name) {
-                                onUpdateUser(user, 'name', e.target.value);
+                                onUpdateUser(user, "name", e.target.value);
                               }
                             }}
                           />
                         </td>
-
                         <td data-label="Created">
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString()
-                            : "-"}
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
                         </td>
-
                         <td data-label="Actions">
                           {user.role !== "super_user" && (
-                            <button
-                              className="btn-delete"
-                              onClick={() => onDeleteUser(user._id)}
-                            >
+                            <button className="btn-delete" onClick={() => onDeleteUser(user._id)}>
                               Delete
+                            </button>
+                          )}
+
+                          {user.role !== "super_user" && (
+                            <button
+                              className={user.isDisabled ? "btn-save" : "btn-cancel"}
+                              onClick={() => onToggleUserAccess(user)}
+                            >
+                              {user.isDisabled ? "Enable Login" : "Disable Login"}
                             </button>
                           )}
 
@@ -342,14 +283,9 @@ const UserManagement = () => {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                               />
-
-                              <button
-                                className="btn-save"
-                                onClick={() => onChangePassword(user._id)}
-                              >
+                              <button className="btn-save" onClick={() => onChangePassword(user._id)}>
                                 Save
                               </button>
-
                               <button
                                 className="btn-cancel"
                                 onClick={() => {
@@ -361,10 +297,7 @@ const UserManagement = () => {
                               </button>
                             </>
                           ) : (
-                            <button
-                              className="btn-edit"
-                              onClick={() => setPwdUserId(user._id)}
-                            >
+                            <button className="btn-edit" onClick={() => setPwdUserId(user._id)}>
                               Change Password
                             </button>
                           )}
@@ -373,200 +306,15 @@ const UserManagement = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="admin-muted">
+                      <td colSpan="7" className="admin-muted">
                         No users found.
                       </td>
                     </tr>
                   )}
                 </tbody>
-
               </table>
             </div>
           )}
-        </section>
-
-        {/* ===== CREATE EXPENSE ===== */}
-        <section className="admin-card">
-          <h3>Create Expense</h3>
-
-          <form onSubmit={handleAddExpense} className="admin-form">
-            <input
-              placeholder="Title"
-              value={expenseForm.title}
-              onChange={(e) =>
-                setExpenseForm({ ...expenseForm, title: e.target.value })
-              }
-              required
-            />
-
-            <input
-              type="number"
-              placeholder="Amount"
-              value={expenseForm.amount}
-              onChange={(e) =>
-                setExpenseForm({ ...expenseForm, amount: e.target.value })
-              }
-              required
-            />
-
-            <select
-              value={expenseForm.category}
-              onChange={(e) =>
-                setExpenseForm({ ...expenseForm, category: e.target.value })
-              }
-            >
-              <option>Travel</option>
-              <option>Food</option>
-              <option>Salary</option>
-              <option>Office</option>
-              <option>Misc</option>
-            </select>
-
-            <input
-              type="date"
-              value={expenseForm.date}
-              onChange={(e) =>
-                setExpenseForm({ ...expenseForm, date: e.target.value })
-              }
-              required
-            />
-
-            <button type="submit">Add Expense</button>
-          </form>
-        </section>
-
-        {/* ===== ALL EXPENSES ===== */}
-        <section className="admin-card">
-          <h3>All Expenses</h3>
-
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Amount</th>
-                  <th>Category</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {expenses.map((e) => (
-                  <tr key={e._id}>
-                    {/* TITLE */}
-                    <td data-label="Title">
-                      {editExpenseId === e._id ? (
-                        <input
-                          value={editForm.title}
-                          onChange={(ev) =>
-                            setEditForm({ ...editForm, title: ev.target.value })
-                          }
-                        />
-                      ) : (
-                        e.title
-                      )}
-                    </td>
-
-                    {/* AMOUNT */}
-                    <td data-label="Amount">
-                      {editExpenseId === e._id ? (
-                        <input
-                          type="number"
-                          value={editForm.amount}
-                          onChange={(ev) =>
-                            setEditForm({ ...editForm, amount: ev.target.value })
-                          }
-                        />
-                      ) : (
-                        `₹ ${e.amount}`
-                      )}
-                    </td>
-
-                    {/* CATEGORY */}
-                    <td data-label="Category">
-                      {editExpenseId === e._id ? (
-                        <select
-                          value={editForm.category}
-                          onChange={(ev) =>
-                            setEditForm({ ...editForm, category: ev.target.value })
-                          }
-                        >
-                          <option>Travel</option>
-                          <option>Food</option>
-                          <option>Salary</option>
-                          <option>Office</option>
-                          <option>Misc</option>
-                        </select>
-                      ) : (
-                        e.category
-                      )}
-                    </td>
-
-                    {/* DATE */}
-                    <td data-label="Date">
-                      {editExpenseId === e._id ? (
-                        <input
-                          type="date"
-                          value={editForm.date?.substring(0, 10)}
-                          onChange={(ev) =>
-                            setEditForm({ ...editForm, date: ev.target.value })
-                          }
-                        />
-                      ) : (
-                        new Date(e.date).toLocaleDateString()
-                      )}
-                    </td>
-
-                    {/* ACTIONS */}
-                    <td data-label="Actions">
-                      {editExpenseId === e._id ? (
-                        <>
-                          <button
-                            className="btn-save"
-                            onClick={() => handleUpdateExpense(e._id)}
-                          >
-                            Save
-                          </button>
-
-                          <button
-                            className="btn-cancel"
-                            onClick={() => setEditExpenseId(null)}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="btn-edit"
-                            onClick={() => {
-                              setEditExpenseId(e._id);
-                              setEditForm({
-                                title: e.title,
-                                amount: e.amount,
-                                category: e.category,
-                                date: e.date,
-                              });
-                            }}
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            className="btn-delete"
-                            onClick={() => handleDeleteExpense(e._id)}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </section>
       </div>
     </div>

@@ -14,6 +14,7 @@ const {
     getAdminDevices,
     revokeAdminDevice,
     updateUserByAdmin,
+    toggleUserAccessByAdmin,
     verifyPasswordForReAuth,
     checkReAuthToken,
     verifyAdminDevice
@@ -59,6 +60,7 @@ router.post("/users", authMiddleware, superUserOnly, createUserByAdmin);
 router.delete("/users/:id", authMiddleware, superUserOnly, deleteUserByAdmin);
 router.put("/users/:id/password", authMiddleware, superUserOnly, adminChangeUserPassword);
 router.patch("/users/:id", authMiddleware, superUserOnly, updateUserByAdmin);
+router.patch("/users/:id/access", authMiddleware, superUserOnly, toggleUserAccessByAdmin);
 
 
 module.exports = router;
