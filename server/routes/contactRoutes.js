@@ -9,6 +9,11 @@ const { checkReAuthToken } = require("../controllers/authController");
 
 // Public access (with role hierarchy)
 router.get("/", authMiddleware, contactsController.getContacts);
+router.get("/profiles", authMiddleware, rbac(["super_user", "hr"]), contactsController.listEmployeeProfiles);
+router.get("/profiles/me", authMiddleware, contactsController.getMyProfile);
+router.put("/profiles/me", authMiddleware, contactsController.updateMyProfile);
+router.put("/profiles/:userId", authMiddleware, rbac(["super_user", "hr"]), contactsController.updateEmployeeProfile);
+router.post("/profiles/:userId/salary-slips", authMiddleware, rbac(["super_user", "hr"]), contactsController.generateSalarySlip);
 router.post("/", authMiddleware, rbac(["admin"]), contactsController.createContact);
 router.get("/:id", authMiddleware, contactsController.getContactById);
 router.put("/:id", authMiddleware, rbac(["admin"]), contactsController.updateContact);

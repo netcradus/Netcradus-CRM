@@ -16,6 +16,13 @@ import { apiUrl } from "../../config/api";
 
 const API =apiUrl("/api/deals");
 
+const formatRoleLabel = (value = "") =>
+  value === "admin"
+    ? "Administrator"
+    : String(value)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const SalesDashboard = ({ preview }) => {
   const [deals, setDeals] = useState([]);
   const [search, setSearch] = useState("");
@@ -29,7 +36,7 @@ const SalesDashboard = ({ preview }) => {
     assignedTo: "",
   });
   const userName = localStorage.getItem("userName") || "User";
-  const userRole = localStorage.getItem("userRole") || "Administrator";
+  const userRole = localStorage.getItem("userRole") || "sales";
 
   // 🔥 FETCH DEALS
   const fetchDeals = async () => {
@@ -113,7 +120,7 @@ const SalesDashboard = ({ preview }) => {
           </h1>
 
           <p className="sales-subtitle">
-            Role: <strong>{userRole}</strong>
+            Role: <strong>{formatRoleLabel(userRole)}</strong>
           </p>
 
           <div className="nc-attendance-brief">

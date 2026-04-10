@@ -1,9 +1,12 @@
 const Invoice = require("../models/Invoice");
+const Expense = require("../models/Expense");
+
+const normalizeExpenseTitle = (value = "") => String(value || "").trim().toLowerCase();
 
 // Get all invoices
 exports.getInvoices = async (req, res) => {
   try {
-    const invoices = await Invoice.find();
+    const invoices = await Invoice.find().sort({ createdAt: -1 });
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -14,7 +17,53 @@ exports.getInvoices = async (req, res) => {
 exports.createInvoice = async (req, res) => {
   try {
     const { customer, amount, dueDate, status } = req.body;
-    const invoice = new Invoice({ customer, amount, dueDate, status });
+    const invoice = new Invoice({ customer, amount, dueDate, status, sourceType: "manual" });
+    const savedInvoice = await invoice.save();
+    res.status(201).json(savedInvoice);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+exports.generateInvoiceFromExpense = async (req, res) => {
+  try {
+    const { expenseKey, dueDate, status } = req.body;
+
+    if (!expenseKey || !dueDate) {
+      return res.status(400).json({ message: "expenseKey and dueDate are required" });
+    }
+
+    const normalizedExpenseKey = normalizeExpenseTitle(expenseKey);
+    const expenses = await Expense.find().lean();
+    const matchingExpenses = expenses.filter(
+      (expense) => normalizeExpenseTitle(expense.title) === normalizedExpenseKey
+    );
+
+    if (!matchingExpenses.length) {
+      return res.status(404).json({ message: "Matching expense group not found" });
+    }
+
+    const firstExpense = matchingExpenses[0];
+    const quantity = matchingExpenses.reduce(
+      (sum, expense) => sum + (Number(expense.quantity) || 1),
+      0
+    );
+    const amount = matchingExpenses.reduce(
+      (sum, expense) => sum + ((Number(expense.amount) || 0) * (Number(expense.quantity) || 1)),
+      0
+    );
+
+    const invoice = new Invoice({
+      customer: `Expense Invoice - ${firstExpense.title}`,
+      amount,
+      dueDate,
+      status: status || "Unpaid",
+      sourceType: "expense",
+      sourceKey: normalizedExpenseKey,
+      sourceTitle: firstExpense.title,
+      quantity,
+    });
+
     const savedInvoice = await invoice.save();
     res.status(201).json(savedInvoice);
   } catch (err) {
