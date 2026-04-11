@@ -1,51 +1,51 @@
 const mongoose = require('mongoose');
 
+/**
+ * Document — tracks every file uploaded by a user to their personal Drive folder.
+ * Drive file IDs and raw view links are NEVER sent to the frontend.
+ * All file access goes through /api/documents/view/:id (proxy endpoint).
+ */
 const documentSchema = new mongoose.Schema({
-  entityType: { 
-    type: String, 
-    enum: ['contact', 'deal', 'company', 'general'], 
+  // Ownership
+  ownerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    default: 'general'
-  },
-  entityId: { 
-    type: String,   // String allows 'general' as a placeholder value
     index: true,
-    default: 'general'
   },
-  label: { 
-    type: String, 
-    trim: true, 
-    maxlength: 200 
-  },
-  description: {
+
+  // Folder context
+  folderId: { type: String, required: true },   // Drive folder ID this file lives in
+  folderName: { type: String },                  // human-readable folder name (e.g. "cvs")
+
+  // File metadata
+  originalName: { type: String },               // sanitized original filename
+  safeName: { type: String },                   // slugified name used in Drive
+  mimeType: { type: String },
+  fileSizeBytes: { type: Number, default: 0 },
+  fileSizeMB: { type: Number, default: 0 },
+
+  // Drive references — INTERNAL ONLY, never exposed to frontend
+  driveFileId: { type: String },
+  driveViewLink: { type: String },
+
+  // CRM entity link (optional — for attaching docs to leads, deals, etc.)
+  entityType: {
     type: String,
-    trim: true,
-    maxlength: 500
+    enum: ['user', 'lead', 'deal', 'contact', 'company', 'ticket', null],
+    default: null,
   },
-  originalName: String,
-  safeName: String,
-  mimeType: String,
-  fileSize: Number,
-  storageProvider: { 
-    type: String, 
-    enum: ['drive', 'dropbox'] 
-  },
-  storageFileId: String,
-  viewLink: String,
-  uploadedBy: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
-  },
-  uploadedAt: { 
-    type: Date, 
-    default: Date.now 
-  },
-  deletedAt: Date,
-  isDeleted: { 
-    type: Boolean, 
-    default: false 
-  }
+  entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
+
+  // Soft delete
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date },
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  uploadedAt: { type: Date, default: Date.now },
 });
+
+// Compound index for fast per-user, per-folder queries
+documentSchema.index({ ownerId: 1, folderId: 1, isDeleted: 1 });
 
 module.exports = mongoose.model('Document', documentSchema);

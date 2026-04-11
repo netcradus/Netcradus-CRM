@@ -1,209 +1,470 @@
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
+const UserStorage = require('../models/UserStorage');
+const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const storageService = require('../services/storageService');
-const slugify = require('slugify');
-
-// Only pass entityId to AuditLog when it is a valid ObjectId
-const safeEntityId = (id) =>
-    mongoose.Types.ObjectId.isValid(id) ? id : undefined;
+const driveService = require('../services/driveService');
+const { createNotifications } = require('../services/taskNotificationService');
 
 /**
- * Wraps async functions to catch errors and pass them to Express error handlers
+ * Wraps async route handlers to forward errors to Express error middleware.
  */
-const catchAsync = (fn) => (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
+const catchAsync = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
+/** Strips internal Drive fields before sending a Document to the frontend. */
+const sanitizeDoc = (doc) => {
+  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  delete obj.driveFileId;
+  delete obj.driveViewLink;
+  return obj;
 };
+
+const getEffectiveUserId = (req) => {
+  if (req.user && req.user.role === 'super_user') {
+    return req.query?.userId || req.body?.userId || req.user.id;
+  }
+  return req.user?.id;
+};
+
+// ─── GET /api/documents/storage ──────────────────────────────────────────────
 
 /**
- * Checks if the storage provider is configured.
- * Returns true if configured, false otherwise.
+ * Returns the authenticated user's storage info.
  */
-const isStorageConfigured = () => {
-    const provider = process.env.STORAGE_PROVIDER || 'drive';
-    if (provider === 'drive') {
-        return !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
-    }
-    if (provider === 'dropbox') {
-        return !!process.env.DROPBOX_ACCESS_TOKEN;
-    }
-    return false;
-};
+exports.getMyStorage = catchAsync(async (req, res) => {
+  const effectiveUserId = getEffectiveUserId(req);
+  const storage = await storageService.getUserStorage(effectiveUserId);
+  const usedPercent = storage.quotaMB > 0
+    ? parseFloat(((storage.usedMB / storage.quotaMB) * 100).toFixed(2))
+    : 0;
+  const remainingMB = parseFloat((storage.quotaMB - storage.usedMB).toFixed(4));
 
-// 0. Get ALL Documents (for admin/hr listing page)
-exports.getAllDocuments = catchAsync(async (req, res) => {
-    const documents = await Document.find({ isDeleted: false })
-        .populate('uploadedBy', 'name email')
-        .sort({ uploadedAt: -1 });
-
-    res.status(200).json({
-        success: true,
-        storageConfigured: isStorageConfigured(),
-        data: documents
-    });
+  res.json({
+    success: true,
+    data: {
+      ...storage.toObject(),
+      usedPercent,
+      remainingMB,
+    },
+  });
 });
 
-// 1. Upload Document
-exports.uploadDocument = catchAsync(async (req, res) => {
-    // Check storage config first
-    if (!isStorageConfigured()) {
-        return res.status(503).json({
-            success: false,
-            code: 'STORAGE_NOT_CONFIGURED',
-            message: `Storage provider is not configured. Please set ${
-                (process.env.STORAGE_PROVIDER || 'drive') === 'drive'
-                    ? 'GOOGLE_SERVICE_ACCOUNT_KEY_JSON'
-                    : 'DROPBOX_ACCESS_TOKEN'
-            } in your server .env file.`
-        });
-    }
+// ─── GET /api/documents/files ─────────────────────────────────────────────────
 
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No file uploaded', code: 'NO_FILE' });
-    }
+/**
+ * Returns paginated file list for the authenticated user.
+ * Query: ?folderId=&page=1&limit=20&search=&mimeType=
+ */
+exports.getMyFiles = catchAsync(async (req, res) => {
+  const { folderId, page = 1, limit = 20, search, mimeType } = req.query;
+  const effectiveUserId = getEffectiveUserId(req);
 
-    const { entityType = 'general', entityId = 'general', label, description } = req.body;
+  const query = { ownerId: effectiveUserId, isDeleted: false };
+  if (folderId) query.folderId = folderId;
+  if (mimeType)  query.mimeType = { $regex: mimeType, $options: 'i' };
+  if (search) {
+    query.$or = [
+      { originalName: { $regex: search, $options: 'i' } },
+      { safeName: { $regex: search, $options: 'i' } },
+    ];
+  }
 
-    // Sanitize filename
-    const originalName = req.file.originalname;
-    const ext = originalName.substring(originalName.lastIndexOf('.'));
-    const baseName = originalName.substring(0, originalName.lastIndexOf('.'));
-    const safeName = slugify(baseName, { lower: true, strict: true }) + ext;
-    
-    // Attempt upload to storage provider
-    const { fileId, viewLink } = await storageService.uploadFile(
-        req.file.buffer, 
-        safeName, 
-        req.file.mimetype
-    );
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const [docs, total] = await Promise.all([
+    Document.find(query).sort({ uploadedAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+    Document.countDocuments(query),
+  ]);
 
-    // Create record in DB
-    const newDoc = await Document.create({
-        entityType,
-        entityId,
-        label: label || originalName,
-        description: description || '',
-        originalName,
-        safeName,
-        mimeType: req.file.mimetype,
-        fileSize: req.file.size,
-        storageProvider: process.env.STORAGE_PROVIDER || 'drive',
-        storageFileId: fileId,
-        viewLink,
-        uploadedBy: req.user.id
-    });
-
-    // Populate uploader info for the response
-    await newDoc.populate('uploadedBy', 'name email');
-
-    // Log action
-    await AuditLog.create({
-        action: 'upload',
-        performedBy: req.user.id,
-        documentId: newDoc._id,
-        entityType,
-        entityId: safeEntityId(entityId),
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent']
-    });
-
-    res.status(201).json({
-        success: true,
-        message: 'File uploaded successfully',
-        data: newDoc
-    });
+  res.json({
+    success: true,
+    data: docs.map(d => {
+      const { driveFileId, driveViewLink, ...safe } = d;
+      return safe;
+    }),
+    pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) },
+  });
 });
 
-// 2. Get Documents by Entity
-exports.getDocumentsByEntity = catchAsync(async (req, res) => {
-    const { entityType, entityId } = req.params;
+// ─── POST /api/documents/upload ───────────────────────────────────────────────
 
-    const documents = await Document.find({ 
-        entityType, 
-        entityId, 
-        isDeleted: false 
-    }).populate('uploadedBy', 'name email').sort({ uploadedAt: -1 });
+/**
+ * Uploads a file to the authenticated user's specified folder.
+ * Body: multipart { file, folderId, entityType?, entityId? }
+ */
+exports.uploadFile = catchAsync(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded.', code: 'NO_FILE' });
+  }
 
-    res.status(200).json({
-        success: true,
-        data: documents
-    });
+  const { folderId, entityType, entityId } = req.body;
+  if (!folderId) {
+    return res.status(400).json({ success: false, message: 'folderId is required.', code: 'NO_FOLDER' });
+  }
+  const effectiveUserId = getEffectiveUserId(req);
+
+  const doc = await storageService.uploadToFolder(
+    effectiveUserId,
+    folderId,
+    req.file,
+    entityType || null,
+    entityId || null
+  );
+
+  // Audit
+  AuditLog.create({
+    action: 'DOCUMENT_UPLOAD',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  }).catch(console.error);
+
+  res.status(201).json({
+    success: true,
+    message: 'File uploaded successfully.',
+    data: sanitizeDoc(doc),
+  });
 });
 
-// 3. View Document (Secure Proxy Stream)
-exports.viewDocumentProxy = catchAsync(async (req, res) => {
-    const { documentId } = req.params;
+// ─── GET /api/documents/view/:documentId ──────────────────────────────────────
 
-    if (!isStorageConfigured()) {
-        return res.status(503).json({
-            success: false,
-            code: 'STORAGE_NOT_CONFIGURED',
-            message: 'Storage provider is not configured on the server.'
-        });
-    }
+/**
+ * Streams a file inline for viewing. Logs the view action.
+ */
+exports.viewFile = catchAsync(async (req, res) => {
+  const { documentId } = req.params;
+  const isSuperUser = req.user.role === 'super_user';
 
-    const document = await Document.findOne({ _id: documentId, isDeleted: false });
+  const query = isSuperUser
+    ? { _id: documentId, isDeleted: false }
+    : { _id: documentId, ownerId: req.user.id, isDeleted: false };
 
-    if (!document) {
-        return res.status(404).json({ success: false, message: 'Document not found', code: 'NOT_FOUND' });
-    }
+  const doc = await Document.findOne(query);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
+  }
 
-    // Set correct headers for inline viewing
-    res.setHeader('Content-Type', document.mimeType);
-    res.setHeader('Content-Disposition', `inline; filename="${document.originalName}"`);
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.originalName)}"`);
 
-    // Stream file from storage
-    await storageService.streamFile(document.storageFileId, res, document.mimeType);
+  // Stream from Drive
+  await driveService.streamFile(doc.driveFileId, res);
 
-    // Log view action (fire-and-forget)
-    AuditLog.create({
-        action: 'view',
-        performedBy: req.user.id,
-        documentId: document._id,
-        entityType: document.entityType,
-        entityId: safeEntityId(document.entityId),
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent']
-    }).catch(console.error);
+  // Log view (fire-and-forget)
+  AuditLog.create({
+    action: 'DOCUMENT_VIEW',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  }).catch(console.error);
 });
 
-// 4. Delete Document (Soft delete DB, hard delete storage)
-exports.deleteDocument = catchAsync(async (req, res) => {
-    const { documentId } = req.params;
+// ─── GET /api/documents/download/:documentId ──────────────────────────────────
 
-    const document = await Document.findOne({ _id: documentId, isDeleted: false });
+/**
+ * Downloads a file as an attachment.
+ */
+exports.downloadFile = catchAsync(async (req, res) => {
+  const { documentId } = req.params;
+  const isSuperUser = req.user.role === 'super_user';
 
-    if (!document) {
-        return res.status(404).json({ success: false, message: 'Document not found', code: 'NOT_FOUND' });
-    }
+  const query = isSuperUser
+    ? { _id: documentId, isDeleted: false }
+    : { _id: documentId, ownerId: req.user.id, isDeleted: false };
 
-    // Attempt hard delete from storage (non-fatal if storage not configured)
-    if (document.storageFileId && isStorageConfigured()) {
-        try {
-            await storageService.deleteFile(document.storageFileId);
-        } catch (err) {
-            console.warn('Storage delete failed (soft delete will still proceed):', err.message);
-        }
-    }
+  const doc = await Document.findOne(query);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
+  }
 
-    // Soft delete in DB
-    document.isDeleted = true;
-    document.deletedAt = Date.now();
-    await document.save();
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.originalName)}"`);
 
-    // Log action
-    await AuditLog.create({
-        action: 'delete',
-        performedBy: req.user.id,
-        documentId: document._id,
-        entityType: document.entityType,
-        entityId: safeEntityId(document.entityId),
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent']
-    });
+  await driveService.streamFile(doc.driveFileId, res);
 
-    res.status(200).json({
-        success: true,
-        message: 'Document deleted successfully'
-    });
+  AuditLog.create({
+    action: 'DOCUMENT_DOWNLOAD',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  }).catch(console.error);
+});
+
+// ─── DELETE /api/documents/:documentId ────────────────────────────────────────
+
+exports.deleteFile = catchAsync(async (req, res) => {
+  const isSuperUser = req.user.role === 'super_user';
+
+  await storageService.deleteDocument(
+    req.user.id,
+    req.params.documentId,
+    req.user.id,
+    isSuperUser
+  );
+
+  AuditLog.create({
+    action: 'DOCUMENT_DELETE',
+    performedBy: req.user.id,
+    documentId: req.params.documentId,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  }).catch(console.error);
+
+  res.json({ success: true, message: 'File deleted successfully.' });
+});
+
+// ─── PATCH /api/documents/:documentId/rename ──────────────────────────────────
+
+/**
+ * Renames a document (DB-only — Drive name is not changed).
+ */
+exports.renameFile = catchAsync(async (req, res) => {
+  const { documentId } = req.params;
+  const { newName } = req.body;
+
+  if (!newName || !String(newName).trim()) {
+    return res.status(400).json({ success: false, message: 'newName is required.', code: 'NO_NAME' });
+  }
+
+  const isSuperUser = req.user.role === 'super_user';
+  const query = isSuperUser
+    ? { _id: documentId, isDeleted: false }
+    : { _id: documentId, ownerId: req.user.id, isDeleted: false };
+
+  const doc = await Document.findOne(query);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
+  }
+
+  doc.originalName = String(newName).trim().substring(0, 200);
+  await doc.save();
+
+  res.json({ success: true, message: 'File renamed.', data: sanitizeDoc(doc) });
+});
+
+// ─── PATCH /api/documents/:documentId/move ────────────────────────────────────
+
+/**
+ * Moves a document to a different folder within the same user's storage.
+ */
+exports.moveFile = catchAsync(async (req, res) => {
+  const { documentId } = req.params;
+  const { targetFolderId } = req.body;
+
+  if (!targetFolderId) {
+    return res.status(400).json({ success: false, message: 'targetFolderId is required.', code: 'NO_TARGET' });
+  }
+
+  const isSuperUser = req.user.role === 'super_user';
+  const query = isSuperUser ? { _id: documentId, isDeleted: false } : { _id: documentId, ownerId: req.user.id, isDeleted: false };
+  const doc = await Document.findOne(query);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
+  }
+
+  // Validate target folder belongs to this doc's owner
+  const storage = await storageService.getUserStorage(doc.ownerId);
+  const targetFolder = storage.subFolders.find(f => f.driveFolderId === targetFolderId);
+  if (!targetFolder) {
+    return res.status(403).json({ success: false, message: 'Target folder is not valid.', code: 'INVALID_FOLDER' });
+  }
+
+  if (doc.folderId === targetFolderId) {
+    return res.status(400).json({ success: false, message: 'File is already in this folder.', code: 'SAME_FOLDER' });
+  }
+
+  // Move in Drive
+  await driveService.moveFile(doc.driveFileId, doc.folderId, targetFolderId);
+
+  // Update MongoDB
+  doc.folderId = targetFolderId;
+  doc.folderName = targetFolder.name;
+  await doc.save();
+
+  res.json({ success: true, message: 'File moved successfully.', data: sanitizeDoc(doc) });
+});
+
+// ─── POST /api/documents/folders ──────────────────────────────────────────────
+
+exports.createFolder = catchAsync(async (req, res) => {
+  const { folderName } = req.body;
+  const effectiveUserId = getEffectiveUserId(req);
+  if (!folderName) {
+    return res.status(400).json({ success: false, message: 'folderName is required.', code: 'NO_NAME' });
+  }
+
+  const storage = await storageService.createCustomFolder(effectiveUserId, folderName);
+  res.status(201).json({ success: true, message: 'Folder created.', data: storage });
+});
+
+// ─── DELETE /api/documents/folders/:folderName ────────────────────────────────
+
+exports.deleteFolder = catchAsync(async (req, res) => {
+  const effectiveUserId = getEffectiveUserId(req);
+  const storage = await storageService.deleteCustomFolder(effectiveUserId, req.params.folderName);
+  res.json({ success: true, message: 'Folder deleted.', data: storage });
+});
+
+// ─── SUPER USER ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/documents/admin/storage
+ * Returns storage summary for ALL users, paginated.
+ */
+exports.getAllUsersStorage = catchAsync(async (req, res) => {
+  const { page = 1, limit = 20, role, sortBy = 'usedMB' } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const matchQuery = role ? { role } : {};
+  const users = await User.find(matchQuery)
+    .select('_id name email role storageProvisioned')
+    .lean();
+
+  const userIds = users.map(u => u._id);
+  const storageRecords = await UserStorage.find({ userId: { $in: userIds } }).lean();
+
+  const storageMap = {};
+  storageRecords.forEach(s => { storageMap[String(s.userId)] = s; });
+
+  const combined = users.map(u => {
+    const s = storageMap[String(u._id)] || {};
+    const usedMB = s.usedMB || 0;
+    const quotaMB = s.quotaMB || 500;
+    return {
+      userId: u._id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      storageProvisioned: u.storageProvisioned,
+      quotaMB,
+      usedMB,
+      fileCount: s.fileCount || 0,
+      usedPercent: quotaMB > 0 ? parseFloat(((usedMB / quotaMB) * 100).toFixed(2)) : 0,
+    };
+  });
+
+  // Sort
+  const validSortFields = ['usedMB', 'fileCount', 'usedPercent', 'name'];
+  const sortField = validSortFields.includes(sortBy) ? sortBy : 'usedMB';
+  combined.sort((a, b) => (b[sortField] > a[sortField] ? 1 : -1));
+
+  const paginated = combined.slice(skip, skip + parseInt(limit));
+
+  // Summary totals
+  const totalUsedMB = combined.reduce((sum, u) => sum + u.usedMB, 0);
+  const overQuota = combined.filter(u => u.usedPercent >= 80).length;
+  const avgUsedPercent = combined.length > 0
+    ? parseFloat((combined.reduce((s, u) => s + u.usedPercent, 0) / combined.length).toFixed(2))
+    : 0;
+
+  res.json({
+    success: true,
+    summary: {
+      totalUsers: combined.length,
+      totalUsedMB: parseFloat(totalUsedMB.toFixed(2)),
+      avgUsedPercent,
+      usersOverEightyPercent: overQuota,
+    },
+    data: paginated,
+    pagination: {
+      total: combined.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(combined.length / parseInt(limit)),
+    },
+  });
+});
+
+/**
+ * GET /api/documents/admin/user/:userId/files
+ * Super user: view any user's files.
+ */
+exports.getUserFiles = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const { folderId, page = 1, limit = 20, search } = req.query;
+
+  const query = { ownerId: userId, isDeleted: false };
+  if (folderId) query.folderId = folderId;
+  if (search) {
+    query.$or = [
+      { originalName: { $regex: search, $options: 'i' } },
+      { safeName: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const [docs, total] = await Promise.all([
+    Document.find(query).sort({ uploadedAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
+    Document.countDocuments(query),
+  ]);
+
+  res.json({
+    success: true,
+    data: docs.map(d => {
+      const { driveFileId, driveViewLink, ...safe } = d;
+      return safe;
+    }),
+    pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / parseInt(limit)) },
+  });
+});
+
+/**
+ * PATCH /api/documents/admin/user/:userId/quota
+ * Super user: update a user's storage quota.
+ */
+exports.updateUserQuota = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const { newQuotaMB, reason } = req.body;
+
+  if (!newQuotaMB || isNaN(newQuotaMB)) {
+    return res.status(400).json({ success: false, message: 'newQuotaMB must be a valid number.', code: 'INVALID_QUOTA' });
+  }
+
+  const storage = await storageService.updateQuota(userId, Number(newQuotaMB), req.user.id, reason);
+
+  // Notify the user about their quota increase
+  await createNotifications({
+    taskId: null,
+    userIds: [String(userId)],
+    message: `📦 Storage Update: Your storage quota has been increased to ${newQuotaMB}MB by the administrator.`,
+    targetPath: '/documents',
+  });
+
+  res.json({ success: true, message: 'Quota updated successfully.', data: storage });
+});
+
+/**
+ * POST /api/documents/admin/user/:userId/provision
+ * Super user: retry Drive storage provisioning for a user
+ * (used when storageProvisioned === false).
+ */
+exports.provisionUserStorage = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found.', code: 'NOT_FOUND' });
+  }
+
+  if (user.storageProvisioned) {
+    return res.status(409).json({ success: false, message: 'Storage is already provisioned for this user.', code: 'ALREADY_PROVISIONED' });
+  }
+
+  // Check if UserStorage already exists (partial provision)
+  const existingStorage = await UserStorage.findOne({ userId });
+  if (existingStorage) {
+    // Mark as provisioned even if Drive creation had issues
+    user.storageProvisioned = true;
+    await user.save();
+    return res.json({ success: true, message: 'Storage already exists. Marked as provisioned.', data: existingStorage });
+  }
+
+  const storage = await storageService.provisionUserStorage(user._id, user.name || user.email, user.role);
+
+  user.storageProvisioned = true;
+  await user.save();
+
+  res.status(201).json({ success: true, message: 'Storage provisioned successfully.', data: storage });
 });

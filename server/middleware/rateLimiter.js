@@ -1,40 +1,50 @@
 const rateLimit = require("express-rate-limit");
 
-// Prevent spamming the overarching login endpoint
+// ─── Login limiter ────────────────────────────────────────────────────────────
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 Mins
-    max: 10, // Max 10 attempts per IP
-    message: {
-        message: "Too many login attempts from this IP, please try again after 15 minutes."
-    },
+    windowMs: 15 * 60 * 1000, // 15 mins
+    max: 10,
+    message: { message: "Too many login attempts from this IP, please try again after 15 minutes." },
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-// Stricter limiter for requesting OTPs to prevent email flooding
+// ─── OTP request limiter ──────────────────────────────────────────────────────
 const otpRequestLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 Hour
-    max: 10, // Max 10 attempts per IP
-    message: {
-        message: "Too many OTP requests from this IP, please try again after 1 hour."
-    }
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10,
+    message: { message: "Too many OTP requests from this IP, please try again after 1 hour." },
 });
 
-// Document upload limiter (scoped by user ID if authenticated, else IP)
+// ─── Document upload limiter — 30 uploads per user per hour ───────────────────
 const uploadRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 Minutes
-    max: 20, // Max 20 uploads per user
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 30,
     keyGenerator: (req) => req.user?._id || req.user?.id || req.ip,
     validate: { keyGeneratorIpFallback: false },
     message: {
         success: false,
-        message: "Upload limit reached. Please try again after 15 minutes.",
-        code: "RATE_LIMIT_REACHED"
-    }
+        message: "Upload limit reached (30 per hour). Please try again later.",
+        code: "RATE_LIMIT_REACHED",
+    },
+});
+
+// ─── View/Download limiter — 100 requests per user per hour ──────────────────
+const viewDownloadRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 100,
+    keyGenerator: (req) => req.user?._id || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "View/download limit reached (100 per hour). Please try again later.",
+        code: "RATE_LIMIT_REACHED",
+    },
 });
 
 module.exports = {
     loginLimiter,
     otpRequestLimiter,
-    uploadRateLimiter
+    uploadRateLimiter,
+    viewDownloadRateLimiter,
 };

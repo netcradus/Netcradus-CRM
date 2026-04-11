@@ -56,6 +56,7 @@ import ExpensesPage from "./features/Expenses/ExpensesPage";
 import EmployeeProfilesPage from "./features/EmployeeProfiles/EmployeeProfilesPage";
 import MyProfilePage from "./features/MyProfile/MyProfilePage";
 import InterviewsPage from "./features/Interviews/InterviewsPage";
+import StorageAdminPage from "./features/Documents/admin/StorageAdminPage";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -150,6 +151,7 @@ function App() {
           <Route path="/sales-orders" element={<SalesOrders />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/deals" element={<Deals />} />
+          {/* My Drive — open to ALL authenticated roles */}
           <Route path="/documents" element={<Documents />} />
           <Route path="/forecasts" element={<Forecasts />} />
           <Route path="/meetings" element={<Meetings />} />
@@ -186,6 +188,16 @@ function App() {
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/holidays" element={<HolidaysPage />} />
           <Route path="/attendance-reports" element={<AttendanceReportsPage />} />
+
+          {/* ---- Storage Admin ---- */}
+          <Route
+            path="/admin/storage"
+            element={
+              <RoleRoute roles="super_user">
+                <StorageAdminPage />
+              </RoleRoute>
+            }
+          />
 
         </Route>
 

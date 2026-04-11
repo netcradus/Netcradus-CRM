@@ -36,6 +36,7 @@ import {
   CalendarDays,
   UmbrellaOff,
   FileBarChart2,
+  HardDrive,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { apiUrl } from "../../config/api";
@@ -95,8 +96,10 @@ const roleMenus = {
       icon: <Shield size={18} />,
       children: [
         { label: "Device Security", path: "/admin/devices", icon: <FileLock size={18} /> },
+        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={16} /> },
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   admin: [
@@ -132,6 +135,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   management: [
@@ -157,6 +161,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   sales: [
@@ -185,6 +190,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   support: [
@@ -211,6 +217,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   hr: [
@@ -232,7 +239,7 @@ const roleMenus = {
       ],
     },
             { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
-
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   it: [
@@ -258,6 +265,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   digital_media: [
@@ -284,6 +292,7 @@ const roleMenus = {
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 };
 

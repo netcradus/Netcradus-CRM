@@ -22,6 +22,11 @@ const taskNotificationSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    type: {
+      type: String,
+      enum: ["task", "storage_low", "general"],
+      default: "general"
+    },
     isRead: {
       type: Boolean,
       default: false,
