@@ -10,6 +10,9 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
+  CartesianGrid,
 } from "recharts";
 import axios from "axios";
 import "./AdminDashboard.css";
@@ -83,6 +86,35 @@ const AdminDashboard = () => {
     (attendanceSnapshot?.absentCount || 0) <= Math.max(1, Math.floor(trackedEmployees * 0.2))
       ? "Good"
       : "Needs Review";
+
+  const attendanceStatusData = useMemo(
+    () => [
+      { name: "Present", total: attendanceSnapshot?.presentCount || 0, color: "#22c55e" },
+      { name: "Clocked In", total: attendanceSnapshot?.clockedInCount || 0, color: "#38bdf8" },
+      { name: "Late", total: attendanceSnapshot?.lateCount || 0, color: "#f59e0b" },
+      { name: "Leave", total: attendanceSnapshot?.onLeaveCount || 0, color: "#a78bfa" },
+      { name: "Absent", total: attendanceSnapshot?.absentCount || 0, color: "#fb7185" },
+    ],
+    [attendanceSnapshot]
+  );
+
+  const attendanceTrendData = useMemo(() => {
+    const total = trackedEmployees || 0;
+    const present = attendanceSnapshot?.presentCount || 0;
+    const active = attendanceSnapshot?.clockedInCount || 0;
+    const late = attendanceSnapshot?.lateCount || 0;
+    const leave = attendanceSnapshot?.onLeaveCount || 0;
+    const absent = attendanceSnapshot?.absentCount || 0;
+
+    return [
+      { step: "Tracked", value: total },
+      { step: "Present", value: present },
+      { step: "Active", value: active },
+      { step: "Late", value: late },
+      { step: "Leave", value: leave },
+      { step: "Absent", value: absent },
+    ];
+  }, [attendanceSnapshot, trackedEmployees]);
 
   return (
     <div className="admin-dashboard">
@@ -191,6 +223,53 @@ const AdminDashboard = () => {
               </strong>
             </li>
           </ul>
+        </div>
+      </div>
+
+      <div className="admin-grid" style={{ marginTop: "20px" }}>
+        <div className="admin-charts glass netcradus-panel">
+          <div className="card-header">
+            <h3>Attendance Status Mix</h3>
+            <span className="chip">Live counts</span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={attendanceStatusData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="total" radius={[10, 10, 0, 0]}>
+                {attendanceStatusData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="admin-side glass netcradus-panel">
+          <div className="card-header">
+            <h3>Attendance Flow</h3>
+            <span className="chip">Realtime</span>
+          </div>
+
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={attendanceTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="step" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#ff5f3d"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#ff8a00" }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

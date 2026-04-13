@@ -8,7 +8,13 @@ import {
   BadgeDollarSign,
   CircleDashed,
   BriefcaseBusiness,
-} from "lucide-react";
+}from "lucide-react";
+import {
+  PieChart, Pie, Cell,
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  BarChart, Bar, CartesianGrid,
+  ResponsiveContainer
+} from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import "./SalesDashboard.css";
 import { apiUrl } from "../../config/api";
@@ -49,9 +55,11 @@ const SalesDashboard = ({ preview }) => {
     }
   };
 
-  useEffect(() => {
-    fetchDeals();
-  }, []);
+useEffect(() => {
+  fetchDeals();
+  const interval = setInterval(fetchDeals, 5000);
+  return () => clearInterval(interval);
+}, []);
 
   // 🔥 ADD DEAL
  const handleAddDeal = async (e) => {
@@ -105,6 +113,33 @@ const SalesDashboard = ({ preview }) => {
     ? ((wonDeals.length / deals.length) * 100).toFixed(1)
     : 0;
 
+    // 📊 STATUS DATA (Pie Chart)
+const statusData = [
+  {
+    name: "In Progress",
+    value: deals.filter(d => d.status === "In Progress").length,
+  },
+  {
+    name: "Won",
+    value: deals.filter(d => d.status === "Won").length,
+  },
+  {
+    name: "Lost",
+    value: deals.filter(d => d.status === "Lost").length,
+  },
+];
+
+// 📈 REVENUE TREND (Line Chart)
+const revenueTrend = deals.map((d, index) => ({
+  name: `Deal ${index + 1}`,
+  revenue: Number(d.value || 0),
+}));
+
+// 📉 DEAL COUNT OVER TIME (Bar Chart)
+const dealsOverTime = deals.map((d, index) => ({
+  name: `Deal ${index + 1}`,
+  count: 1,
+}));
   return (
     <div className="sales-dashboard">
       {/* HERO */}
@@ -196,7 +231,7 @@ const SalesDashboard = ({ preview }) => {
 
       {/* METRICS */}
       <div className="sales-metrics">
-        <div className="metric-card gradient-orange">
+        {/* <div className="metric-card gradient-orange">
           <div className="metric-icon metric-orange">
             <CircleDashed size={22} />
           </div>
@@ -224,9 +259,58 @@ const SalesDashboard = ({ preview }) => {
             <div className="metric-label">Conversion Rate</div>
             <div className="metric-value">{conversionRate}%</div>
           </div>
-        </div>
+        </div> */}
       </div>
+<div className="sales-charts">
+  
+  {/* PIE CHART */}
+  {/* <div className="chart-card">
+    <h3>Deals by Status</h3>
+    <ResponsiveContainer width="100%" height={250}>
+      <PieChart>
+        <Pie
+          data={statusData}
+          dataKey="value"
+          outerRadius={80}
+          label
+        >
+          <Cell fill="#f97316" />
+          <Cell fill="#22c55e" />
+          <Cell fill="#ef4444" />
+        </Pie>
+        <Tooltip />
+      </PieChart>
+    </ResponsiveContainer>
+  </div> */}
 
+  {/* LINE CHART */}
+  <div className="chart-card">
+    <h3>Revenue Trend</h3>
+    <ResponsiveContainer width="100%" height={250}>
+      <LineChart data={revenueTrend}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="revenue" stroke="#3b82f6" />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+
+  {/* BAR CHART */}
+  <div className="chart-card">
+    <h3>Deals Activity</h3>
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={dealsOverTime}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="count" fill="#8b5cf6" />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+
+</div>
       {/* RECENT DEALS */}
     <div className="sales-list net-panel">
   <div className="section-header">

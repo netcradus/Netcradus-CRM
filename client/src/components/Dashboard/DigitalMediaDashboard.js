@@ -9,9 +9,24 @@ import {
   BarChart3,
   Globe,
   Clock3,
-  RadioTower,
   CalendarClock,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  LineChart,
+  Line,
+} from "recharts";
+
+const DIGITAL_CHART_COLORS = ["#ff8a00", "#ff5f3d", "#ff4f9a", "#fb7185", "#38bdf8", "#22c55e"];
 
 const formatRoleLabel = (value = "") =>
   String(value)
@@ -109,6 +124,51 @@ function DigitalMediaDashboard({ preview }) {
     [campaigns]
   );
 
+  const statusChartData = useMemo(() => {
+    const grouped = campaigns.reduce((acc, campaign) => {
+      const key = String(campaign.status || "Unknown");
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([name, value], index) => ({
+      name,
+      value,
+      color: DIGITAL_CHART_COLORS[index % DIGITAL_CHART_COLORS.length],
+    }));
+  }, [campaigns]);
+
+  const channelChartData = useMemo(() => {
+    const grouped = campaigns.reduce((acc, campaign) => {
+      const key = campaign.channel || "General";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [campaigns]);
+
+  const launchTrendData = useMemo(() => {
+    const grouped = campaigns.reduce((acc, campaign) => {
+      const sourceDate = campaign.startDate || campaign.createdAt;
+      if (!sourceDate) return acc;
+      const date = new Date(sourceDate);
+      if (Number.isNaN(date.getTime())) return acc;
+      const key = date.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([month, launches]) => ({ month, launches }))
+      .slice(-6);
+  }, [campaigns]);
+
+  const activeCampaignCount = campaigns.filter((campaign) => String(campaign.status).toLowerCase() === "active").length;
+  const liveActivityScore = campaigns.length ? Math.round((activeCampaignCount / campaigns.length) * 100) : 0;
+
   return (
     <div className="nc-page digital-page">
       <div className="nc-hero">
@@ -154,6 +214,110 @@ function DigitalMediaDashboard({ preview }) {
             <div className="digital-metric-meta">{metric.meta}</div>
           </div>
         ))}
+      </div>
+
+      <div className="digital-analytics-grid">
+        <div className="nc-card digital-insight-card">
+          <div className="digital-analytics-head">
+            <div>
+              <p className="digital-kicker">Activity Analysis</p>
+              <h3>Campaign Live Pulse</h3>
+            </div>
+            <span className="nc-status nc-status--ok">Real time</span>
+          </div>
+          <div className="digital-gauge-shell">
+            <div
+              className="digital-gauge-ring"
+              style={{ "--gauge-fill": `${liveActivityScore}%` }}
+            >
+              <div className="digital-gauge-center">
+                <strong>{liveActivityScore}%</strong>
+                <span>Active</span>
+              </div>
+            </div>
+          </div>
+          <div className="digital-gauge-legend">
+            <span><i className="digital-dot digital-dot--active" /> Active Users</span>
+            <span><i className="digital-dot digital-dot--idle" /> Inactive Users</span>
+          </div>
+          <p className="digital-gauge-copy">
+            {activeCampaignCount} of {campaigns.length} campaigns are actively running across your live channels.
+          </p>
+        </div>
+
+        <div className="nc-card digital-chart-card">
+          <div className="digital-analytics-head">
+            <div>
+              <p className="digital-kicker">Channel Mix</p>
+              <h3>Campaigns by Channel</h3>
+            </div>
+            <span className="nc-status nc-status--pending">Live</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={channelChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.14)" />
+              <XAxis dataKey="name" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="total" radius={[10, 10, 0, 0]} fill="#ff8a00" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="nc-card digital-chart-card">
+          <div className="digital-analytics-head">
+            <div>
+              <p className="digital-kicker">Status Share</p>
+              <h3>Campaign Status Split</h3>
+            </div>
+            <span className="nc-status nc-status--ok">Synced</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={statusChartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={58}
+                outerRadius={94}
+                paddingAngle={4}
+              >
+                {statusChartData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="nc-card digital-chart-card">
+          <div className="digital-analytics-head">
+            <div>
+              <p className="digital-kicker">Launch Trend</p>
+              <h3>Recent Campaign Starts</h3>
+            </div>
+            <span className="nc-status">6 months</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={launchTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.14)" />
+              <XAxis dataKey="month" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" allowDecimals={false} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="launches"
+                stroke="#ff4f9a"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#ff8a00" }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* <div className="digital-highlights">

@@ -61,7 +61,8 @@
 }
 
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-danger {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,6 +103,17 @@
   border-color: var(--primary-color);
   background: var(--hover-bg);
   transform: translateY(-2px);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.35);
 }
 
 .search-bar {
@@ -169,13 +181,15 @@
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   background: var(--card-bg);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   animation: fadeInUp 0.6s ease 0.3s both;
   border: 1px solid var(--border-color);
 }
 
 .meetings-table table {
   width: 100%;
+  min-width: 1400px;
   table-layout: auto;
   border-collapse: collapse;
   background: var(--card-bg);
@@ -198,6 +212,17 @@
   border-bottom: 1px solid rgba(51, 65, 85, 0.3);
   color: var(--text-primary);
   font-size: 14px;
+}
+
+.meeting-actions-cell {
+  white-space: nowrap;
+  min-width: 220px;
+}
+
+.meeting-action-btn {
+  min-width: 88px;
+  padding-inline: 14px;
+  margin-right: 8px;
 }
 
 .meetings-table tr:last-child td {
@@ -507,6 +532,10 @@
     width: 100%;
   }
 
+  .btn-danger {
+    width: 100%;
+  }
+
   .search-bar {
     width: 100%;
     min-width: 0;
@@ -567,6 +596,27 @@
 
   .meetings-table tbody td:last-child {
     border-bottom: none;
+  }
+
+  .meeting-actions-cell {
+    white-space: normal;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .meeting-action-btn {
+    width: auto !important;
+    min-width: 92px !important;
+    max-width: max-content !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 8px 14px !important;
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
   }
 
   .meetings-table tbody td::before {

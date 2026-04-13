@@ -96,9 +96,11 @@ function Visits() {
         <FaMapMarkerAlt /> Client Visits
       </h2>
 
-      <button className="add-btn" onClick={() => setShowModal(true)}>
-        + Schedule Visit
-      </button>
+      <div className="visits-topbar">
+        <button className="visits-add-btn visits-top-action" onClick={() => setShowModal(true)}>
+          + Schedule Visit
+        </button>
+      </div>
 
       {/* SUMMARY CARDS */}
       <div className="visits-summary">

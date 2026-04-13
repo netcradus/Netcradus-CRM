@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import "./styles/global.css";
+import { ChatProvider } from "./context/ChatContext";
 
 /* ========== Pages ========== */
 import Login from "./Pages/Login";
@@ -57,12 +58,17 @@ import EmployeeProfilesPage from "./features/EmployeeProfiles/EmployeeProfilesPa
 import MyProfilePage from "./features/MyProfile/MyProfilePage";
 import InterviewsPage from "./features/Interviews/InterviewsPage";
 import StorageAdminPage from "./features/Documents/admin/StorageAdminPage";
+import ChatPanel from "./components/Chat/ChatPanel";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
   const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
-  return token && userRole ? <MainLayout /> : <Navigate to="/login" replace />;
+  return token && userRole ? (
+    <ChatProvider>
+      <MainLayout />
+    </ChatProvider>
+  ) : <Navigate to="/login" replace />;
 }
 
 function RoleRoute({ roles, children }) {
@@ -120,7 +126,7 @@ function App() {
               </RoleRoute>
             }
           />
-
+          <Route path="/messages" element={<ChatPanel />} />
           <Route path="/tickets" element={<TicketsPage />} />
           <Route path="/my-profile" element={<MyProfilePage />} />
           <Route

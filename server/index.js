@@ -32,6 +32,12 @@ app.get("/healthz", (req, res) => {
 
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
+const conversationRoutes = require("./routes/conversationRoutes");
+app.use("/api/conversations", conversationRoutes);
+const messageRoutes = require("./routes/messageRoutes");
+app.use("/api/messages", messageRoutes);
+const userPresenceRoutes = require("./routes/userPresenceRoutes");
+app.use("/api/users", userPresenceRoutes);
 
 const leadsRoutes = require("./routes/leadsRoutes");
 app.use("/api/leads", leadsRoutes);

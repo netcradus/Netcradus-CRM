@@ -7,10 +7,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid,
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
+  CartesianGrid,
 } from "recharts";
 import axios from "axios";
 import "./AdminDashboard.css"; // Reuse existing styles
@@ -95,6 +97,39 @@ const SuperUserDashboard = () => {
 
     return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
   }, [attendanceSnapshot]);
+
+  const registeredRoleData = useMemo(() => {
+    const grouped = users.reduce((acc, user) => {
+      const label = formatRoleLabel(user.role || "general");
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [users]);
+
+  const departmentStrengthData = useMemo(() => {
+    const employees = attendanceSnapshot?.employees || [];
+    const grouped = employees.reduce((acc, employee) => {
+      const department = employee.department || "General";
+      acc[department] = (acc[department] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [attendanceSnapshot]);
+
+  const systemHealthTrendData = useMemo(() => [
+    { point: "Users", total: users.length },
+    { point: "Tracked", total: attendanceSnapshot?.employees?.length || 0 },
+    { point: "Present", total: attendanceSnapshot?.presentCount || 0 },
+    { point: "Active", total: attendanceSnapshot?.clockedInCount || 0 },
+    { point: "Leave", total: attendanceSnapshot?.onLeaveCount || 0 },
+  ], [users, attendanceSnapshot]);
 
   useEffect(() => {
     if (selectedRole && previewRef.current) {
@@ -231,6 +266,96 @@ const SuperUserDashboard = () => {
               </p>
             )}
          </div>
+      </div>
+
+      <div className="admin-grid" style={{ marginTop: "20px" }}>
+        <div className="admin-charts glass netcradus-panel">
+          <div className="card-header">
+            <h3>Registered Users by Role</h3>
+            <span className="chip">Live users</span>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={registeredRoleData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#ff8a00" radius={[10, 10, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="admin-side glass netcradus-panel">
+          <div className="card-header">
+            <h3>Department Snapshot</h3>
+            <span className="chip">Attendance</span>
+          </div>
+          <ul className="insight-list">
+            {departmentStrengthData.length ? (
+              departmentStrengthData.slice(0, 4).map((entry) => (
+                <li key={entry.name}>
+                  <span>{entry.name}</span>
+                  <strong>{entry.total}</strong>
+                </li>
+              ))
+            ) : (
+              <li>
+                <span>No department data</span>
+                <strong>--</strong>
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+
+      <div className="admin-grid" style={{ marginTop: "20px" }}>
+        <div className="admin-charts glass netcradus-panel">
+          <div className="card-header">
+            <h3>System Coverage Trend</h3>
+            <span className="chip">Realtime</span>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={systemHealthTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+              <XAxis dataKey="point" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="#ff5f3d"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#ff2d8f" }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="admin-side glass netcradus-panel">
+          <div className="card-header">
+            <h3>Role Search Snapshot</h3>
+            <span className="chip">Overview</span>
+          </div>
+          <ul className="insight-list">
+            <li>
+              <span>Total Registered Users</span>
+              <strong>{users.length}</strong>
+            </li>
+            <li>
+              <span>Tracked in Attendance</span>
+              <strong>{attendanceSnapshot?.employees?.length || 0}</strong>
+            </li>
+            <li>
+              <span>Selected Role Preview</span>
+              <strong>{selectedRole ? formatRoleLabel(selectedRole) : "--"}</strong>
+            </li>
+            <li>
+              <span>Selected User</span>
+              <strong>{selectedUser?.name || "--"}</strong>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );

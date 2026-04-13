@@ -91,6 +91,15 @@ const roleMenus = {
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
       ],
     },
+     {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+
+      ],
+    },
     {
       label: "Security",
       icon: <Shield size={18} />,
@@ -99,7 +108,7 @@ const roleMenus = {
         { label: "Storage Admin", path: "/admin/storage", icon: <Database size={16} /> },
       ],
     },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+   
   ],
 
   admin: [
@@ -129,13 +138,23 @@ const roleMenus = {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
+        
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+          { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+
+      ],
+    },
+    
   ],
 
   management: [
@@ -155,6 +174,7 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
                 { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
@@ -184,6 +204,7 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
@@ -211,6 +232,7 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
                 { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
@@ -228,6 +250,7 @@ const roleMenus = {
       label: "HR Workspace",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
@@ -259,9 +282,10 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
@@ -286,6 +310,7 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
