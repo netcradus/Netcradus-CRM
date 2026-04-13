@@ -38,6 +38,7 @@ const createFolder = async (name, parentFolderId) => {
       parents: [parentFolderId],
     },
     fields: 'id, name',
+    supportsAllDrives: true,
   });
 
   return {
@@ -70,6 +71,7 @@ const uploadFile = async (buffer, fileName, mimeType, parentFolderId) => {
       body: stream,
     },
     fields: 'id, webViewLink, webContentLink',
+    supportsAllDrives: true,
   });
 
   return {
@@ -88,7 +90,10 @@ const deleteFile = async (driveFileId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
   try {
-    await drive.files.delete({ fileId: driveFileId });
+    await drive.files.delete({
+      fileId: driveFileId,
+      supportsAllDrives: true,
+    });
     return true;
   } catch (err) {
     if (err.code === 404) {
@@ -114,12 +119,17 @@ const streamFile = async (driveFileId, res) => {
   const meta = await drive.files.get({
     fileId: driveFileId,
     fields: 'mimeType, name',
+    supportsAllDrives: true,
   });
 
   res.setHeader('Content-Type', meta.data.mimeType || 'application/octet-stream');
 
   const response = await drive.files.get(
-    { fileId: driveFileId, alt: 'media' },
+    {
+      fileId: driveFileId,
+      alt: 'media',
+      supportsAllDrives: true,
+    },
     { responseType: 'stream' }
   );
 
@@ -137,6 +147,7 @@ const getFileMetadata = async (driveFileId) => {
   const res = await drive.files.get({
     fileId: driveFileId,
     fields: 'id, name, mimeType, size, createdTime',
+    supportsAllDrives: true,
   });
 
   return {
@@ -160,6 +171,10 @@ const listFilesInFolder = async (driveFolderId) => {
     q: `'${driveFolderId}' in parents and trashed = false`,
     fields: 'files(id, name, mimeType, size)',
     pageSize: 1000,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    corpora: 'drive',
+    driveId: process.env.DRIVE_SHARED_ID || undefined,
   });
 
   return (res.data.files || []).map(f => ({
@@ -185,6 +200,7 @@ const moveFile = async (driveFileId, oldParentFolderId, newParentFolderId) => {
     addParents: newParentFolderId,
     removeParents: oldParentFolderId,
     fields: 'id, parents',
+    supportsAllDrives: true,
   });
 
   return true;

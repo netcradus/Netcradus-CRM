@@ -13,6 +13,7 @@ const {
   endBreak,
   getCurrentStatus: getCurrentAttendanceStatus,
 } = require('../services/attendanceService');
+const { getIpGeoLocation } = require('../services/securityService');
 const { getSettings, invalidateCache } = require('../config/attendanceSettings');
 const User = require('../models/User');
 const LeaveApplication = require('../models/LeaveApplication');
@@ -28,7 +29,20 @@ exports.punchIn = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Super users are exempt from attendance tracking.' });
     }
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const coords = req.body.coords || null;
+    let coords = req.body.coords || null;
+
+    // Background Geolocation if missing
+    if (!coords && ip !== 'unknown') {
+      try {
+        const geo = await getIpGeoLocation(ip);
+        if (geo) {
+          coords = { latitude: geo.lat, longitude: geo.lon };
+        }
+      } catch (geoErr) {
+        console.warn(`[Attendance] Geolocation failed for IP ${ip}:`, geoErr.message);
+      }
+    }
+
     const record = await handlePunchIn(userId, ip, coords);
     res.status(200).json({ success: true, data: record });
   } catch (err) {

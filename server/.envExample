@@ -20,7 +20,8 @@ STORAGE_PROVIDER=drive   # 'drive' or 'dropbox'
 
 # Google Drive
 GOOGLE_SERVICE_ACCOUNT_KEY_JSON=
-DRIVE_FOLDER_ID=
+DRIVE_FOLDER_ID=      # Must be a folder ID INSIDE the Shared Drive
+DRIVE_SHARED_ID=      # The ID of the Shared Drive itself
 
 # Dropbox
 DROPBOX_ACCESS_TOKEN=
