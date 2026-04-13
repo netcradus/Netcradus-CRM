@@ -126,7 +126,7 @@ function App() {
               </RoleRoute>
             }
           />
-           <Route path="/messages" element={<ChatPanel />} />
+          <Route path="/messages" element={<ChatPanel />} />
           <Route path="/tickets" element={<TicketsPage />} />
           <Route path="/my-profile" element={<MyProfilePage />} />
           <Route
