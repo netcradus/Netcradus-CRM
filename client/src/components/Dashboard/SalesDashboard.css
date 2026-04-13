@@ -603,3 +603,17 @@
     pointer-events: auto;
   }
 }
+
+.sales-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.chart-card {
+  background: linear-gradient(180deg, rgba(22,31,53,0.96), rgba(14,22,38,0.96));
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid rgba(131, 148, 187, 0.18);
+}

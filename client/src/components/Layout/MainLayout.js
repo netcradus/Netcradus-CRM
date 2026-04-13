@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../Dashboard/Sidebar";
 import Topbar from "../Topbar/Topbar";
+import ChatLauncher from "../Chat/ChatLauncher";
 import "./MainLayout.css";
 
 const MainLayout = () => {
@@ -14,6 +15,7 @@ const MainLayout = () => {
           <Outlet />
         </div>
       </div>
+      <ChatLauncher />
     </div>
   );
 };

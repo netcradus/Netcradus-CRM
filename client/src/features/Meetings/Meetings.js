@@ -1,74 +1,77 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaCalendarAlt } from "react-icons/fa";
 import { apiUrl } from "../../config/api";
-
 import "./Meetings.css";
+
+const initialMeetingState = {
+  title: "",
+  clientName: "",
+  company: "",
+  phone: "",
+  email: "",
+  projectTitle: "",
+  projectDetails: "",
+  participants: "",
+  visitDate: "",
+  date: "",
+  status: "Upcoming",
+};
+
+function normalizeMeetingForEdit(meeting) {
+  return {
+    ...meeting,
+    visitDate: meeting.visitDate ? String(meeting.visitDate).split("T")[0] : "",
+    date: meeting.date ? String(meeting.date).split("T")[0] : "",
+  };
+}
 
 function Meetings() {
   const [meetings, setMeetings] = useState([]);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState(null);
+  const [newMeeting, setNewMeeting] = useState(initialMeetingState);
 
-  const [newMeeting, setNewMeeting] = useState({
-    title: "",
-    clientName: "",
-    company: "",
-    phone: "",
-    email: "",
-    projectTitle: "",
-    projectDetails: "",
-    participants: "",
-    visitDate: "",
-    date: "",
-    status: "Upcoming",
-  });
+  const loadMeetings = async () => {
+    try {
+      const res = await fetch(apiUrl("/api/meetings"));
+      if (!res.ok) throw new Error("Failed to fetch meetings");
+      const data = await res.json();
+      setMeetings(data);
+    } catch (err) {
+      console.error(err);
+      setMeetings([]);
+    }
+  };
 
-  // ✅ FETCH MEETINGS
   useEffect(() => {
-    const fetchMeetings = async () => {
-      try {
-        const res = await fetch(apiUrl("/api/meetings")); // ✅ FIXED
-        if (!res.ok) throw new Error("Failed to fetch meetings");
-        const data = await res.json();
-        setMeetings(data);
-      } catch (err) {
-        console.error(err);
-        setMeetings([]);
-      }
-    };
-
-    fetchMeetings();
+    loadMeetings();
   }, []);
 
-  // ✅ FILTER (SAFE VERSION)
-  const filteredMeetings = meetings.filter((meeting) => {
-    const matchesFilter = filter === "All" || meeting.status === filter;
+  const filteredMeetings = useMemo(() => {
+    return meetings.filter((meeting) => {
+      const matchesFilter = filter === "All" || meeting.status === filter;
+      const needle = search.toLowerCase();
+      const matchesSearch =
+        (meeting.title || "").toLowerCase().includes(needle) ||
+        (meeting.company || "").toLowerCase().includes(needle) ||
+        (meeting.projectTitle || "").toLowerCase().includes(needle);
 
-    const matchesSearch =
-      (meeting.title || "").toLowerCase().includes(search.toLowerCase()) ||
-      (meeting.company || "").toLowerCase().includes(search.toLowerCase()) ||
-      (meeting.projectTitle || "").toLowerCase().includes(search.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [filter, meetings, search]);
 
-    return matchesFilter && matchesSearch;
-  });
-
-  // ✅ ADD MEETING
   const handleAddMeeting = async (e) => {
     e.preventDefault();
 
-    if (
-      !newMeeting.title ||
-      !newMeeting.clientName ||
-      !newMeeting.company ||
-      !newMeeting.date
-    ) {
+    if (!newMeeting.title || !newMeeting.clientName || !newMeeting.company || !newMeeting.date) {
       alert("Please fill required fields");
       return;
     }
 
     try {
-      const res = await fetch(apiUrl("/api/meetings"), { // ✅ FIXED
+      const res = await fetch(apiUrl("/api/meetings"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,27 +82,53 @@ function Meetings() {
       if (!res.ok) throw new Error("Failed to save meeting");
 
       const data = await res.json();
-
       setMeetings((prev) => [data, ...prev]);
-
-      setNewMeeting({
-        title: "",
-        clientName: "",
-        company: "",
-        phone: "",
-        email: "",
-        projectTitle: "",
-        projectDetails: "",
-        participants: "",
-        visitDate: "",
-        date: "",
-        status: "Upcoming",
-      });
-
+      setNewMeeting(initialMeetingState);
       setShowModal(false);
     } catch (err) {
       console.error(err);
       alert("Error saving meeting");
+    }
+  };
+
+  const handleUpdateMeeting = async (e) => {
+    e.preventDefault();
+    if (!editingMeeting?._id) return;
+
+    try {
+      const res = await fetch(apiUrl(`/api/meetings/${editingMeeting._id}`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editingMeeting),
+      });
+
+      if (!res.ok) throw new Error("Failed to update meeting");
+
+      const data = await res.json();
+      setMeetings((prev) => prev.map((meeting) => (meeting._id === data._id ? data : meeting)));
+      setEditingMeeting(null);
+    } catch (err) {
+      console.error(err);
+      alert("Error updating meeting");
+    }
+  };
+
+  const handleDeleteMeeting = async (meetingId) => {
+    if (!window.confirm("Delete this meeting?")) return;
+
+    try {
+      const res = await fetch(apiUrl(`/api/meetings/${meetingId}`), {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete meeting");
+
+      setMeetings((prev) => prev.filter((meeting) => meeting._id !== meetingId));
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting meeting");
     }
   };
 
@@ -109,7 +138,6 @@ function Meetings() {
         <FaCalendarAlt /> Meetings
       </h2>
 
-      {/* ACTIONS */}
       <div className="meetings-actions">
         <button className="btn-primary" onClick={() => setShowModal(true)}>
           + Schedule Meeting
@@ -123,7 +151,6 @@ function Meetings() {
         />
       </div>
 
-      {/* FILTER */}
       <div className="meeting-status">
         {["All", "Upcoming", "Completed", "Cancelled"].map((status) => (
           <div
@@ -136,7 +163,6 @@ function Meetings() {
         ))}
       </div>
 
-      {/* TABLE */}
       <div className="meetings-table">
         <table>
           <thead>
@@ -150,42 +176,50 @@ function Meetings() {
               <th>Visit Date</th>
               <th>Meeting Date</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {filteredMeetings.length > 0 ? (
-              filteredMeetings.map((m, i) => (
-                <tr key={i}>
-                  <td>{m.title}</td>
-                  <td>{m.clientName}</td>
-                  <td>{m.company}</td>
-                  <td>{m.phone}</td>
-                  <td>{m.email}</td>
-                  <td>{m.projectTitle}</td>
-
-                  <td>
-                    {m.visitDate
-                      ? new Date(m.visitDate).toLocaleDateString()
-                      : "—"}
+              filteredMeetings.map((meeting) => (
+                <tr key={meeting._id}>
+                  <td data-label="Title">{meeting.title}</td>
+                  <td data-label="Client Name">{meeting.clientName}</td>
+                  <td data-label="Company">{meeting.company}</td>
+                  <td data-label="Phone">{meeting.phone || "—"}</td>
+                  <td data-label="Email">{meeting.email || "—"}</td>
+                  <td data-label="Project">{meeting.projectTitle || "—"}</td>
+                  <td data-label="Visit Date">
+                    {meeting.visitDate ? new Date(meeting.visitDate).toLocaleDateString() : "—"}
                   </td>
-
-                  <td>
-                    {m.date
-                      ? new Date(m.date).toLocaleDateString()
-                      : "—"}
+                  <td data-label="Meeting Date">
+                    {meeting.date ? new Date(meeting.date).toLocaleDateString() : "—"}
                   </td>
-
-                  <td>
-                    <span className={`badge ${m.status.toLowerCase()}`}>
-                      {m.status}
+                  <td data-label="Status">
+                    <span className={`badge ${meeting.status.toLowerCase()}`}>
+                      {meeting.status}
                     </span>
+                  </td>
+                  <td data-label="Actions" className="meeting-actions-cell">
+                    <button
+                      className="btn-secondary meeting-action-btn"
+                      onClick={() => setEditingMeeting(normalizeMeetingForEdit(meeting))}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn-danger meeting-action-btn"
+                      onClick={() => handleDeleteMeeting(meeting._id)}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="9" style={{ textAlign: "center" }}>
+                <td colSpan="10" style={{ textAlign: "center" }}>
                   No meetings found
                 </td>
               </tr>
@@ -194,12 +228,9 @@ function Meetings() {
         </table>
       </div>
 
-      {/* MODAL */}
       {showModal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            
-            {/* HEADER */}
             <div className="modal-header-simple">
               <h3>Meetings</h3>
               <button
@@ -210,113 +241,181 @@ function Meetings() {
               </button>
             </div>
 
-            {/* BODY */}
             <div className="modal-body">
-              <form>
+              <form onSubmit={handleAddMeeting}>
                 <div className="form-grid">
-
                   <input
                     placeholder="Meeting Title *"
                     value={newMeeting.title}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, title: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
                   />
 
                   <input
                     placeholder="Client Name *"
                     value={newMeeting.clientName}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, clientName: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, clientName: e.target.value })}
                   />
 
                   <input
                     placeholder="Company *"
                     value={newMeeting.company}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, company: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, company: e.target.value })}
                   />
 
                   <input
                     placeholder="Phone"
                     value={newMeeting.phone}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, phone: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, phone: e.target.value })}
                   />
 
                   <input
                     placeholder="Email"
                     value={newMeeting.email}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, email: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, email: e.target.value })}
                   />
 
                   <input
                     placeholder="Project Title"
                     value={newMeeting.projectTitle}
-                    onChange={(e) =>
-                      setNewMeeting({
-                        ...newMeeting,
-                        projectTitle: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, projectTitle: e.target.value })}
                   />
 
                   <input
                     type="date"
                     value={newMeeting.visitDate}
-                    onChange={(e) =>
-                      setNewMeeting({
-                        ...newMeeting,
-                        visitDate: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, visitDate: e.target.value })}
                   />
 
                   <input
                     type="date"
                     value={newMeeting.date}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, date: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
                   />
 
                   <select
                     value={newMeeting.status}
-                    onChange={(e) =>
-                      setNewMeeting({ ...newMeeting, status: e.target.value })
-                    }
+                    onChange={(e) => setNewMeeting({ ...newMeeting, status: e.target.value })}
                   >
                     <option>Upcoming</option>
                     <option>Completed</option>
                     <option>Cancelled</option>
                   </select>
+                </div>
 
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowModal(false)}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                  >
+                    Schedule Meeting
+                  </button>
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* FOOTER */}
-            <div className="modal-footer">
+      {editingMeeting && (
+        <div className="modal-overlay" onClick={() => setEditingMeeting(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-simple">
+              <h3>Edit Meeting</h3>
               <button
-                className="btn-secondary"
-                onClick={() => setShowModal(false)}
+                className="modal-close"
+                onClick={() => setEditingMeeting(null)}
               >
-                Cancel
-              </button>
-
-              <button
-                className="btn-primary"
-                onClick={handleAddMeeting}
-              >
-                Schedule Meeting
+                ×
               </button>
             </div>
 
+            <div className="modal-body">
+              <form onSubmit={handleUpdateMeeting}>
+                <div className="form-grid">
+                  <input
+                    placeholder="Meeting Title *"
+                    value={editingMeeting.title}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, title: e.target.value })}
+                  />
+
+                  <input
+                    placeholder="Client Name *"
+                    value={editingMeeting.clientName}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, clientName: e.target.value })}
+                  />
+
+                  <input
+                    placeholder="Company *"
+                    value={editingMeeting.company}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, company: e.target.value })}
+                  />
+
+                  <input
+                    placeholder="Phone"
+                    value={editingMeeting.phone || ""}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, phone: e.target.value })}
+                  />
+
+                  <input
+                    placeholder="Email"
+                    value={editingMeeting.email || ""}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, email: e.target.value })}
+                  />
+
+                  <input
+                    placeholder="Project Title"
+                    value={editingMeeting.projectTitle || ""}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, projectTitle: e.target.value })}
+                  />
+
+                  <input
+                    type="date"
+                    value={editingMeeting.visitDate || ""}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, visitDate: e.target.value })}
+                  />
+
+                  <input
+                    type="date"
+                    value={editingMeeting.date || ""}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, date: e.target.value })}
+                  />
+
+                  <select
+                    value={editingMeeting.status}
+                    onChange={(e) => setEditingMeeting({ ...editingMeeting, status: e.target.value })}
+                  >
+                    <option>Upcoming</option>
+                    <option>Completed</option>
+                    <option>Cancelled</option>
+                  </select>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setEditingMeeting(null)}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                  >
+                    Update Meeting
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

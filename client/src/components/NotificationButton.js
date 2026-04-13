@@ -3,7 +3,7 @@ import axios from "axios";
 import { Bell, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../config/api";
-import { disconnectNotificationSocket, getNotificationSocket } from "../services/socket";
+import { getNotificationSocket } from "../services/socket";
 import "./NotificationButton.css";
 
 function formatTimeAgo(value) {
@@ -78,7 +78,6 @@ export default function NotificationButton() {
 
     return () => {
       socket.off("notification:new", handleNewNotification);
-      disconnectNotificationSocket();
     };
   }, [fetchNotifications, notificationsAvailable, token]);
 

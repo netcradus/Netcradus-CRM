@@ -4,14 +4,17 @@ import { API_URL } from "../config/api";
 let socketInstance = null;
 const SOCKET_BASE_URL = API_URL.replace(/\/api$/i, "");
 
-export function getNotificationSocket(token) {
+export function getAppSocket(token) {
   if (!token) return null;
 
-  if (!socketInstance) {
+  if (!socketInstance || socketInstance.auth?.token !== token) {
+    if (socketInstance) {
+      socketInstance.disconnect();
+    }
     socketInstance = io(SOCKET_BASE_URL, {
-      transports: ["polling"],
-      reconnection: false,
-      timeout: 5000,
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      timeout: 10000,
       auth: { token },
     });
   }
@@ -19,9 +22,17 @@ export function getNotificationSocket(token) {
   return socketInstance;
 }
 
-export function disconnectNotificationSocket() {
+export function disconnectAppSocket() {
   if (socketInstance) {
     socketInstance.disconnect();
     socketInstance = null;
   }
+}
+
+export function getNotificationSocket(token) {
+  return getAppSocket(token);
+}
+
+export function disconnectNotificationSocket() {
+  disconnectAppSocket();
 }

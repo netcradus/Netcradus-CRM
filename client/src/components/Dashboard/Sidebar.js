@@ -48,6 +48,7 @@ const roleMenus = {
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
             { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
 
 
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
@@ -69,6 +70,8 @@ const roleMenus = {
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
+                { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
+
       ],
     },
     {
@@ -102,6 +105,7 @@ const roleMenus = {
   admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Finance",
@@ -137,6 +141,7 @@ const roleMenus = {
   management: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "My CRM",
@@ -162,6 +167,7 @@ const roleMenus = {
   sales: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Sales Workspace",
@@ -190,6 +196,7 @@ const roleMenus = {
   support: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Support Workspace",
@@ -215,6 +222,7 @@ const roleMenus = {
 
   hr: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     
     {
@@ -238,6 +246,7 @@ const roleMenus = {
   it: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "IT Workspace",
@@ -263,6 +272,7 @@ const roleMenus = {
   digital_media: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
+    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Media Workspace",
@@ -270,8 +280,7 @@ const roleMenus = {
       children: [
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
-        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
-        { label: "Reports", path: "/reports", icon: <FileBarChart2 size={16} /> },
+        
       ],
     },
     {

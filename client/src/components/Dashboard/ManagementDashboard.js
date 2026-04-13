@@ -13,6 +13,8 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  LineChart,
+  Line,
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import { useNavigate } from "react-router-dom";
@@ -128,6 +130,39 @@ const ManagementDashboard = () => {
     [dashboardData.tickets]
   );
 
+  const ticketPriorityData = useMemo(() => {
+    const priorityColors = {
+      low: "#94a3b8",
+      medium: "#f59e0b",
+      high: "#fb7185",
+      urgent: "#ef4444",
+    };
+
+    const grouped = dashboardData.tickets.reduce((acc, ticket) => {
+      const priority = (ticket.priority || "medium").toLowerCase();
+      acc[priority] = (acc[priority] || 0) + 1;
+      return acc;
+    }, {});
+
+    return ["low", "medium", "high", "urgent"].map((name) => ({
+      name,
+      total: grouped[name] || 0,
+      fill: priorityColors[name],
+    }));
+  }, [dashboardData.tickets]);
+
+  const workPulseData = useMemo(() => {
+    const totals = {
+      Leads: dashboardData.leads.length,
+      Tasks: dashboardData.tasks.length,
+      Tickets: dashboardData.tickets.length,
+      Active: dashboardData.tasks.filter((task) => task.status === "in_progress").length,
+      Closed: dashboardData.tickets.filter((ticket) => ["resolved", "closed"].includes(ticket.status)).length,
+    };
+
+    return Object.entries(totals).map(([label, value]) => ({ label, value }));
+  }, [dashboardData]);
+
   return (
     <div className="admin-dashboard management-view">
       <div className="admin-hero">
@@ -242,6 +277,51 @@ const ManagementDashboard = () => {
               <strong>{dashboardData.leads.slice(0, 5).length}</strong>
             </li>
           </ul>
+        </div>
+      </div>
+
+      <div className="admin-grid" style={{ marginTop: "20px" }}>
+        <div className="admin-charts glass netcradus-panel">
+          <div className="card-header">
+            <h3>Ticket Priority Snapshot</h3>
+            <span className="chip">Live tickets</span>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={ticketPriorityData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="total" radius={[10, 10, 0, 0]}>
+                {ticketPriorityData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="admin-side glass netcradus-panel">
+          <div className="card-header">
+            <h3>Work Pulse</h3>
+            <span className="chip">Realtime</span>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={workPulseData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+              <XAxis dataKey="label" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#ff5f3d"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#ff8a00" }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
