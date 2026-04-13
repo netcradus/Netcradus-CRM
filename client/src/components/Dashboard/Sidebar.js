@@ -36,6 +36,7 @@ import {
   CalendarDays,
   UmbrellaOff,
   FileBarChart2,
+  HardDrive,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { apiUrl } from "../../config/api";
@@ -48,7 +49,6 @@ const roleMenus = {
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
             { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
 
 
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
@@ -70,8 +70,6 @@ const roleMenus = {
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-                { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
-
       ],
     },
     {
@@ -93,19 +91,30 @@ const roleMenus = {
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
       ],
     },
+     {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+
+      ],
+    },
     {
       label: "Security",
       icon: <Shield size={18} />,
       children: [
         { label: "Device Security", path: "/admin/devices", icon: <FileLock size={18} /> },
+        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={16} /> },
       ],
     },
+   
   ],
 
   admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
+   
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Finance",
@@ -130,18 +139,28 @@ const roleMenus = {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
+        
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    {
+      label: "Personal",
+      icon: <Clock size={18} />,
+      children: [
+         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+          { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+
+      ],
+    },
+    
   ],
 
   management: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "My CRM",
@@ -156,18 +175,19 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
                 { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   sales: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Sales Workspace",
@@ -185,18 +205,19 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   support: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Support Workspace",
@@ -212,23 +233,25 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
                 { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   hr: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     
     {
       label: "HR Workspace",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
@@ -239,14 +262,13 @@ const roleMenus = {
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
-            { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
-
+    { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   it: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "IT Workspace",
@@ -261,18 +283,19 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 
   digital_media: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Media Workspace",
@@ -280,19 +303,22 @@ const roleMenus = {
       children: [
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
-        
+        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
+        { label: "Reports", path: "/reports", icon: <FileBarChart2 size={16} /> },
       ],
     },
     {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
 
       ],
     },
+    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 };
 

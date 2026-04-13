@@ -4,7 +4,7 @@ const { emitToUsers } = require("../socket");
 
 const REVIEWER_ROLES = ["super_user", "hr"];
 
-async function createNotifications({ taskId = null, userIds, message, targetPath = "" }) {
+async function createNotifications({ taskId = null, userIds, message, targetPath = "", type = "general" }) {
   const uniqueUserIds = [...new Set((userIds || []).filter(Boolean).map(String))];
 
   if (!uniqueUserIds.length || !message) {
@@ -17,6 +17,7 @@ async function createNotifications({ taskId = null, userIds, message, targetPath
       userId,
       message,
       targetPath,
+      type,
     }))
   );
 
@@ -24,6 +25,7 @@ async function createNotifications({ taskId = null, userIds, message, targetPath
     taskId: taskId ? String(taskId) : null,
     message,
     targetPath,
+    type,
   });
 
   return notifications;

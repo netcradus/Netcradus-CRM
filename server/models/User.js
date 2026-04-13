@@ -74,9 +74,11 @@ const userSchema = new mongoose.Schema({
 
   resetToken: String,
   resetTokenExpiry: Date,
-  lastSeenAt: {
-    type: Date,
-    default: null
+
+  // Drive storage provisioning status
+  storageProvisioned: {
+    type: Boolean,
+    default: false
   }
 
 }, { timestamps: true });

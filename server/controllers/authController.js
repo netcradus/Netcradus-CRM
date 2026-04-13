@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Contact = require("../models/Contact");
+const storageService = require("../services/storageService");
 const AdminDevice = require("../models/AdminDevice");
 const { UAParser } = require("ua-parser-js");
 const {
@@ -97,6 +98,17 @@ const createUserByAdmin = async (req, res) => {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    // ── Provision Google Drive storage for the new user ──────────────────────
+    try {
+      await storageService.provisionUserStorage(user._id, user.name || firstName, user.role);
+      user.storageProvisioned = true;
+      await user.save();
+    } catch (storageErr) {
+      // Do NOT block user creation if Drive provisioning fails.
+      // storageProvisioned stays false — retryable from the admin panel.
+      console.error(`[AuthController] Drive provisioning failed for user ${user._id}:`, storageErr.message);
+    }
 
     res.status(201).json({
       message: "User created successfully",
