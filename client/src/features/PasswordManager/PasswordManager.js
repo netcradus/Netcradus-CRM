@@ -457,6 +457,7 @@ function PasswordManager() {
               <form onSubmit={handleVerifySubmit}>
                 <input
                   type="password"
+                  autoComplete="current-password"
                   placeholder="Enter password"
                   value={verifyState.password}
                   onChange={(event) => setVerifyState((current) => ({ ...current, password: event.target.value }))}
@@ -494,11 +495,23 @@ function PasswordManager() {
                 </label>
                 <label>
                   <span>Password</span>
-                  <input type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required />
+                  <input
+                    type="text"
+                    autoComplete={editingRow ? "current-password" : "new-password"}
+                    value={form.password}
+                    onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                    required
+                  />
                 </label>
                 <label>
                   <span>Confirm Password</span>
-                  <input type="password" value={form.confirmPassword} onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))} required />
+                  <input
+                    type="text"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                    required
+                  />
                 </label>
                 <label className="pm-form-wide">
                   <span>Description / Notes</span>
