@@ -13,20 +13,12 @@ import {
   Handshake,
   CheckSquare2,
   CalendarClock,
-  PhoneCall,
-  Boxes,
   Receipt,
   ClipboardList,
-  Truck,
-  Inbox,
-  BookOpen,
   BriefcaseBusiness,
   BarChart3,
   MapPin,
   MessageCircle,
-  Settings2,
-  Workflow,
-  Wrench,
   UserCircle2,
   Layers3,
   Shield,
@@ -37,20 +29,44 @@ import {
   UmbrellaOff,
   FileBarChart2,
   HardDrive,
+  ShoppingCart,
+  PackagePlus,
+  KeyRound,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 import "./Sidebar.css";
-import { useNavigate } from "react-router-dom";
 
-// ─── Menu config ─────────────────────────────────────────────────────────────
+const managementMenu = {
+  label: "Management",
+  icon: <BriefcaseBusiness size={18} />,
+  children: [
+    {
+      label: "Business",
+      icon: <BriefcaseBusiness size={16} />,
+      children: [
+        { label: "Client Information", path: "/management/business/clients", icon: <Users size={16} /> },
+        { label: "Tender", path: "/management/business/tenders", icon: <FileText size={16} /> },
+        { label: "Other Business", path: "/management/business/overview", icon: <BarChart3 size={16} /> },
+      ],
+    },
+    {
+      label: "Day to Day",
+      icon: <ClipboardList size={16} />,
+      children: [
+        { label: "Purchases Done", path: "/management/day-to-day/purchases", icon: <ShoppingCart size={16} /> },
+        { label: "Items to Purchase", path: "/management/day-to-day/purchase-items", icon: <PackagePlus size={16} /> },
+        { label: "Invoices", path: "/management/day-to-day/invoices", icon: <Receipt size={16} /> },
+      ],
+    },
+  ],
+};
+
 const roleMenus = {
   super_user: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
-            { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
-
-
+    { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
     {
       label: "Finance",
@@ -80,6 +96,7 @@ const roleMenus = {
         { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
       ],
     },
+    managementMenu,
     {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
@@ -91,13 +108,12 @@ const roleMenus = {
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
       ],
     },
-     {
+    {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
       ],
     },
     {
@@ -108,9 +124,8 @@ const roleMenus = {
         { label: "Storage Admin", path: "/admin/storage", icon: <Database size={16} /> },
       ],
     },
-   
+    { label: "Password Manager", path: "/password-manager", icon: <KeyRound size={18} /> },
   ],
-
   admin: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
@@ -128,9 +143,7 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
-        // { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
@@ -138,52 +151,38 @@ const roleMenus = {
       label: "HR & Attendance",
       icon: <Clock size={18} />,
       children: [
-        
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
       ],
     },
     {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-          { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
       ],
     },
-    
   ],
-
   management: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "My CRM",
-      icon: <Layers3 size={18} />,
-      children: [
-        // { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-      ],
-    },
+    managementMenu,
+    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
     {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
-
   sales: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
@@ -193,7 +192,6 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
         { label: "Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
@@ -204,16 +202,14 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
-
   support: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
@@ -222,9 +218,7 @@ const roleMenus = {
       label: "Support Workspace",
       icon: <Layers3 size={18} />,
       children: [
-        // { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        // { label: "Calls", path: "/calls", icon: <Phone size={16} /> },
         { label: "Cases", path: "/cases", icon: <Handshake size={16} /> },
       ],
     },
@@ -232,25 +226,22 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-                { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
+        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
-
   hr: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    
     {
       label: "HR Workspace",
       icon: <Clock size={18} />,
       children: [
-          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
         { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
@@ -261,10 +252,9 @@ const roleMenus = {
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
       ],
     },
-            { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
+    { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
-
   it: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
@@ -282,16 +272,14 @@ const roleMenus = {
       label: "Personal",
       icon: <Clock size={18} />,
       children: [
-          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
+        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
-
   digital_media: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
     { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
@@ -314,48 +302,105 @@ const roleMenus = {
         { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
         { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
         { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
   ],
 };
 
-// ─── NavGroup — dropdown opens BELOW the button ───────────────────────────────
-function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick, pendingCount }) {
+const isItemActive = (item, pathname) => {
+  if (item.path && pathname === item.path) return true;
+  return Array.isArray(item.children) && item.children.some((child) => isItemActive(child, pathname));
+};
+
+const flattenMenuItems = (items = []) =>
+  items.flatMap((item) => (item.children ? flattenMenuItems(item.children) : item.path ? [item] : []));
+
+function DropdownNode({ item, location, onLeafClick, getBadgeValue, depth = 0 }) {
+  const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+  const isActive = isItemActive(item, location.pathname);
+  const [open, setOpen] = useState(isActive);
+  const badgeValue = getBadgeValue(item);
+
+  useEffect(() => {
+    if (isActive) setOpen(true);
+  }, [isActive]);
+
+  if (!hasChildren) {
+    return (
+      <Link to={item.path} className={`dropdown-link ${isActive ? "active" : ""}`} onClick={onLeafClick}>
+        <span className="nav-icon">{item.icon}</span>
+        <span>{item.label}</span>
+        {badgeValue > 0 && <span className="sidebar-badge">{badgeValue}</span>}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={`dropdown-node dropdown-depth-${depth}`}>
+      <button
+        type="button"
+        className={`dropdown-toggle ${isActive ? "active" : ""} ${open ? "open" : ""}`}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="dropdown-toggle-main">
+          <span className="nav-icon">{item.icon}</span>
+          <span>{item.label}</span>
+        </span>
+        <span className={`nav-chevron ${open ? "rotated" : ""}`}>
+          <ChevronDown size={14} />
+        </span>
+      </button>
+      <div className={`dropdown-children ${open ? "open" : ""}`}>
+        <div className="dropdown-children-inner">
+          {item.children.map((child, index) => (
+            <DropdownNode
+              key={`${item.label}-${index}`}
+              item={child}
+              location={location}
+              onLeafClick={onLeafClick}
+              getBadgeValue={getBadgeValue}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavGroup({ item, isHovered, isMobileOpen, location, onLinkClick, getBadgeValue }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const isChildActive = item.children?.some(c => location.pathname === c.path);
+  const isChildActive = isItemActive(item, location.pathname);
+  const hasVisibleBadge = flattenMenuItems(item.children || []).some((child) => getBadgeValue(child) > 0);
 
-  // Close when clicking outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close when sidebar collapses
   useEffect(() => {
     if (!isHovered && !isMobileOpen) setOpen(false);
   }, [isHovered, isMobileOpen]);
 
+  useEffect(() => {
+    if (isChildActive) setOpen(true);
+  }, [isChildActive]);
+
   return (
     <li className="nav-group" ref={ref}>
-      {/* Trigger button */}
       <button
         className={`nav-group-btn ${isChildActive ? "group-active" : ""} ${open ? "group-open" : ""}`}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((current) => !current)}
         title={!isHovered && !isMobileOpen ? item.label : undefined}
       >
         <span className="nav-icon">
           {item.icon}
-          {!isHovered && !isMobileOpen && item.children.some(c => c.badge) && pendingCount > 0 && (
-            <span className="sidebar-badge-dot" />
-          )}
+          {!isHovered && !isMobileOpen && hasVisibleBadge && <span className="sidebar-badge-dot" />}
         </span>
         {(isHovered || isMobileOpen) && (
           <>
@@ -367,80 +412,97 @@ function NavGroup({ item, isHovered, location, isMobileOpen, onLinkClick, pendin
         )}
       </button>
 
-      {/* Dropdown panel — rendered below the button */}
       {open && (
         <div className="nav-dropdown">
           <div className="dropdown-header">{item.label}</div>
-          <ul>
-            {item.children.map((child, i) => {
-              const isActive = location.pathname === child.path;
-              return (
-                <li key={i}>
-                  <Link
-                    to={child.path}
-                    className={`dropdown-link ${isActive ? "active" : ""}`}
-                    onClick={() => {
-                      setOpen(false);
-                      onLinkClick();
-                    }}
-                  >
-                    <span className="nav-icon">{child.icon}</span>
-                    <span>{child.label}</span>
-                    {child.badge && pendingCount > 0 && (
-                      <span className="sidebar-badge">{pendingCount}</span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="dropdown-tree">
+            {item.children.map((child, index) => (
+              <DropdownNode
+                key={`${item.label}-${index}`}
+                item={child}
+                location={location}
+                onLeafClick={() => {
+                  setOpen(false);
+                  onLinkClick();
+                }}
+                getBadgeValue={getBadgeValue}
+              />
+            ))}
+          </div>
         </div>
       )}
     </li>
   );
 }
 
-// ─── Main Sidebar ─────────────────────────────────────────────────────────────
 function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [managementCounts, setManagementCounts] = useState({
+    purchasesThisPeriod: 0,
+    pendingPurchaseItems: 0,
+    outstandingInvoices: 0,
+  });
   const navigate = useNavigate();
   const location = useLocation();
-  const [pendingCount, setPendingCount] = useState(0);
 
   const fetchPendingCount = useCallback(async () => {
     const role = localStorage.getItem("userRole");
     if (!["super_user", "admin", "hr"].includes(role)) return;
     try {
       const { data } = await axios.get(apiUrl("/api/attendance/admin/pending-actions"), {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const count = (data.data?.pendingLeaves?.length || 0) + (data.data?.pendingRegularizations?.length || 0);
       setPendingCount(count);
-    } catch (e) {
-      console.error("Failed to fetch pending counts", e);
+    } catch (error) {
+      console.error("Failed to fetch pending counts", error);
+    }
+  }, []);
+
+  const fetchManagementCounts = useCallback(async () => {
+    const role = localStorage.getItem("userRole");
+    if (!["super_user", "management"].includes(role)) return;
+    try {
+      const { data } = await axios.get(apiUrl("/api/management/sidebar-summary"), {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setManagementCounts({
+        purchasesThisPeriod: Number(data.purchasesThisPeriod || 0),
+        pendingPurchaseItems: Number(data.pendingPurchaseItems || 0),
+        outstandingInvoices: Number(data.outstandingInvoices || 0),
+      });
+    } catch (error) {
+      console.error("Failed to fetch management counts", error);
     }
   }, []);
 
   useEffect(() => {
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 300000); // 5 mins
+    fetchManagementCounts();
+    const interval = setInterval(() => {
+      fetchPendingCount();
+      fetchManagementCounts();
+    }, 300000);
     return () => clearInterval(interval);
-  }, [fetchPendingCount]);
+  }, [fetchPendingCount, fetchManagementCounts]);
 
   const userRole = localStorage.getItem("userRole");
   const menuItems = roleMenus[userRole] || [];
 
-  // Flatten all items for search
-  const allItems = menuItems.flatMap(item =>
-    item.children ? item.children : [item]
+  const getBadgeValue = useCallback(
+    (item) => {
+      if (item.badge) return pendingCount;
+      if (item.badgeKey) return Number(managementCounts[item.badgeKey] || 0);
+      return 0;
+    },
+    [managementCounts, pendingCount]
   );
 
   const filteredMenu = searchTerm
-    ? allItems.filter(item =>
-      item.label.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    ? flattenMenuItems(menuItems).filter((item) => item.label.toLowerCase().includes(searchTerm.toLowerCase()))
     : null;
 
   const handleLogout = () => {
@@ -453,53 +515,34 @@ function Sidebar() {
     navigate("/login");
   };
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileOpen(false);
   }, [location.pathname]);
 
-  // Prevent body scroll when mobile menu is open
   useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
+    document.body.style.overflow = isMobileOpen ? "hidden" : "auto";
     return () => {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = "auto";
     };
   }, [isMobileOpen]);
 
-  const handleLinkClick = () => {
-    setIsMobileOpen(false);
-  };
-
   return (
     <>
-      {/* Mobile Hamburger Toggle Button */}
-      <button 
-        className={`mobile-hamburger ${isMobileOpen ? 'active' : ''}`}
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
+      <button
+        className={`mobile-hamburger ${isMobileOpen ? "active" : ""}`}
+        onClick={() => setIsMobileOpen((current) => !current)}
         aria-label="Toggle menu"
       >
         {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
 
-      {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <div 
-          className="mobile-overlay" 
-          onClick={() => setIsMobileOpen(false)} 
-        />
-      )}
+      {isMobileOpen && <div className="mobile-overlay" onClick={() => setIsMobileOpen(false)} />}
 
-      {/* Sidebar */}
       <div
         className={`sidebar ${isHovered ? "expanded" : "collapsed"} ${isMobileOpen ? "mobile-open" : ""}`}
         onMouseEnter={() => window.innerWidth > 768 && setIsHovered(true)}
         onMouseLeave={() => window.innerWidth > 768 && setIsHovered(false)}
       >
-        {/* LOGO */}
         <div className="sidebar-logo">
           <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
           {(isHovered || isMobileOpen) && (
@@ -509,7 +552,6 @@ function Sidebar() {
           )}
         </div>
 
-        {/* SEARCH */}
         {(isHovered || isMobileOpen) && (
           <div className="sidebar-search">
             <div className="search-input-wrapper">
@@ -518,62 +560,57 @@ function Sidebar() {
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={(event) => setSearchTerm(event.target.value)}
               />
             </div>
           </div>
         )}
 
-        {/* NAV */}
         <nav className="sidebar-nav">
           <ul>
             {filteredMenu
-              ? filteredMenu.map((item, i) => (
-                <li key={i}>
-                  <Link
-                    to={item.path}
-                    className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                    onClick={handleLinkClick}
-                  >
-                    <span className="nav-icon">{item.icon}</span>
-                    {(isHovered || isMobileOpen) && <span>{item.label}</span>}
-                  </Link>
-                </li>
-              ))
-              : menuItems.map((item, i) =>
-                item.children ? (
-                  <NavGroup
-                    key={i}
-                    item={item}
-                    isHovered={isHovered}
-                    isMobileOpen={isMobileOpen}
-                    location={location}
-                    onLinkClick={handleLinkClick}
-                    pendingCount={pendingCount}
-                  />
-                ) : (
-                  <li key={i}>
-                    <Link
-                      to={item.path}
-                      className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                      title={!isHovered && !isMobileOpen ? item.label : undefined}
-                      onClick={handleLinkClick}
-                    >
+              ? filteredMenu.map((item, index) => (
+                  <li key={`${item.label}-${index}`}>
+                    <Link to={item.path} className={`nav-link ${location.pathname === item.path ? "active" : ""}`}>
                       <span className="nav-icon">{item.icon}</span>
                       {(isHovered || isMobileOpen) && <span>{item.label}</span>}
+                      {(isHovered || isMobileOpen) && getBadgeValue(item) > 0 && (
+                        <span className="sidebar-badge">{getBadgeValue(item)}</span>
+                      )}
                     </Link>
                   </li>
-                )
-              )}
+                ))
+              : menuItems.map((item, index) =>
+                  item.children ? (
+                    <NavGroup
+                      key={`${item.label}-${index}`}
+                      item={item}
+                      isHovered={isHovered}
+                      isMobileOpen={isMobileOpen}
+                      location={location}
+                      onLinkClick={() => setIsMobileOpen(false)}
+                      getBadgeValue={getBadgeValue}
+                    />
+                  ) : (
+                    <li key={`${item.label}-${index}`}>
+                      <Link
+                        to={item.path}
+                        className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
+                        title={!isHovered && !isMobileOpen ? item.label : undefined}
+                        onClick={() => setIsMobileOpen(false)}
+                      >
+                        <span className="nav-icon">{item.icon}</span>
+                        {(isHovered || isMobileOpen) && <span>{item.label}</span>}
+                      </Link>
+                    </li>
+                  )
+                )}
           </ul>
         </nav>
 
-        {/* LOGOUT */}
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
-            <span className="logout-icon">
-              ⏏
-            </span>
+            <span className="logout-icon">⏏</span>
             {(isHovered || isMobileOpen) && <span>Logout</span>}
           </button>
         </div>

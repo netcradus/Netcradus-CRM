@@ -15,7 +15,9 @@ const Topbar = () => {
           <span className="topbar-orbit-inner" />
         </div>
         <div className="topbar-title">
-          <span className="topbar-product">Netcradus</span>
+          <div className="topbar-product-logo-wrap">
+            <img src="/netcradus.png" alt="Netcradus" className="topbar-product-logo" />
+          </div>
           <span className="topbar-subtitle">Revenue CRM Workspace</span>
         </div>
       </div>
