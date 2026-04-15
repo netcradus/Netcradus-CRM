@@ -1,10 +1,33 @@
 const { Readable } = require('stream');
-const drive = require('../config/drive');
+const { drive } = require('../config/drive');
 
 /**
  * driveService — pure Google Drive API wrappers with no business logic.
  * All functions require the drive client to be initialized.
  */
+
+/**
+ * Helper to handle Google Drive API errors consistently.
+ * Detects token expiry/invalid_grant and formats a 503 response for the client.
+ */
+const handleDriveError = (error, context = 'Drive Operation') => {
+  const message = error.message || '';
+  console.error(`[DriveService] ${context} error:`, message);
+
+  // Detect token expiration or revoked access (typical of Refresh Token expiration after 6 months or password change)
+  if (message.includes('invalid_grant') || message.includes('Token has been expired')) {
+    const customError = new Error('File storage is temporarily unavailable. Please contact your administrator.');
+    customError.status = 503;
+    customError.code = 'DRIVE_AUTH_EXPIRED';
+    throw customError;
+  }
+
+  // General error (maintain original status if present, or 500)
+  const generalError = new Error(message || 'Internal Drive error.');
+  generalError.status = error.status || 500;
+  generalError.code = error.code || 'DRIVE_ERROR';
+  throw generalError;
+};
 
 /**
  * Sanitizes a name for use in Google Drive (strips forbidden characters).
@@ -29,22 +52,26 @@ const sanitizeDriveName = (name = '') => {
 const createFolder = async (name, parentFolderId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  const safeName = sanitizeDriveName(name);
+  try {
+    const safeName = sanitizeDriveName(name);
 
-  const res = await drive.files.create({
-    requestBody: {
-      name: safeName,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [parentFolderId],
-    },
-    fields: 'id, name',
-    supportsAllDrives: true,
-  });
+    const res = await drive.files.create({
+      requestBody: {
+        name: safeName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentFolderId],
+      },
+      fields: 'id, name',
+      supportsAllDrives: true,
+    });
 
-  return {
-    folderId: res.data.id,
-    folderName: res.data.name,
-  };
+    return {
+      folderId: res.data.id,
+      folderName: res.data.name,
+    };
+  } catch (err) {
+    handleDriveError(err, 'createFolder');
+  }
 };
 
 /**
@@ -58,27 +85,31 @@ const createFolder = async (name, parentFolderId) => {
 const uploadFile = async (buffer, fileName, mimeType, parentFolderId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  const safeName = sanitizeDriveName(fileName);
-  const stream = Readable.from(buffer);
+  try {
+    const safeName = sanitizeDriveName(fileName);
+    const stream = Readable.from(buffer);
 
-  const res = await drive.files.create({
-    requestBody: {
-      name: safeName,
-      parents: [parentFolderId],
-    },
-    media: {
-      mimeType,
-      body: stream,
-    },
-    fields: 'id, webViewLink, webContentLink',
-    supportsAllDrives: true,
-  });
+    const res = await drive.files.create({
+      requestBody: {
+        name: safeName,
+        parents: [parentFolderId],
+      },
+      media: {
+        mimeType,
+        body: stream,
+      },
+      fields: 'id, webViewLink, webContentLink',
+      supportsAllDrives: true,
+    });
 
-  return {
-    driveFileId: res.data.id,
-    driveViewLink: res.data.webViewLink || '',
-    webContentLink: res.data.webContentLink || '',
-  };
+    return {
+      driveFileId: res.data.id,
+      driveViewLink: res.data.webViewLink || '',
+      webContentLink: res.data.webContentLink || '',
+    };
+  } catch (err) {
+    handleDriveError(err, 'uploadFile');
+  }
 };
 
 /**
@@ -97,11 +128,10 @@ const deleteFile = async (driveFileId) => {
     return true;
   } catch (err) {
     if (err.code === 404) {
-      // File already gone from Drive — treat as success
       console.warn(`[DriveService] File ${driveFileId} not found on Drive (already deleted?)`);
       return true;
     }
-    throw err;
+    handleDriveError(err, 'deleteFile');
   }
 };
 
@@ -115,25 +145,29 @@ const deleteFile = async (driveFileId) => {
 const streamFile = async (driveFileId, res) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  // First fetch metadata to get mimeType
-  const meta = await drive.files.get({
-    fileId: driveFileId,
-    fields: 'mimeType, name',
-    supportsAllDrives: true,
-  });
-
-  res.setHeader('Content-Type', meta.data.mimeType || 'application/octet-stream');
-
-  const response = await drive.files.get(
-    {
+  try {
+    // First fetch metadata to get mimeType
+    const meta = await drive.files.get({
       fileId: driveFileId,
-      alt: 'media',
+      fields: 'mimeType, name',
       supportsAllDrives: true,
-    },
-    { responseType: 'stream' }
-  );
+    });
 
-  response.data.pipe(res);
+    res.setHeader('Content-Type', meta.data.mimeType || 'application/octet-stream');
+
+    const response = await drive.files.get(
+      {
+        fileId: driveFileId,
+        alt: 'media',
+        supportsAllDrives: true,
+      },
+      { responseType: 'stream' }
+    );
+
+    response.data.pipe(res);
+  } catch (err) {
+    handleDriveError(err, 'streamFile');
+  }
 };
 
 /**
@@ -144,18 +178,22 @@ const streamFile = async (driveFileId, res) => {
 const getFileMetadata = async (driveFileId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  const res = await drive.files.get({
-    fileId: driveFileId,
-    fields: 'id, name, mimeType, size, createdTime',
-    supportsAllDrives: true,
-  });
+  try {
+    const res = await drive.files.get({
+      fileId: driveFileId,
+      fields: 'id, name, mimeType, size, createdTime',
+      supportsAllDrives: true,
+    });
 
-  return {
-    name: res.data.name,
-    mimeType: res.data.mimeType,
-    size: parseInt(res.data.size || '0', 10),
-    createdTime: res.data.createdTime,
-  };
+    return {
+      name: res.data.name,
+      mimeType: res.data.mimeType,
+      size: parseInt(res.data.size || '0', 10),
+      createdTime: res.data.createdTime,
+    };
+  } catch (err) {
+    handleDriveError(err, 'getFileMetadata');
+  }
 };
 
 /**
@@ -167,22 +205,26 @@ const getFileMetadata = async (driveFileId) => {
 const listFilesInFolder = async (driveFolderId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  const res = await drive.files.list({
-    q: `'${driveFolderId}' in parents and trashed = false`,
-    fields: 'files(id, name, mimeType, size)',
-    pageSize: 1000,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-    corpora: 'drive',
-    driveId: process.env.DRIVE_SHARED_ID || undefined,
-  });
+  try {
+    const res = await drive.files.list({
+      q: `'${driveFolderId}' in parents and trashed = false`,
+      fields: 'files(id, name, mimeType, size)',
+      pageSize: 1000,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      corpora: 'drive',
+      driveId: process.env.DRIVE_SHARED_ID || undefined,
+    });
 
-  return (res.data.files || []).map(f => ({
-    driveFileId: f.id,
-    name: f.name,
-    mimeType: f.mimeType,
-    size: parseInt(f.size || '0', 10),
-  }));
+    return (res.data.files || []).map(f => ({
+      driveFileId: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      size: parseInt(f.size || '0', 10),
+    }));
+  } catch (err) {
+    handleDriveError(err, 'listFilesInFolder');
+  }
 };
 
 /**
@@ -195,15 +237,19 @@ const listFilesInFolder = async (driveFolderId) => {
 const moveFile = async (driveFileId, oldParentFolderId, newParentFolderId) => {
   if (!drive) throw new Error('Google Drive client is not initialized.');
 
-  await drive.files.update({
-    fileId: driveFileId,
-    addParents: newParentFolderId,
-    removeParents: oldParentFolderId,
-    fields: 'id, parents',
-    supportsAllDrives: true,
-  });
+  try {
+    await drive.files.update({
+      fileId: driveFileId,
+      addParents: newParentFolderId,
+      removeParents: oldParentFolderId,
+      fields: 'id, parents',
+      supportsAllDrives: true,
+    });
 
-  return true;
+    return true;
+  } catch (err) {
+    handleDriveError(err, 'moveFile');
+  }
 };
 
 module.exports = {

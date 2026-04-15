@@ -1,34 +1,30 @@
 const { google } = require('googleapis');
 
 /**
- * Initializes the Google Drive API client using a Service Account.
- * Credentials are read from GOOGLE_SERVICE_ACCOUNT_KEY_JSON (full JSON as single-line string).
- * Uses the full 'drive' scope to support streaming files uploaded by the service account.
- *
- * NOTE: 'drive.file' scope is intentionally NOT used — it would prevent the server from
- * streaming files that were already uploaded in previous sessions.
+ * Initializes the Google Drive API client using OAuth2 with Refresh Tokens.
+ * This is the preferred method for personal accounts and bypasses service account quota limits.
  */
 const initDrive = () => {
   try {
-    const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
-    if (!raw) {
-      console.error('[Drive] GOOGLE_SERVICE_ACCOUNT_KEY_JSON is not set in environment.');
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+
+    if (!clientId || !clientSecret || !refreshToken) {
+      console.warn('[Drive] ⚠️ OAuth2 credentials missing (CLIENT_ID, SECRET, or REFRESH_TOKEN). Drive features will be unavailable.');
       return null;
     }
 
-    const credentials = JSON.parse(raw);
+    const oauth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      'https://developers.google.com/oauthplayground' // Common redirect URI for manual token generation
+    );
 
-    if (credentials.private_key) {
-      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
-    }
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-
-    const driveClient = google.drive({ version: 'v3', auth });
-    console.log('[Drive] Google Drive client initialized successfully.');
+    const driveClient = google.drive({ version: 'v3', auth: oauth2Client });
+    console.log('[Drive] Google Drive client initialized with OAuth2.');
     return driveClient;
   } catch (error) {
     console.error('[Drive] Initialization failed:', error.message);
@@ -36,5 +32,27 @@ const initDrive = () => {
   }
 };
 
-// Export as singleton — initialized once at startup
-module.exports = initDrive();
+const drive = initDrive();
+
+/**
+ * Diagnostic function to verify Drive connectivity.
+ * Used for both technical health checks and server startup validation.
+ */
+const checkDriveHealth = async () => {
+  if (!drive) {
+    return { status: 'error', message: 'Drive client not initialized.' };
+  }
+  try {
+    // Lightweight call to list the root folder
+    await drive.files.list({ pageSize: 1 });
+    return { status: 'ok' };
+  } catch (error) {
+    console.error('[Drive] Health Check Failed:', error.message);
+    return { status: 'error', message: error.message };
+  }
+};
+
+module.exports = {
+  drive,
+  checkDriveHealth,
+};

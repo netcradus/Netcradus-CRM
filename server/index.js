@@ -9,6 +9,8 @@ const { initializeSocket } = require("./socket");
 dotenv.config();
 connectDB();
 
+const { checkDriveHealth } = require('./config/drive');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -132,9 +134,21 @@ app.get("/api/health/cron", (req, res) => {
   res.status(200).json({ success: true, data: getCronLastRun() });
 });
 
+const healthRoutes = require("./routes/healthRoutes");
+app.use("/api/health", healthRoutes);
+
 initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", async () => {
   console.log(`🚀 Server is running on port ${PORT}`);
+
+  // Drive Startup Check
+  const driveStatus = await checkDriveHealth();
+  if (driveStatus.status !== 'ok') {
+    console.error('\n⚠️  DRIVE CONNECTION FAILED — file uploads will not work. Check OAuth credentials.');
+    console.error(`Reason: ${driveStatus.message}\n`);
+  } else {
+    console.log('✅ DRIVE CONNECTED — Storage system operational.');
+  }
 });

@@ -11,7 +11,9 @@
  *   node scripts/migrateExistingUserStorage.js
  *
  * Prerequisites:
- *   - GOOGLE_SERVICE_ACCOUNT_KEY_JSON must be set in server/.env
+ *   - GOOGLE_CLIENT_ID must be set in server/.env
+ *   - GOOGLE_CLIENT_SECRET must be set in server/.env
+ *   - GOOGLE_REFRESH_TOKEN must be set in server/.env
  *   - DRIVE_FOLDER_ID must be set in server/.env
  *   - MONGODB_URI must be set in server/.env
  */

@@ -1,17 +1,34 @@
 # Netcradus CRM - Backend
 
-## Google Drive Setup (Shared Drive)
+## Google Drive Setup (OAuth2)
 
-### Prerequisites
-1. **Shared Drive**: You must create a Shared Drive in your Google Workspace.
-2. **Service Account**: Ensure your Service Account has **Contributor** or **Content Manager** access to the Shared Drive.
+The system uses Google Drive for document storage. To ensure maximum storage quota and reliability, we use the **OAuth2 Refresh Token** method (Personal/Workspace account).
 
-### Configuration
-Update your `.env` file with the following:
-- `DRIVE_SHARED_ID`: The ID of the Shared Drive itself (found in the URL: `drive.google.com/drive/u/0/folders/SHARED_DRIVE_ID`).
-- `DRIVE_FOLDER_ID`: The ID of a specific folder **inside** that Shared Drive where files will be stored. 
-  > [!IMPORTANT]
-  > Using a standard "My Drive" folder ID will **not** work, as Service Accounts have zero personal storage quota.
+### 1. Create a Google Cloud Project
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project.
+3. Enable **Google Drive API**.
+4. Configure the **OAuth Consent Screen** (Internal or External/Testing). Add yourself as a test user if External.
+5. Create **OAuth 2.0 Client IDs** (Application type: "Web application").
+6. Note your **Client ID** and **Client Secret**.
+
+### 2. Generate Refresh Token
+1. Go to [Google OAuth Playground](https://developers.google.com/oauthplayground/).
+2. Click the gear icon (Settings) and check **"Use your own OAuth credentials"**. Enter your Client ID and Client Secret.
+3. In the "Select & authorize APIs" box, find **Drive API v3** and select `https://www.googleapis.com/auth/drive`.
+4. Click **Authorize APIs** and log in to your Google account.
+5. In Step 2, click **Exchange authorization code for tokens**.
+6. Note the **Refresh Token**.
+
+### 3. Configuration
+Update your `server/.env` file:
+- `GOOGLE_CLIENT_ID`: From step 1.
+- `GOOGLE_CLIENT_SECRET`: From step 1.
+- `GOOGLE_REFRESH_TOKEN`: From step 2.
+- `DRIVE_FOLDER_ID`: Create a folder in your Drive and copy its ID from the URL.
+
+> [!CAUTION]
+> **Refresh Token Longevity**: Refresh tokens for "Testing" apps expire after 7 days. Ensure your Google Cloud Project is set to "In Production" or use a Google Workspace account to avoid constant regeneration.
 
 ## Maintenance & Troubleshooting
 
