@@ -59,6 +59,8 @@ import MyProfilePage from "./features/MyProfile/MyProfilePage";
 import InterviewsPage from "./features/Interviews/InterviewsPage";
 import StorageAdminPage from "./features/Documents/admin/StorageAdminPage";
 import ChatPanel from "./components/Chat/ChatPanel";
+import ManagementHub from "./features/Management/ManagementHub";
+import PasswordManager from "./features/PasswordManager/PasswordManager";
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
@@ -153,6 +155,54 @@ function App() {
           <Route path="/calls" element={<Calls />} />
           <Route path="/cases" element={<Cases />} />
           <Route path="/contacts" element={<Contacts />} />
+          <Route
+            path="/management/business/clients"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/management/business/tenders"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/management/business/overview"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/management/day-to-day/purchases"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/management/day-to-day/purchase-items"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/management/day-to-day/invoices"
+            element={
+              <RoleRoute roles={["super_user", "management"]}>
+                <ManagementHub />
+              </RoleRoute>
+            }
+          />
           <Route path="/sales" element={<Sales />} />
           <Route path="/sales-orders" element={<SalesOrders />} />
           <Route path="/reports" element={<Reports />} />
@@ -201,6 +251,14 @@ function App() {
             element={
               <RoleRoute roles="super_user">
                 <StorageAdminPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/password-manager"
+            element={
+              <RoleRoute roles="super_user">
+                <PasswordManager />
               </RoleRoute>
             }
           />

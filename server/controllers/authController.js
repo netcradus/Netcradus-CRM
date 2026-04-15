@@ -16,6 +16,7 @@ const AuditLog = require("../models/AuditLog");
 
 // In-memory re-authentication tokens (5-min TTL)
 const reAuthTokens = new Map();
+const reAuthAttemptMap = new Map();
 
 // Helper to purge expired re-auth tokens
 const purgeExpiredTokens = () => {
@@ -25,6 +26,23 @@ const purgeExpiredTokens = () => {
       reAuthTokens.delete(userId);
     }
   }
+};
+
+const getAttemptState = (userId) => {
+  const current = reAuthAttemptMap.get(userId);
+  if (!current) return null;
+
+  if (current.cooldownUntil && current.cooldownUntil <= Date.now()) {
+    reAuthAttemptMap.delete(userId);
+    return null;
+  }
+
+  if (Date.now() - current.windowStartedAt > 60 * 1000 && !current.cooldownUntil) {
+    reAuthAttemptMap.delete(userId);
+    return null;
+  }
+
+  return current;
 };
 
 // Create user (super user only)
@@ -315,23 +333,65 @@ const verifyPasswordForReAuth = async (req, res) => {
   try {
     const { password } = req.body;
     const userId = req.user.id;
+    const attemptState = getAttemptState(String(userId));
+
+    if (attemptState?.cooldownUntil && attemptState.cooldownUntil > Date.now()) {
+      const retryAfterSeconds = Math.ceil((attemptState.cooldownUntil - Date.now()) / 1000);
+      await AuditLog.create({
+        action: "VERIFICATION_FAILED",
+        performedBy: userId,
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+        details: { retryAfterSeconds, reason: "COOLDOWN_ACTIVE" },
+      });
+      return res.status(429).json({
+        message: "Verification temporarily locked. Try again in 5 minutes.",
+        attemptsRemaining: 0,
+        retryAfterSeconds,
+      });
+    }
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      await AuditLog.create({ action: "REAUTH_FAILED", performedBy: userId, ipAddress: req.ip, userAgent: req.get('User-Agent') });
-      return res.status(400).json({ message: "Invalid password" });
+      const nextCount = (attemptState?.count || 0) + 1;
+      const nextState = {
+        count: nextCount,
+        windowStartedAt: attemptState?.windowStartedAt || Date.now(),
+        cooldownUntil: nextCount >= 3 ? Date.now() + 5 * 60 * 1000 : null,
+      };
+      reAuthAttemptMap.set(String(userId), nextState);
+      await AuditLog.create({
+        action: "VERIFICATION_FAILED",
+        performedBy: userId,
+        ipAddress: req.ip,
+        userAgent: req.get("User-Agent"),
+        details: {
+          attemptsRemaining: Math.max(0, 3 - nextCount),
+          cooldownUntil: nextState.cooldownUntil,
+        },
+      });
+      return res.status(nextState.cooldownUntil ? 429 : 400).json({
+        message: nextState.cooldownUntil
+          ? "Verification temporarily locked. Try again in 5 minutes."
+          : "Invalid password",
+        attemptsRemaining: Math.max(0, 3 - nextCount),
+        retryAfterSeconds: nextState.cooldownUntil
+          ? Math.ceil((nextState.cooldownUntil - Date.now()) / 1000)
+          : 0,
+      });
     }
 
+    reAuthAttemptMap.delete(String(userId));
     const reAuthToken = crypto.randomUUID();
     reAuthTokens.set(userId.toString(), {
       token: reAuthToken,
       expiresAt: Date.now() + 5 * 60 * 1000 // 5 mins
     });
 
-    await AuditLog.create({ action: "REAUTH_SUCCESS", performedBy: userId, ipAddress: req.ip, userAgent: req.get('User-Agent') });
+    await AuditLog.create({ action: "VERIFICATION_SUCCESS", performedBy: userId, ipAddress: req.ip, userAgent: req.get('User-Agent') });
     res.json({ success: true, reAuthToken });
   } catch (err) {
     res.status(500).json({ message: "Server error" });

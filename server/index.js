@@ -127,6 +127,12 @@ app.use("/api/visits", visitRoutes);
 const ticketRoutes = require("./routes/ticketRoutes");
 app.use("/api/tickets", ticketRoutes);
 
+const managementRoutes = require("./routes/managementRoutes");
+app.use("/api/management", managementRoutes);
+
+const passwordManagerRoutes = require("./routes/passwordManagerRoutes");
+app.use("/api/password-manager", passwordManagerRoutes);
+
 const { registerCronJobs, getCronLastRun } = require("./cron");
 registerCronJobs();
 

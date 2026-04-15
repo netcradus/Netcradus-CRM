@@ -59,6 +59,7 @@ const authMiddleware = async (req, res, next) => {
 
     // Attach user to request
     req.user = user;
+    req.authIssuedAt = decoded.iat;
     next();
   } catch (err) {
     if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
