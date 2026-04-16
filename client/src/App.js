@@ -65,7 +65,7 @@ import PasswordManager from "./features/PasswordManager/PasswordManager";
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
   const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("userRole");
+  const userRole = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
   return token && userRole ? (
     <ChatProvider>
       <MainLayout />
@@ -74,8 +74,13 @@ function ProtectedLayout() {
 }
 
 function RoleRoute({ roles, children }) {
-  const role = localStorage.getItem("userRole");
-  const allowed = Array.isArray(roles) ? roles.includes(role) : role === roles;
+  const role = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const normalizedRoles = Array.isArray(roles)
+    ? roles.map((item) => String(item).trim().toLowerCase())
+    : String(roles).trim().toLowerCase();
+  const allowed = Array.isArray(normalizedRoles)
+    ? normalizedRoles.includes(role)
+    : role === normalizedRoles;
   if (!allowed) {
     return <Navigate to="/dashboard" replace />;
   }
