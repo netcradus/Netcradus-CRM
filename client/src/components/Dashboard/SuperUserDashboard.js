@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import axios from "axios";
 import "./AdminDashboard.css"; // Reuse existing styles
+import AdminDashboard from "./AdminDashboard";
 import SalesDashboard from "./SalesDashboard";
 import SupportDashboard from "./SupportDashboard";
 import HRDashboard from "./HRDashboard";
@@ -168,7 +169,7 @@ const SuperUserDashboard = () => {
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
     switch (role) {
-      case "admin": return <p>Administrator oversight active</p>;
+      case "admin": return <AdminDashboard />;
       case "sales": return <SalesDashboard preview={!selectedUser} />;
       case "support": return <SupportDashboard preview={!selectedUser} />;
       case "hr": return <HRDashboard preview={!selectedUser} />;

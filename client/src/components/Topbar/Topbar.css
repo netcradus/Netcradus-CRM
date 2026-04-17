@@ -1,4 +1,4 @@
- .topbar {
+.topbar {
   height: 64px;
   display: flex;
   align-items: center;
@@ -13,6 +13,10 @@
     0 18px 45px rgba(15, 23, 42, 0.85),
     0 0 0 1px rgba(15, 23, 42, 0.9) inset;
   color: var(--nc-text);
+}
+
+.topbar-theme-toggle {
+  flex-shrink: 0;
 }
 
 .topbar-left {
@@ -161,6 +165,12 @@
 
   .topbar-right {
     gap: 8px;
+  }
+
+  .topbar-theme-toggle {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
   }
 
   .topbar-search {

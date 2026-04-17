@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { apiUrl } from "../config/api";
+import ThemeToggle from "../components/ThemeToggle";
 import "./Login.css";
 
 function Login() {
@@ -253,9 +254,12 @@ function Login() {
             <img src="/sidebar-logo.jpeg" alt="Netcradus" className="lp-logo-img" />
             <img src="/netcradus.png" alt="Netcradus" className="lp-logo-text" />
           </div>
-          <div className="lp-secure-mark">
-            <ShieldCheck size={14} />
-            <span>CRM Workspace</span>
+          <div className="lp-brand-actions">
+            <ThemeToggle className="lp-theme-toggle" compact />
+            <div className="lp-secure-mark">
+              <ShieldCheck size={14} />
+              <span>CRM Workspace</span>
+            </div>
           </div>
         </div>
 
@@ -266,9 +270,12 @@ function Login() {
                 <img src="/sidebar-logo.jpeg" alt="Netcradus" className="lp-logo-img" />
                 <img src="/netcradus.png" alt="Netcradus" className="lp-logo-text" />
               </div>
-              <div className="lp-secure-mark">
-                <ShieldCheck size={14} />
-                <span>CRM Workspace</span>
+              <div className="lp-brand-actions">
+                <ThemeToggle className="lp-theme-toggle" compact />
+                <div className="lp-secure-mark">
+                  <ShieldCheck size={14} />
+                  <span>CRM Workspace</span>
+                </div>
               </div>
             </div>
 

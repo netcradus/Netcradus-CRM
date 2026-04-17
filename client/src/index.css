@@ -53,8 +53,6 @@ body,
   height: 100%;
   width: 100%;
   overflow: auto;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   background-color: var(--nc-bg);
   color: var(--nc-text);
   -webkit-font-smoothing: antialiased;
@@ -91,4 +89,3 @@ code {
   justify-content: center;
   align-items: center;
 }
-
