@@ -93,12 +93,10 @@ function Leads() {
     });
   }, [setSearchParams]);
 
-  const fetchLeads = useCallback(async () => {
+  const fetchLeads = useCallback(async (paramsOverride) => {
     try {
       setLoading(true);
-      // Read directly from the URL (window.location) to always get the freshest params
-      const urlParams = new URLSearchParams(window.location.search);
-      const params = Object.fromEntries(urlParams.entries());
+      const params = paramsOverride || Object.fromEntries(searchParams.entries());
       const response = await axios.get(apiUrl("/api/leads"), { params });
       
       if (response.data.success) {
@@ -114,13 +112,13 @@ function Leads() {
     } finally {
       setLoading(false);
     }
-  }, []); // No deps — reads URL directly each time
+  }, [searchParams]);
 
   // Fetch leads when searchParams change
   useEffect(() => {
     fetchLeads();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [searchParams, fetchLeads]);
+  }, [fetchLeads]);
 
   // Debounce search input
   useEffect(() => {
@@ -421,7 +419,15 @@ function Leads() {
       }
 
       setSuccess(`Imported ${total} leads successfully!`);
-      await fetchLeads();
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("page", "1");
+      const nextParamsObject = Object.fromEntries(nextParams.entries());
+
+      if (searchParams.get("page") !== "1") {
+        setSearchParams(nextParams);
+      } else {
+        await fetchLeads(nextParamsObject);
+      }
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error importing CSV:", err);
