@@ -156,3 +156,23 @@
   font-size: 13px;
   padding: 8px 0;
 }
+
+@media (max-width: 768px) {
+  .bell-pill {
+    gap: 0;
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .bell-label {
+    display: none;
+  }
+
+  .popup-box {
+    right: -42px;
+    width: min(340px, calc(100vw - 20px));
+  }
+}

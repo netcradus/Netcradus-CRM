@@ -70,6 +70,17 @@ const projectRouteLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const passwordVerificationLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 3,
+    keyGenerator: (req) => req.user?._id?.toString() || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        message: "Too many verification attempts. Please wait a minute before trying again.",
+        attemptsRemaining: 0,
+    },
+});
+
 module.exports = {
     loginLimiter,
     otpRequestLimiter,
@@ -77,4 +88,5 @@ module.exports = {
     viewDownloadRateLimiter,
     verifyPasswordLimiter,
     projectRouteLimiter,
+    passwordVerificationLimiter,
 };
