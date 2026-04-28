@@ -37,6 +37,9 @@ import {
   UmbrellaOff,
   FileBarChart2,
   HardDrive,
+  FolderKanban,
+  Presentation,
+  LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { apiUrl } from "../../config/api";
@@ -52,6 +55,14 @@ const roleMenus = {
 
 
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Projects",
+      icon: <FolderKanban size={18} />,
+      children: [
+        { label: "Projects", path: "/projects", icon: <FolderKanban size={16} /> },
+        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
+      ],
+    },
     {
       label: "Finance",
       icon: <Receipt size={18} />,
@@ -97,6 +108,7 @@ const roleMenus = {
       children: [
          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
 
       ],
     },
@@ -151,6 +163,7 @@ const roleMenus = {
       children: [
          { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
           { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+          { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
 
       ],
     },
@@ -182,6 +195,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 
   sales: [
@@ -212,6 +226,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 
   support: [
@@ -240,6 +255,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 
   hr: [
@@ -263,6 +279,7 @@ const roleMenus = {
     },
             { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 
   it: [
@@ -274,7 +291,7 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Projects", path: "/projects", icon: <CalendarClock size={16} /> },
+        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
         { label: "Documents", path: "/documents", icon: <Phone size={16} /> },
       ],
     },
@@ -290,6 +307,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 
   digital_media: [
@@ -318,6 +336,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
 };
 
@@ -572,7 +591,7 @@ function Sidebar() {
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
             <span className="logout-icon">
-              ⏏
+              <LogOut size={18} />
             </span>
             {(isHovered || isMobileOpen) && <span>Logout</span>}
           </button>

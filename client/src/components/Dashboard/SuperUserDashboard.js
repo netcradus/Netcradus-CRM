@@ -42,8 +42,8 @@ const SuperUserDashboard = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
+  const [portfolioProjects, setPortfolioProjects] = useState([]);
   const userName = localStorage.getItem("userName") || "Super User";
-  const userRole = localStorage.getItem("userRole") || "super_user";
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -75,6 +75,27 @@ const SuperUserDashboard = () => {
     const interval = setInterval(fetchAttendance, 60000);
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    const fetchPortfolioProjects = async () => {
+      try {
+        const res = await axios.get(apiUrl("/api/projects"), {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 100, sortBy: "createdAt" },
+        });
+        setPortfolioProjects(res.data.projects || []);
+      } catch (err) {
+        console.error("Error fetching portfolio projects:", err);
+      }
+    };
+    fetchPortfolioProjects();
+  }, [token]);
+
+  const portfolioStats = useMemo(() => ({
+    total: portfolioProjects.length,
+    visible: portfolioProjects.filter((project) => project.isVisibleInShowcase).length,
+    ongoing: portfolioProjects.filter((project) => project.status === "ongoing").length,
+  }), [portfolioProjects]);
 
   const liveAttendanceChartData = useMemo(() => {
     if (!attendanceSnapshot) return [];
@@ -227,6 +248,45 @@ const SuperUserDashboard = () => {
           {renderSelectedDashboard()}
         </div>
       )}
+
+      <div className="portfolio-dashboard-strip">
+        {[
+          ["Total Projects", portfolioStats.total],
+          ["Visible in Showcase", portfolioStats.visible],
+          ["Ongoing Projects", portfolioStats.ongoing],
+        ].map(([label, value]) => (
+          <button key={label} className="portfolio-dashboard-card glass" onClick={() => navigate("/projects")}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </button>
+        ))}
+      </div>
+
+      <div className="portfolio-dashboard-recent glass netcradus-panel">
+        <div className="card-header">
+          <h3>Recent Projects</h3>
+          <button className="btn-primary" onClick={() => navigate("/projects")}>View All</button>
+        </div>
+        <div className="portfolio-dashboard-table">
+          <div className="portfolio-dashboard-row head">
+            <span>Name</span>
+            <span>Client</span>
+            <span>Status</span>
+            <span>Live URL</span>
+            <span>Actions</span>
+          </div>
+          {portfolioProjects.slice(0, 5).map((project) => (
+            <div className="portfolio-dashboard-row" key={project._id}>
+              <span>{project.name}</span>
+              <span>{project.clientCompany || project.clientName || "--"}</span>
+              <span>{project.status}</span>
+              <span>{project.liveUrl ? <a href={project.liveUrl} target="_blank" rel="noreferrer">Open</a> : "--"}</span>
+              <button onClick={() => navigate(`/projects/${project._id}`)}>View</button>
+            </div>
+          ))}
+          {!portfolioProjects.length && <p className="portfolio-dashboard-empty">No portfolio projects yet.</p>}
+        </div>
+      </div>
 
       <div className="admin-grid">
          <div className="admin-charts glass netcradus-panel">

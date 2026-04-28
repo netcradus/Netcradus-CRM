@@ -1,5 +1,9 @@
 # Netcradus CRM - Backend
 
+## Modules
+- Projects: super-user portfolio records for company projects, sensitive field verification, Drive document attachments, and showcase visibility controls.
+- Showcase: authenticated in-app presentation view for portfolio projects, available at `/showcase` with no public sharing URL.
+
 ## Google Drive Setup (OAuth2)
 
 The system uses Google Drive for document storage. To ensure maximum storage quota and reliability, we use the **OAuth2 Refresh Token** method (Personal/Workspace account).

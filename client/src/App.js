@@ -31,6 +31,9 @@ import Accounts from "./features/Accounts/Accounts";
 import Meetings from "./features/Meetings/Meetings";
 import Products from "./features/Products/Products";
 import Projects from "./features/Projects/Projects";
+import ProjectDetailPage from "./features/Projects/ProjectDetailPage";
+import ProjectFormPage from "./features/Projects/ProjectFormPage";
+import ShowcasePage from "./features/Projects/ShowcasePage";
 import Quotes from "./features/Quotes/Quotes";
 import Social from "./features/Social/Social";
 import Services from "./features/Services/Services";
@@ -162,7 +165,39 @@ function App() {
           <Route path="/forecasts" element={<Forecasts />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/projects" element={<Projects />} />
+          <Route
+            path="/projects"
+            element={
+              <RoleRoute roles="super_user">
+                <Projects />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/projects/new"
+            element={
+              <RoleRoute roles="super_user">
+                <ProjectFormPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/projects/:id"
+            element={
+              <RoleRoute roles="super_user">
+                <ProjectDetailPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/edit"
+            element={
+              <RoleRoute roles="super_user">
+                <ProjectFormPage />
+              </RoleRoute>
+            }
+          />
+          <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="/quotes" element={<Quotes />} />
           <Route path="/social" element={<Social />} />
           <Route path="/services" element={<Services />} />
