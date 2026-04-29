@@ -42,6 +42,34 @@ const viewDownloadRateLimiter = rateLimit({
     },
 });
 
+const verifyPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => req.user?._id || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "Too many password attempts. Please try again after 15 minutes.",
+        code: "TOO_MANY_ATTEMPTS",
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const projectRouteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    keyGenerator: (req) => req.user?._id || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "Too many project requests. Please try again later.",
+        code: "RATE_LIMIT_REACHED",
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 const passwordVerificationLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 3,
@@ -58,5 +86,7 @@ module.exports = {
     otpRequestLimiter,
     uploadRateLimiter,
     viewDownloadRateLimiter,
+    verifyPasswordLimiter,
+    projectRouteLimiter,
     passwordVerificationLimiter,
 };

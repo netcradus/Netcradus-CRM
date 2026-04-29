@@ -29,6 +29,9 @@ import {
   UmbrellaOff,
   FileBarChart2,
   HardDrive,
+  FolderKanban,
+  Presentation,
+  LogOut,
   ShoppingCart,
   PackagePlus,
   KeyRound,
@@ -68,6 +71,14 @@ const roleMenus = {
     { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
     { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
     { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
+    {
+      label: "Projects",
+      icon: <FolderKanban size={18} />,
+      children: [
+        { label: "Projects", path: "/projects", icon: <FolderKanban size={16} /> },
+        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
+      ],
+    },
     {
       label: "Finance",
       icon: <Receipt size={18} />,
@@ -114,6 +125,7 @@ const roleMenus = {
       children: [
         { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
         { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
       ],
     },
     {
@@ -209,6 +221,7 @@ const roleMenus = {
       ],
     },
     { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
+    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
   ],
   support: [
     { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
@@ -264,7 +277,6 @@ const roleMenus = {
       icon: <Layers3 size={18} />,
       children: [
         { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Projects", path: "/projects", icon: <CalendarClock size={16} /> },
         { label: "Documents", path: "/documents", icon: <Phone size={16} /> },
       ],
     },
@@ -315,6 +327,25 @@ const isItemActive = (item, pathname) => {
 
 const flattenMenuItems = (items = []) =>
   items.flatMap((item) => (item.children ? flattenMenuItems(item.children) : item.path ? [item] : []));
+
+const stripShowcaseForRole = (items = [], userRole) =>
+  items
+    .map((item) => {
+      if (item.path === "/showcase" && userRole !== "super_user") return null;
+      if (!Array.isArray(item.children)) return item;
+      const children = stripShowcaseForRole(item.children, userRole).filter(Boolean);
+      if (!children.length && !item.path) return null;
+      return { ...item, children };
+    })
+    .filter(Boolean);
+
+const mapMenuForProjectsAccess = (items = [], userRole) => {
+  const filtered = stripShowcaseForRole(items, userRole);
+  const hasProjectsLink = flattenMenuItems(filtered).some((item) => item.path === "/projects");
+  if (hasProjectsLink) return filtered;
+
+  return [...filtered, { label: "Projects", path: "/projects", icon: <FolderKanban size={18} /> }];
+};
 
 function DropdownNode({ item, location, onLeafClick, getBadgeValue, depth = 0 }) {
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -490,7 +521,7 @@ function Sidebar() {
   }, [fetchPendingCount, fetchManagementCounts]);
 
   const userRole = localStorage.getItem("userRole");
-  const menuItems = roleMenus[userRole] || [];
+  const menuItems = mapMenuForProjectsAccess(roleMenus[userRole] || [], userRole);
 
   const getBadgeValue = useCallback(
     (item) => {
@@ -610,7 +641,9 @@ function Sidebar() {
 
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={handleLogout}>
-            <span className="logout-icon">⏏</span>
+            <span className="logout-icon">
+              <LogOut size={18} />
+            </span>
             {(isHovered || isMobileOpen) && <span>Logout</span>}
           </button>
         </div>

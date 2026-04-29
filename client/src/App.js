@@ -31,6 +31,9 @@ import Accounts from "./features/Accounts/Accounts";
 import Meetings from "./features/Meetings/Meetings";
 import Products from "./features/Products/Products";
 import Projects from "./features/Projects/Projects";
+import ProjectDetailPage from "./features/Projects/ProjectDetailPage";
+import ProjectFormPage from "./features/Projects/ProjectFormPage";
+import ShowcasePage from "./features/Projects/ShowcasePage";
 import Quotes from "./features/Quotes/Quotes";
 import Social from "./features/Social/Social";
 import Services from "./features/Services/Services";
@@ -73,7 +76,7 @@ function ProtectedLayout() {
   ) : <Navigate to="/login" replace />;
 }
 
-function RoleRoute({ roles, children }) {
+function RoleRoute({ roles, children, redirectTo = "/dashboard" }) {
   const role = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
   const normalizedRoles = Array.isArray(roles)
     ? roles.map((item) => String(item).trim().toLowerCase())
@@ -82,9 +85,20 @@ function RoleRoute({ roles, children }) {
     ? normalizedRoles.includes(role)
     : role === normalizedRoles;
   if (!allowed) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
   return children;
+}
+
+function UnauthorizedPage() {
+  return (
+    <div className="nc-page">
+      <div className="nc-panel nc-section">
+        <h1 className="nc-hero-title">403 Unauthorized</h1>
+        <p className="nc-hero-subtitle">You do not have permission to open this page.</p>
+      </div>
+    </div>
+  );
 }
 
 function App() {
@@ -217,7 +231,30 @@ function App() {
           <Route path="/forecasts" element={<Forecasts />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/projects" element={<Projects />} />
+          <Route
+            path="/projects"
+            element={<Projects />}
+          />
+          <Route
+            path="/projects/new"
+            element={<ProjectFormPage />}
+          />
+          <Route
+            path="/projects/:id"
+            element={<ProjectDetailPage />}
+          />
+          <Route
+            path="/projects/:id/edit"
+            element={<ProjectFormPage />}
+          />
+          <Route
+            path="/showcase"
+            element={
+              <RoleRoute roles="super_user" redirectTo="/unauthorized">
+                <ShowcasePage />
+              </RoleRoute>
+            }
+          />
           <Route path="/quotes" element={<Quotes />} />
           <Route path="/social" element={<Social />} />
           <Route path="/services" element={<Services />} />
@@ -271,6 +308,7 @@ function App() {
         </Route>
 
         {/* ================= FALLBACK ================= */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
 
       </Routes>

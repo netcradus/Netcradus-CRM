@@ -488,7 +488,7 @@ function Login() {
               </div>
             )}
 
-            <p className="lp-copy">Â© 2026 Netcradus. All rights reserved.</p>
+            <p className="lp-copy">© 2026 Netcradus. All rights reserved.</p>
           </div>
         </section>
       </div>
