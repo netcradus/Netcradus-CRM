@@ -1,6 +1,7 @@
 import React from "react";
 import { Search } from "lucide-react";
 import NotificationButton from "../NotificationButton";
+import ThemeToggle from "../ThemeToggle";
 import "./Topbar.css";
 
 const Topbar = () => {
@@ -23,6 +24,8 @@ const Topbar = () => {
       </div>
 
       <div className="topbar-right">
+        <ThemeToggle className="topbar-theme-toggle" compact />
+
         <div className="topbar-search">
           <Search size={16} />
           <input

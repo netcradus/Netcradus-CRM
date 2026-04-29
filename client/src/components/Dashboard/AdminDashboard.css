@@ -1,7 +1,7 @@
 .admin-dashboard {
   padding: 30px;
   min-height: 100vh;
-  color: #f5f5f5;
+  color: var(--text-primary);
   width: 100%;
   box-sizing: border-box;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -10,7 +10,7 @@
   background:
     radial-gradient(circle at top left, rgba(255, 138, 0, 0.14), transparent 26%),
     radial-gradient(circle at top right, rgba(255, 45, 143, 0.14), transparent 28%),
-    linear-gradient(135deg, #050505 0%, #0b0b11 45%, #130813 100%);
+    linear-gradient(135deg, var(--bg-base) 0%, var(--bg-surface) 45%, var(--bg-raised) 100%);
 }
 
 /* Desktop: Collapsed sidebar */
@@ -49,7 +49,7 @@
   margin: 0;
   font-size: 30px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .admin-hero-left h1 span {
@@ -61,7 +61,7 @@
 
 .admin-hero-left p {
   margin-top: 8px;
-  color: #cfcfcf;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -85,7 +85,7 @@
     rgba(255, 45, 143, 0.16)
   );
   border: 1px solid rgba(255, 138, 0, 0.24);
-  color: #ffd7bf;
+  color: var(--text-primary);
   box-shadow: 0 0 18px rgba(255, 95, 61, 0.12);
 }
 
@@ -135,11 +135,11 @@
 .netcradus-panel {
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.035),
-    rgba(255, 255, 255, 0.02)
+    var(--glass-bg),
+    var(--app-surface-muted)
   );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg, 0 8px 28px rgba(0, 0, 0, 0.28));
   backdrop-filter: blur(12px);
   border-radius: 16px;
 }
@@ -156,23 +156,23 @@
 .admin-search,
 .admin-select {
   padding: 11px 14px;
-  background: #131319;
-  border: 1px solid rgba(255, 138, 0, 0.14);
-  color: #fff;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   border-radius: 10px;
   min-width: 200px;
   transition: all 0.3s ease;
 }
 
 .admin-search::placeholder {
-  color: #9f9f9f;
+  color: var(--text-muted);
 }
 
 .admin-search:focus,
 .admin-select:focus {
   outline: none;
   border-color: #ff5f3d;
-  background: #1a1a22;
+  background: var(--bg-secondary);
   box-shadow: 0 0 0 3px rgba(255, 95, 61, 0.14);
 }
 
@@ -267,7 +267,7 @@
 }
 
 .metric-label {
-  color: #d0aaa1;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 6px;
 }
@@ -275,7 +275,7 @@
 .metric-value {
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* ===== GRID SECTION ===== */
@@ -300,7 +300,7 @@
 
 .card-header h3 {
   margin: 0;
-  color: #fff1e8;
+  color: var(--text-primary);
   font-size: 20px;
 }
 
@@ -330,8 +330,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  color: #ddd;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -346,7 +346,7 @@
 
 /* ===== OPTIONAL OLD LIST SUPPORT ===== */
 .admin-list {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 0 12px rgba(255, 128, 171, 0.08);
@@ -357,7 +357,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -605,14 +605,14 @@
   margin-top: 30px;
   padding: 20px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   border: 1px solid rgba(255, 138, 0, 0.15);
   backdrop-filter: blur(12px);
   animation: fadeIn 0.3s ease-in-out;
 }
 
 /* Slight scaling for preview dashboards */
-/* 🔥 Fix role dashboard preview width */
+/* ?? Fix role dashboard preview width */
 .role-dashboard-preview .admin-dashboard,
 .role-dashboard-preview .sales-dashboard,
 .role-dashboard-preview .support-page,
@@ -645,86 +645,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
- .portfolio-dashboard-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 20px 0;
-}
-
-.portfolio-dashboard-card {
-  min-height: 96px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 18px;
-  color: #f8fafc;
-  text-align: left;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.portfolio-dashboard-card span {
-  display: block;
-  color: #a9adbb;
-  font-size: 0.9rem;
-}
-
-.portfolio-dashboard-card strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 2rem;
-}
-
-.portfolio-dashboard-recent {
-  margin-bottom: 20px;
-  padding: 18px;
-}
-
-.portfolio-dashboard-table {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.portfolio-dashboard-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 0.7fr 0.7fr 0.5fr;
-  gap: 12px;
-  align-items: center;
-  min-height: 42px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  color: #e5e7eb;
-}
-
-.portfolio-dashboard-row.head {
-  color: #a9adbb;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.portfolio-dashboard-row a {
-  color: #93c5fd;
-}
-
-.portfolio-dashboard-row button {
-  min-height: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.portfolio-dashboard-empty {
-  color: #9ca3af;
-  margin: 10px 0 0;
-}
-
-@media (max-width: 900px) {
-  .portfolio-dashboard-strip,
-  .portfolio-dashboard-row {
-    grid-template-columns: 1fr;
   }
 }
