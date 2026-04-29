@@ -13,6 +13,7 @@ export const projectAssetUrl = (id) => {
 
 export const projectApi = {
   list: (params) => axios.get(apiUrl("/api/projects"), { headers: authHeaders(), params }),
+  users: () => axios.get(apiUrl("/api/projects/users"), { headers: authHeaders() }),
   get: (id) => axios.get(apiUrl(`/api/projects/${id}`), { headers: authHeaders() }),
   create: (payload) => axios.post(apiUrl("/api/projects"), payload, { headers: authHeaders() }),
   update: (id, payload, password) =>

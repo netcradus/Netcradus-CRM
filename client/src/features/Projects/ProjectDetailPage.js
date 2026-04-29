@@ -43,12 +43,19 @@ const ALL_FIELD_KEYS = [
   "deploymentPassword",
   "serverNotes",
   "environment",
+  "createdBy",
+  "collaborators",
 ];
 
 const tabs = ["Overview", "Client & Deployment", "Documents", "Settings"];
 
 const formatDate = (date) => date ? new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 const isSensitive = (fieldKey, project) => project?.sensitiveFields?.includes(fieldKey);
+const getUserLabel = (user) => {
+  if (!user) return "â€”";
+  if (typeof user === "string") return user;
+  return user.name || user.email || "â€”";
+};
 
 const renderField = (fieldKey, value, project, sensitiveRevealed) => {
   if (isSensitive(fieldKey, project) && !sensitiveRevealed) {
@@ -209,6 +216,12 @@ export default function ProjectDetailPage() {
             <DetailRow label="Status"><span className={`portfolio-status status-${project.status}`}>{project.status}</span></DetailRow>
             <DetailRow label="Dates">{formatDate(project.startDate)} to {formatDate(project.endDate)}</DetailRow>
             <DetailRow label="Industry">{renderField("industry", project.industry, project, sensitiveRevealed)}</DetailRow>
+            <DetailRow label="Created By">{getUserLabel(project.createdBy)}</DetailRow>
+            <DetailRow label="Collaborators">
+              {(project.collaborators || []).length ? (
+                <span className="portfolio-tags inline">{project.collaborators.map((user) => <span key={user._id || user.email}>{getUserLabel(user)}</span>)}</span>
+              ) : "â€”"}
+            </DetailRow>
             <DetailRow label="Tech Stack"><span className="portfolio-tags inline">{(project.techStack || []).map((tag) => <span key={tag}>{tag}</span>)}</span></DetailRow>
             <DetailRow label="Live URL">{isSensitive("liveUrl", project) && !sensitiveRevealed ? renderField("liveUrl", project.liveUrl, project, sensitiveRevealed) : project.liveUrl ? <a href={project.liveUrl} target="_blank" rel="noreferrer">{project.liveUrl}</a> : "—"}</DetailRow>
             <DetailRow label="Internal Notes">{renderField("description", project.description, project, sensitiveRevealed)}</DetailRow>

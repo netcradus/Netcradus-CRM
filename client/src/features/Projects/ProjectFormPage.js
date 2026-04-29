@@ -31,6 +31,8 @@ const emptyForm = {
   deploymentPassword: "",
   serverNotes: "",
   environment: "production",
+  createdBy: "",
+  collaborators: [],
 };
 
 const toInputDate = (date) => date ? new Date(date).toISOString().slice(0, 10) : "";
@@ -47,8 +49,14 @@ function TextField({ label, name, value, onChange, type = "text", maxLength, req
 export default function ProjectFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [form, setForm] = useState(emptyForm);
+  const currentUserId = localStorage.getItem("userId") || "";
+  const currentUserName = localStorage.getItem("userName") || "";
+  const currentUserRole = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const isSuperUser = currentUserRole === "super_user";
+  const [form, setForm] = useState(() => ({ ...emptyForm, createdBy: currentUserId }));
   const [tagInput, setTagInput] = useState("");
+  const [collaboratorInput, setCollaboratorInput] = useState("");
+  const [users, setUsers] = useState([]);
   const [pickerMode, setPickerMode] = useState(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [editUnlocked, setEditUnlocked] = useState(false);
@@ -58,10 +66,23 @@ export default function ProjectFormPage() {
   const editing = Boolean(id);
 
   useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const { data } = await projectApi.users();
+        setUsers(data.users || []);
+      } catch (err) {
+        setUsers([]);
+      }
+    };
+    loadUsers();
+  }, []);
+
+  useEffect(() => {
     if (!editing) return;
     if (!editUnlocked) return;
     const load = async () => {
       const { data } = await projectApi.get(id);
+      const createdById = data.project.createdBy?._id || data.project.createdBy || "";
       setForm({
         ...emptyForm,
         ...data.project,
@@ -69,10 +90,17 @@ export default function ProjectFormPage() {
         endDate: toInputDate(data.project.endDate),
         techStack: data.project.techStack || [],
         screenshots: data.project.screenshots || [],
+        createdBy: createdById,
+        collaborators: (data.project.collaborators || []).map((user) => user._id || user).filter(Boolean),
       });
     };
     load();
   }, [editing, id, editUnlocked]);
+
+  useEffect(() => {
+    if (editing) return;
+    setForm((prev) => ({ ...prev, createdBy: prev.createdBy || currentUserId }));
+  }, [currentUserId, editing]);
 
   useEffect(() => {
     if (!editing || !editUnlocked) return undefined;
@@ -138,6 +166,29 @@ export default function ProjectFormPage() {
     if (pickerMode === "screenshots") setForm((prev) => ({ ...prev, screenshots: [...prev.screenshots, last.driveFileId].slice(0, 10) }));
   };
 
+  const userOptions = users.map((user) => ({
+    id: user._id,
+    label: user.name || user.email,
+    meta: user.email,
+  }));
+
+  const createdByLabel =
+    userOptions.find((user) => user.id === form.createdBy)?.label || currentUserName || "Current user";
+
+  const collaboratorOptions = userOptions.filter((user) => user.id !== form.createdBy);
+  const collaboratorEntries = form.collaborators
+    .map((userId) => collaboratorOptions.find((user) => user.id === userId) || userOptions.find((user) => user.id === userId))
+    .filter(Boolean);
+
+  const addCollaborator = (userId) => {
+    if (!userId) return;
+    setForm((prev) => ({
+      ...prev,
+      collaborators: [...new Set([...prev.collaborators, userId])].slice(0, 25),
+    }));
+    setCollaboratorInput("");
+  };
+
   return (
     <div className="portfolio-page">
       <header className="portfolio-page-head">
@@ -169,6 +220,81 @@ export default function ProjectFormPage() {
             <label className="portfolio-form-field">Status<select name="status" value={form.status} onChange={setValue}><option value="completed">Completed</option><option value="ongoing">Ongoing</option><option value="maintenance">Maintenance</option></select></label>
             <TextField label="Start Date" name="startDate" value={form.startDate} onChange={setValue} type="date" />
             <TextField label="End Date" name="endDate" value={form.endDate} onChange={setValue} type="date" />
+          </div>
+          <div className="portfolio-form-grid">
+            <label className="portfolio-form-field">
+              Created By
+              {isSuperUser ? (
+                <select name="createdBy" value={form.createdBy} onChange={setValue}>
+                  {!userOptions.some((user) => user.id === form.createdBy) && form.createdBy ? <option value={form.createdBy}>{createdByLabel}</option> : null}
+                  {userOptions.map((user) => (
+                    <option key={user.id} value={user.id}>{user.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input value={createdByLabel} readOnly />
+              )}
+            </label>
+            <label className="portfolio-form-field">
+              Collaborators
+              <div className="portfolio-multi-select">
+                <input
+                  list="project-collaborators"
+                  value={collaboratorInput}
+                  onChange={(e) => setCollaboratorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const match = collaboratorOptions.find(
+                      (user) =>
+                        `${user.label} (${user.meta})` === collaboratorInput ||
+                        user.label === collaboratorInput ||
+                        user.meta === collaboratorInput
+                    );
+                    addCollaborator(match?.id || "");
+                  }}
+                  placeholder="Select a user and press Add"
+                />
+                <button
+                  type="button"
+                  className="portfolio-secondary-btn"
+                  onClick={() => {
+                    const match = collaboratorOptions.find(
+                      (user) =>
+                        `${user.label} (${user.meta})` === collaboratorInput ||
+                        user.label === collaboratorInput ||
+                        user.meta === collaboratorInput
+                    );
+                    addCollaborator(match?.id || "");
+                  }}
+                >
+                  Add
+                </button>
+                <datalist id="project-collaborators">
+                  {collaboratorOptions
+                    .filter((user) => !form.collaborators.includes(user.id))
+                    .map((user) => (
+                      <option key={user.id} value={`${user.label} (${user.meta})`} />
+                    ))}
+                </datalist>
+              </div>
+              <div className="portfolio-tags">
+                {collaboratorEntries.map((user) => (
+                  <button
+                    type="button"
+                    key={user.id}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        collaborators: prev.collaborators.filter((id) => id !== user.id),
+                      }))
+                    }
+                  >
+                    {user.label}
+                  </button>
+                ))}
+              </div>
+            </label>
           </div>
           <label className="portfolio-form-field">Internal Notes<textarea name="description" value={form.description || ""} onChange={setValue} maxLength={2000} /></label>
           <label className="portfolio-form-field">Showcase Description<textarea name="showcaseDescription" value={form.showcaseDescription || ""} onChange={setValue} maxLength={500} /></label>

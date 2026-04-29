@@ -1,15 +1,26 @@
-:root {
-  --portfolio-bg: #09090c;
-  --portfolio-surface: rgba(18, 18, 26, 0.88);
-  --portfolio-raised: rgba(26, 26, 36, 0.86);
-  --portfolio-border: rgba(255, 255, 255, 0.09);
-  --portfolio-text: #f6f7fb;
-  --portfolio-muted: #a9adbb;
+:root,
+:root[data-theme="dark"] {
+  --portfolio-bg: var(--app-bg);
+  --portfolio-surface: var(--app-surface);
+  --portfolio-raised: var(--app-surface-elevated);
+  --portfolio-border: var(--app-border);
+  --portfolio-text: var(--app-text);
+  --portfolio-muted: var(--app-text-muted);
   --portfolio-dim: #767b8e;
   --portfolio-accent: #ff5f3d;
   --portfolio-blue: #38bdf8;
   --portfolio-green: #22c55e;
   --portfolio-yellow: #facc15;
+}
+
+:root[data-theme="light"] {
+  --portfolio-bg: var(--app-bg);
+  --portfolio-surface: rgba(255, 255, 255, 0.88);
+  --portfolio-raised: rgba(248, 250, 252, 0.96);
+  --portfolio-border: rgba(15, 23, 42, 0.1);
+  --portfolio-text: var(--app-text);
+  --portfolio-muted: var(--app-text-muted);
+  --portfolio-dim: #64748b;
 }
 
 .portfolio-page,
@@ -19,7 +30,7 @@
   color: var(--portfolio-text);
   background:
     radial-gradient(circle at 18% 0%, rgba(255, 95, 61, 0.12), transparent 28%),
-    linear-gradient(180deg, #111119 0%, var(--portfolio-bg) 42%);
+    linear-gradient(180deg, var(--portfolio-raised) 0%, var(--portfolio-bg) 42%);
 }
 
 .portfolio-page-head,
@@ -122,7 +133,7 @@
 .portfolio-tag-input {
   border: 1px solid var(--portfolio-border);
   border-radius: 8px;
-  background: rgba(10, 10, 16, 0.7);
+  background: var(--portfolio-raised);
   color: var(--portfolio-text);
 }
 
@@ -254,6 +265,7 @@
   color: #c7d2fe;
   background: rgba(99, 102, 241, 0.12);
   font-size: 12px;
+  font-weight: 700;
 }
 
 .portfolio-tags button {
@@ -455,6 +467,16 @@
   outline: none;
 }
 
+.portfolio-multi-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.portfolio-multi-select .portfolio-secondary-btn {
+  min-height: 42px;
+}
+
 .portfolio-form-field textarea {
   min-height: 108px;
   resize: vertical;
@@ -498,7 +520,7 @@
   border-radius: 8px;
   padding: 0 12px;
   color: var(--portfolio-text);
-  background: rgba(10, 10, 16, 0.7);
+  background: var(--portfolio-raised);
 }
 
 .portfolio-document-picker {
@@ -531,6 +553,84 @@
 
 .showcase-page {
   padding: 36px;
+}
+
+:root[data-theme="light"] .portfolio-page,
+:root[data-theme="light"] .showcase-page {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 95, 61, 0.12), transparent 28%),
+    radial-gradient(circle at 85% 12%, rgba(56, 189, 248, 0.08), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, var(--portfolio-bg) 42%);
+}
+
+:root[data-theme="light"] .portfolio-card,
+:root[data-theme="light"] .showcase-card,
+:root[data-theme="light"] .portfolio-panel,
+:root[data-theme="light"] .portfolio-modal {
+  box-shadow: var(--app-shadow);
+}
+
+:root[data-theme="light"] .portfolio-tags span,
+:root[data-theme="light"] .portfolio-tags button {
+  color: #5b5bd6;
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.18);
+}
+
+:root[data-theme="light"] .portfolio-status {
+  font-weight: 800;
+}
+
+:root[data-theme="light"] .status-completed {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.16);
+}
+
+:root[data-theme="light"] .status-ongoing {
+  color: #0369a1;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+:root[data-theme="light"] .status-maintenance {
+  color: #a16207;
+  background: rgba(250, 204, 21, 0.22);
+}
+
+:root[data-theme="light"] .portfolio-primary-btn,
+:root[data-theme="light"] .portfolio-secondary-btn,
+:root[data-theme="light"] .portfolio-action-link,
+:root[data-theme="light"] .portfolio-icon-btn,
+:root[data-theme="light"] .portfolio-pagination button,
+:root[data-theme="light"] .portfolio-tabs button,
+:root[data-theme="light"] .showcase-tabs button {
+  color: #1e293b;
+}
+
+:root[data-theme="light"] .portfolio-tabs button.active,
+:root[data-theme="light"] .showcase-tabs button.active {
+  color: #c2410c;
+  border-color: rgba(255, 95, 61, 0.48);
+  background: rgba(255, 95, 61, 0.14);
+}
+
+:root[data-theme="light"] .portfolio-danger-btn {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+:root[data-theme="light"] .portfolio-card p,
+:root[data-theme="light"] .showcase-card p,
+:root[data-theme="light"] .portfolio-muted,
+:root[data-theme="light"] .portfolio-client,
+:root[data-theme="light"] .portfolio-pagination {
+  color: #5b6b84;
+}
+
+:root[data-theme="light"] .portfolio-detail-row > span,
+:root[data-theme="light"] .portfolio-sensitive-item > span,
+:root[data-theme="light"] .portfolio-form-field {
+  color: #50627d;
 }
 
 .showcase-header {

@@ -4,6 +4,13 @@ import { Bell, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../config/api";
 import { getNotificationSocket } from "../services/socket";
+import {
+  getBrowserNotificationPermission,
+  initializeBrowserNotificationPermission,
+  requestBrowserNotificationPermission,
+  showBrowserNotification,
+} from "../utils/browserNotifications";
+import { initializeNotificationSound, playNotificationSound } from "../utils/notificationSound";
 import "./NotificationButton.css";
 
 function formatTimeAgo(value) {
@@ -32,6 +39,9 @@ export default function NotificationButton() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [notificationsAvailable, setNotificationsAvailable] = useState(false);
+  const shownNotificationsRef = useRef(new Set());
+  const previousUnreadCountRef = useRef(null);
+  const latestNotificationsRef = useRef([]);
 
   const authConfig = useMemo(
     () => ({
@@ -40,15 +50,65 @@ export default function NotificationButton() {
     [token]
   );
 
-  const fetchNotifications = useCallback(async () => {
+  const triggerIncomingNotification = useCallback((payload) => {
+    playNotificationSound();
+
+    const permission = getBrowserNotificationPermission();
+    if (permission !== "granted") {
+      return;
+    }
+
+    const targetPath = payload?.targetPath || "/tasks";
+    const message = payload?.message || "You have a new notification.";
+    const notificationTag = [
+      payload?._id || "",
+      payload?.type || "general",
+      payload?.taskId?._id || payload?.taskId || "",
+      message,
+    ].join(":");
+
+    if (shownNotificationsRef.current.has(notificationTag)) {
+      return;
+    }
+
+    shownNotificationsRef.current.add(notificationTag);
+    showBrowserNotification({
+      title: "Netcradus CRM",
+      body: message,
+      tag: notificationTag,
+      onClick: () => {
+        window.focus();
+        navigate(targetPath);
+      },
+    });
+
+    window.setTimeout(() => {
+      shownNotificationsRef.current.delete(notificationTag);
+    }, 10000);
+  }, [navigate]);
+
+  const fetchNotifications = useCallback(async (options = {}) => {
     if (!token) return;
 
     try {
       setLoading(true);
       const { data } = await axios.get(apiUrl("/api/notifications?limit=10"), authConfig);
-      setNotifications(data.data || []);
-      setUnreadCount(data.unreadCount || 0);
+      const nextNotifications = data.data || [];
+      const nextUnreadCount = data.unreadCount || 0;
+      const previousUnreadCount = previousUnreadCountRef.current;
+
+      setNotifications(nextNotifications);
+      setUnreadCount(nextUnreadCount);
       setNotificationsAvailable(true);
+      latestNotificationsRef.current = nextNotifications;
+
+      if (options.triggerAlert && previousUnreadCount !== null && nextUnreadCount > previousUnreadCount) {
+        const latestNotification = nextNotifications.find((item) => !item.isRead) || nextNotifications[0];
+        if (latestNotification) {
+          triggerIncomingNotification(latestNotification);
+        }
+      }
+
     } catch (error) {
       setNotifications([]);
       setUnreadCount(0);
@@ -56,7 +116,31 @@ export default function NotificationButton() {
     } finally {
       setLoading(false);
     }
-  }, [authConfig, token]);
+  }, [authConfig, token, triggerIncomingNotification]);
+
+  useEffect(() => {
+    initializeNotificationSound();
+    initializeBrowserNotificationPermission();
+  }, []);
+
+  useEffect(() => {
+    const previousUnreadCount = previousUnreadCountRef.current;
+    if (previousUnreadCount === null) {
+      previousUnreadCountRef.current = unreadCount;
+      return;
+    }
+
+    if (unreadCount > previousUnreadCount) {
+      const latestNotification = latestNotificationsRef.current.find((item) => !item.isRead) || latestNotificationsRef.current[0];
+      if (latestNotification) {
+        triggerIncomingNotification(latestNotification);
+      } else {
+        playNotificationSound();
+      }
+    }
+
+    previousUnreadCountRef.current = unreadCount;
+  }, [triggerIncomingNotification, unreadCount]);
 
   useEffect(() => {
     fetchNotifications();
@@ -70,8 +154,9 @@ export default function NotificationButton() {
     const socket = getNotificationSocket(token);
     if (!socket) return undefined;
 
-    const handleNewNotification = () => {
-      fetchNotifications();
+    const handleNewNotification = (payload) => {
+      triggerIncomingNotification(payload);
+      fetchNotifications({ triggerAlert: false });
     };
 
     socket.on("notification:new", handleNewNotification);
@@ -79,7 +164,7 @@ export default function NotificationButton() {
     return () => {
       socket.off("notification:new", handleNewNotification);
     };
-  }, [fetchNotifications, notificationsAvailable, token]);
+  }, [fetchNotifications, notificationsAvailable, token, triggerIncomingNotification]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -111,12 +196,20 @@ export default function NotificationButton() {
     } catch {}
   };
 
+  const handleBellClick = async () => {
+    if (getBrowserNotificationPermission() === "default") {
+      await requestBrowserNotificationPermission();
+    }
+
+    setIsOpen((open) => !open);
+  };
+
   return (
     <div className="notification-container" ref={containerRef}>
       <button
         type="button"
         className="bell-pill"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={handleBellClick}
         aria-label="Open notifications"
       >
         <span className="bell-icon-wrap">

@@ -2,6 +2,26 @@ const Holiday = require('../models/Holiday');
 const AuditLog = require('../models/AuditLog');
 const { invalidateHolidayCache } = require('../services/holidayService');
 
+const HOLIDAY_MANAGERS = new Set(['super_user', 'hr']);
+
+const canManageHolidays = (user) => {
+  const role = String(user?.role || '').trim().toLowerCase();
+  return HOLIDAY_MANAGERS.has(role);
+};
+
+const ensureHolidayManager = (req, res) => {
+  if (canManageHolidays(req.user)) {
+    return true;
+  }
+
+  res.status(403).json({
+    success: false,
+    message: 'Only HR and super users can manage holidays.',
+    code: 'FORBIDDEN',
+  });
+  return false;
+};
+
 // GET /api/holidays?year=YYYY  (all authenticated users)
 exports.getHolidays = async (req, res) => {
   try {
@@ -13,9 +33,10 @@ exports.getHolidays = async (req, res) => {
   }
 };
 
-// POST /api/holidays  (admin only)
+// POST /api/holidays  (hr and super user only)
 exports.createHoliday = async (req, res) => {
   try {
+    if (!ensureHolidayManager(req, res)) return;
     const { name, date, type } = req.body;
     if (!name || !date) return res.status(400).json({ success: false, message: 'name and date are required.' });
     const d = new Date(date);
@@ -28,9 +49,10 @@ exports.createHoliday = async (req, res) => {
   }
 };
 
-// PATCH /api/holidays/:id  (admin only)
+// PATCH /api/holidays/:id  (hr and super user only)
 exports.updateHoliday = async (req, res) => {
   try {
+    if (!ensureHolidayManager(req, res)) return;
     const { name, date, type, isActive } = req.body;
     const update = {};
     if (name !== undefined) update.name = name;
@@ -47,9 +69,10 @@ exports.updateHoliday = async (req, res) => {
   }
 };
 
-// DELETE /api/holidays/:id  (admin only)
+// DELETE /api/holidays/:id  (hr and super user only)
 exports.deleteHoliday = async (req, res) => {
   try {
+    if (!ensureHolidayManager(req, res)) return;
     const holiday = await Holiday.findByIdAndDelete(req.params.id);
     if (!holiday) return res.status(404).json({ success: false, message: 'Holiday not found.' });
     invalidateHolidayCache(holiday.year);

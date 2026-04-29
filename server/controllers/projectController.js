@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Document = require("../models/Document");
 const AuditLog = require("../models/AuditLog");
+const User = require("../models/User");
 
 const catchAsync = (fn) => (req, res) =>
   Promise.resolve(fn(req, res)).catch((err) => {
@@ -41,6 +42,8 @@ const PROJECT_FIELDS = [
   "deploymentPassword",
   "serverNotes",
   "environment",
+  "createdBy",
+  "collaborators",
 ];
 
 const SHOWCASE_FIELDS = [
@@ -95,6 +98,23 @@ const normalizeTags = (tags = []) => {
 const normalizeStrings = (items = [], max = 10) =>
   Array.isArray(items) ? items.map(trimString).filter(Boolean).slice(0, max) : [];
 
+const normalizeUserIds = (items = [], max = 25) => {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set();
+  return items
+    .map((item) => {
+      if (typeof item === "string") return trimString(item);
+      if (item && typeof item === "object") return trimString(item._id || item.id || item.userId || item.value);
+      return null;
+    })
+    .filter((value) => mongoose.Types.ObjectId.isValid(value))
+    .filter((value) => {
+      if (seen.has(value) || seen.size >= max) return false;
+      seen.add(value);
+      return true;
+    });
+};
+
 const buildProjectPayload = (body, allowedFields = PROJECT_FIELDS) => {
   const payload = {};
 
@@ -104,8 +124,12 @@ const buildProjectPayload = (body, allowedFields = PROJECT_FIELDS) => {
 
     if (field === "techStack") {
       payload.techStack = normalizeTags(value);
+    } else if (field === "collaborators") {
+      payload.collaborators = normalizeUserIds(value);
     } else if (field === "screenshots") {
       payload.screenshots = normalizeStrings(value, 10);
+    } else if (field === "createdBy") {
+      payload.createdBy = mongoose.Types.ObjectId.isValid(value) ? value : undefined;
     } else if (field === "thumbnail") {
       payload.thumbnail = trimString(value) || null;
     } else if (["startDate", "endDate"].includes(field)) {
@@ -141,6 +165,33 @@ const findProject = async (id) => {
   return Project.findOne({ _id: id, isDeleted: false });
 };
 
+const findProjectWithUsers = async (id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  return Project.findOne({ _id: id, isDeleted: false })
+    .populate("createdBy", "name email role")
+    .populate("collaborators", "name email role");
+};
+
+const isSuperUser = (user) => String(user?.role || "").trim().toLowerCase() === "super_user";
+
+const isProjectOwner = (project, userId) => String(project?.createdBy?._id || project?.createdBy || "") === String(userId || "");
+
+const ensureProjectAccess = (project, req, res) => {
+  if (!project) {
+    errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+    return false;
+  }
+
+  if (isSuperUser(req.user) || isProjectOwner(project, req.user.id)) {
+    return true;
+  }
+
+  errorResponse(res, 403, "You are not allowed to access this project.", "PROJECT_ACCESS_DENIED");
+  return false;
+};
+
+const canEditCreatedBy = (req) => isSuperUser(req.user);
+
 const verifyActionPassword = async (req, res) => {
   const password = trimString(req.body?.password);
   if (!password) {
@@ -158,13 +209,16 @@ const verifyActionPassword = async (req, res) => {
 };
 
 exports.createProject = catchAsync(async (req, res) => {
-  const payload = buildProjectPayload(req.body, PROJECT_FIELDS.filter((field) => field !== "sensitiveFields"));
+  const allowedFields = canEditCreatedBy(req)
+    ? PROJECT_FIELDS.filter((field) => field !== "sensitiveFields")
+    : PROJECT_FIELDS.filter((field) => field !== "sensitiveFields" && field !== "createdBy");
+  const payload = buildProjectPayload(req.body, allowedFields);
   const validationError = validateProjectPayload(payload, true);
   if (validationError) return errorResponse(res, 400, validationError[0], validationError[1]);
 
   const project = await Project.create({
     ...payload,
-    createdBy: req.user.id,
+    createdBy: payload.createdBy || req.user.id,
   });
 
   res.status(201).json({ success: true, project });
@@ -173,12 +227,15 @@ exports.createProject = catchAsync(async (req, res) => {
 exports.updateProject = catchAsync(async (req, res) => {
   if (!(await verifyActionPassword(req, res))) return;
 
-  const payload = buildProjectPayload(req.body);
+  const allowedFields = canEditCreatedBy(req)
+    ? PROJECT_FIELDS
+    : PROJECT_FIELDS.filter((field) => field !== "createdBy");
+  const payload = buildProjectPayload(req.body, allowedFields);
   const validationError = validateProjectPayload(payload);
   if (validationError) return errorResponse(res, 400, validationError[0], validationError[1]);
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   Object.assign(project, payload, { updatedBy: req.user.id, updatedAt: Date.now() });
   await project.save();
@@ -190,7 +247,7 @@ exports.deleteProject = catchAsync(async (req, res) => {
   if (!(await verifyActionPassword(req, res))) return;
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   project.isDeleted = true;
   project.deletedAt = Date.now();
@@ -203,6 +260,10 @@ exports.deleteProject = catchAsync(async (req, res) => {
 exports.getProjects = catchAsync(async (req, res) => {
   const { status, industry, search, sortBy = "", page = 1, limit = 20 } = req.query;
   const query = { isDeleted: false };
+
+  if (!isSuperUser(req.user)) {
+    query.createdBy = req.user.id;
+  }
 
   if (status && STATUSES.includes(status)) query.status = status;
   if (industry) query.industry = new RegExp(trimString(industry), "i");
@@ -236,8 +297,8 @@ exports.getProjects = catchAsync(async (req, res) => {
 });
 
 exports.getProject = catchAsync(async (req, res) => {
-  const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  const project = await findProjectWithUsers(req.params.id);
+  if (!ensureProjectAccess(project, req, res)) return;
 
   res.json({ success: true, project });
 });
@@ -256,13 +317,14 @@ exports.updateSensitiveFields = catchAsync(async (req, res) => {
   if (invalidField) return errorResponse(res, 400, `${invalidField} is not a project field.`, "INVALID_FIELD_KEY");
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   project.sensitiveFields = normalized;
   project.updatedBy = req.user.id;
   await project.save();
 
-  res.json({ success: true, project });
+  const refreshedProject = await findProjectWithUsers(project._id);
+  res.json({ success: true, project: refreshedProject });
 });
 
 exports.verifyPassword = catchAsync(async (req, res) => {
@@ -287,7 +349,7 @@ exports.toggleShowcase = catchAsync(async (req, res) => {
   if (!(await verifyActionPassword(req, res))) return;
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   project.isVisibleInShowcase = !project.isVisibleInShowcase;
   project.updatedBy = req.user.id;
@@ -300,7 +362,7 @@ exports.toggleFeatured = catchAsync(async (req, res) => {
   if (!(await verifyActionPassword(req, res))) return;
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   project.isFeatured = !project.isFeatured;
   project.updatedBy = req.user.id;
@@ -324,7 +386,7 @@ exports.attachDocument = catchAsync(async (req, res) => {
   if (mongoose.Types.ObjectId.isValid(docKey)) documentQuery.$or.push({ _id: docKey });
 
   const [project, document] = await Promise.all([findProject(req.params.id), Document.findOne(documentQuery)]);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
   if (!document) return errorResponse(res, 404, "Document not found in your Drive.", "DOCUMENT_NOT_FOUND");
 
   const storedId = String(document._id);
@@ -347,13 +409,22 @@ exports.removeDocument = catchAsync(async (req, res) => {
   if (!(await verifyActionPassword(req, res))) return;
 
   const project = await findProject(req.params.id);
-  if (!project) return errorResponse(res, 404, "Project not found.", "PROJECT_NOT_FOUND");
+  if (!ensureProjectAccess(project, req, res)) return;
 
   project.documents = project.documents.filter((doc) => doc.driveFileId !== req.params.driveFileId);
   project.updatedBy = req.user.id;
   await project.save();
 
   res.json({ success: true, documents: project.documents });
+});
+
+exports.getProjectUsers = catchAsync(async (req, res) => {
+  const users = await User.find({ isDisabled: { $ne: true } })
+    .select("_id name email role")
+    .sort({ name: 1, email: 1 })
+    .lean();
+
+  res.json({ success: true, users });
 });
 
 exports.getShowcaseProjects = catchAsync(async (req, res) => {

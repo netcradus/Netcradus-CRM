@@ -7,7 +7,6 @@ import "./Projects.css";
 export default function ShowcasePage() {
   const [projects, setProjects] = useState([]);
   const [industry, setIndustry] = useState("All");
-  const role = localStorage.getItem("userRole");
 
   useEffect(() => {
     const load = async () => {
@@ -39,7 +38,7 @@ export default function ShowcasePage() {
         </div>
         <div className="portfolio-card-actions">
           {project.liveUrl && <a href={project.liveUrl} target="_blank" rel="noreferrer" className="portfolio-action-link"><ExternalLink size={16} /> Visit</a>}
-          {role === "super_user" && <Link to={`/projects/${project._id}/edit`} className="portfolio-icon-btn" title="Edit"><Edit3 size={16} /></Link>}
+          <Link to={`/projects/${project._id}/edit`} className="portfolio-icon-btn" title="Edit"><Edit3 size={16} /></Link>
         </div>
       </div>
     </article>
