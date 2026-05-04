@@ -1572,8 +1572,13 @@ body {
   color: #172033;
 }
 
+:root[data-theme="light"] .management-view {
+  color: #172033;
+}
+
 :root[data-theme="light"] .hr-hero,
 :root[data-theme="light"] .sales-hero,
+:root[data-theme="light"] .management-view .admin-hero,
 :root[data-theme="light"] .hr-dashboard .glass-card,
 :root[data-theme="light"] .hr-dashboard .chart-card,
 :root[data-theme="light"] .hr-dashboard .table-card,
@@ -1585,7 +1590,10 @@ body {
 :root[data-theme="light"] .sales-dashboard .net-panel,
 :root[data-theme="light"] .sales-dashboard .metric-card,
 :root[data-theme="light"] .sales-dashboard .chart-card,
-:root[data-theme="light"] .sales-dashboard .table-card {
+:root[data-theme="light"] .sales-dashboard .table-card,
+:root[data-theme="light"] .management-view .glass,
+:root[data-theme="light"] .management-view .netcradus-panel,
+:root[data-theme="light"] .management-view .metric-card {
   background: linear-gradient(180deg, #ffffff, #f7fafc) !important;
   border-color: rgba(148, 163, 184, 0.22) !important;
   color: #172033 !important;
@@ -1604,7 +1612,11 @@ body {
 :root[data-theme="light"] .sales-dashboard .sales-subtitle,
 :root[data-theme="light"] .sales-dashboard .sales-hero-note,
 :root[data-theme="light"] .sales-dashboard .metric-label,
-:root[data-theme="light"] .sales-dashboard .chart-copy {
+:root[data-theme="light"] .sales-dashboard .chart-copy,
+:root[data-theme="light"] .management-view .admin-hero-left p,
+:root[data-theme="light"] .management-view .metric-label,
+:root[data-theme="light"] .management-view .insight-list li,
+:root[data-theme="light"] .management-view .chip {
   color: #64748b !important;
 }
 
@@ -1616,8 +1628,39 @@ body {
 :root[data-theme="light"] .sales-dashboard .sales-title,
 :root[data-theme="light"] .sales-dashboard .metric-value,
 :root[data-theme="light"] .sales-dashboard .chart-header h3,
-:root[data-theme="light"] .sales-dashboard .table-title {
+:root[data-theme="light"] .sales-dashboard .table-title,
+:root[data-theme="light"] .management-view .admin-hero-left h1,
+:root[data-theme="light"] .management-view .metric-value,
+:root[data-theme="light"] .management-view .card-header h3,
+:root[data-theme="light"] .management-view .insight-list strong {
   color: #172033 !important;
+}
+
+:root[data-theme="light"] .management-view .metric-icon {
+  color: #ea580c !important;
+  background: linear-gradient(135deg, rgba(255, 138, 0, 0.16), rgba(255, 45, 143, 0.12)) !important;
+  border-color: rgba(255, 138, 0, 0.2) !important;
+}
+
+:root[data-theme="light"] .management-view .netcradus-badge {
+  color: #b45309 !important;
+  background: linear-gradient(90deg, rgba(255, 138, 0, 0.12), rgba(255, 45, 143, 0.08)) !important;
+  border-color: rgba(255, 138, 0, 0.18) !important;
+}
+
+:root[data-theme="light"] .management-view .chip {
+  background: rgba(255, 138, 0, 0.12) !important;
+  color: #c2410c !important;
+  border-color: rgba(255, 138, 0, 0.2) !important;
+}
+
+:root[data-theme="light"] .management-view svg text,
+:root[data-theme="light"] .management-view svg tspan,
+:root[data-theme="light"] .management-view .recharts-cartesian-axis-tick-value,
+:root[data-theme="light"] .management-view .recharts-legend-item-text,
+:root[data-theme="light"] .management-view .recharts-label {
+  fill: #64748b !important;
+  color: #64748b !important;
 }
 
 :root[data-theme="light"] .hr-dashboard .search-input,

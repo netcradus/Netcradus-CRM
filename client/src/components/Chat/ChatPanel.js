@@ -110,7 +110,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   if (!shouldRender) return null;
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event?.preventDefault?.();
     const nextValue = composerValue.trim();
     if (!nextValue || !selectedConversation?._id) return;
 
@@ -138,6 +138,15 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     typingTimeoutRef.current = setTimeout(() => {
       sendTyping(selectedConversation._id, false);
     }, 1200);
+  };
+
+  const handleComposerKeyDown = (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent?.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    handleSubmit();
   };
 
   const startConversation = async (userId) => {
@@ -388,6 +397,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                   <textarea
                     value={composerValue}
                     onChange={(event) => handleTyping(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
                     placeholder="Type something..."
                     rows={isCompact ? 2 : 3}
                   />

@@ -56,6 +56,7 @@ const projectSchema = new mongoose.Schema({
   documents: [documentSchema],
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   isDeleted: { type: Boolean, default: false },
   deletedAt: Date,

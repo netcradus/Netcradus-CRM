@@ -8,14 +8,12 @@ const { verifyPasswordLimiter, projectRouteLimiter } = require("../middleware/ra
 router.use(authMiddleware);
 router.use(projectRouteLimiter);
 
-router.get("/showcase", projectController.getShowcaseProjects);
-
-router.use(rbac(["super_user"]));
-
-router.post("/verify-password", verifyPasswordLimiter, projectController.verifyPassword);
+router.get("/users", projectController.getProjectUsers);
+router.get("/showcase", rbac(["super_user"]), projectController.getShowcaseProjects);
 router.post("/", projectController.createProject);
 router.get("/", projectController.getProjects);
 router.get("/:id", projectController.getProject);
+router.post("/verify-password", verifyPasswordLimiter, projectController.verifyPassword);
 router.patch("/:id", projectController.updateProject);
 router.delete("/:id", projectController.deleteProject);
 router.patch("/:id/sensitive", projectController.updateSensitiveFields);
