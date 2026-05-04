@@ -40,10 +40,6 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  previousPasswords: {
-    type: [String],
-    default: []
-  },
   accountLockedUntil: {
     type: Date
   },

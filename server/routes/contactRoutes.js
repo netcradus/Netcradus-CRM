@@ -19,7 +19,7 @@ router.get("/:id", authMiddleware, contactsController.getContactById);
 router.put("/:id", authMiddleware, rbac(["admin"]), contactsController.updateContact);
 router.delete("/:id", authMiddleware, rbac(["admin"]), contactsController.deleteContact);
 router.get("/:id/salary-slips", authMiddleware, contactsController.getSalarySlipList);
-router.get("/:id/salary-slips/:index/download", authMiddleware, contactsController.downloadSalarySlip);
+router.get("/salary-slips/:id/download", authMiddleware, contactsController.downloadSalarySlip);
 
 // Sensitive Information Access (Requires re-auth)
 router.get(

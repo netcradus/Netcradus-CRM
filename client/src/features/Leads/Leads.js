@@ -4,11 +4,7 @@ import "./Leads.css";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 import { LayoutPanelLeft, SlidersHorizontal } from "lucide-react";
-import * as mammoth from "mammoth";
-import * as pdfjsLib from "pdfjs-dist";
 
-// Set PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 function Leads() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -70,7 +66,7 @@ function Leads() {
   const updateFilter = useCallback((paramsToUpdate, value) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      
+
       if (typeof paramsToUpdate === "string") {
         if (value) next.set(paramsToUpdate, value);
         else next.delete(paramsToUpdate);
@@ -100,7 +96,7 @@ function Leads() {
       const urlParams = new URLSearchParams(window.location.search);
       const params = Object.fromEntries(urlParams.entries());
       const response = await axios.get(apiUrl("/api/leads"), { params });
-      
+
       if (response.data.success) {
         setLeads(response.data.data);
         setPagination(response.data.pagination);
@@ -303,8 +299,6 @@ function Leads() {
     e.preventDefault();
 
     // Validate
-    // Note: Name and email are no longer strictly required
-    // But we might still want at least one field to not create completely empty rows if needed
 
     try {
       if (editingLead) {
@@ -505,6 +499,7 @@ function Leads() {
         const reader = new FileReader();
         reader.onload = async (event) => {
           const arrayBuffer = event.target.result;
+          const mammoth = await import("mammoth");
           const result = await mammoth.extractRawText({ arrayBuffer });
           processExtractedText(result.value);
         };
@@ -513,6 +508,9 @@ function Leads() {
         const reader = new FileReader();
         reader.onload = async (event) => {
           const arrayBuffer = event.target.result;
+          const pdfjsLib = await import("pdfjs-dist");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           let fullText = "";
           for (let i = 1; i <= pdf.numPages; i++) {
@@ -581,10 +579,10 @@ function Leads() {
           />
           <label htmlFor="import-csv-input" className="btn-csv">📥 Import File</label>
         </div>
-        
+
         {/* Mobile Toggle Button */}
-        <button 
-          className="btn-filter-toggle" 
+        <button
+          className="btn-filter-toggle"
           onClick={() => setShowMobileFilters(!showMobileFilters)}
         >
           <SlidersHorizontal size={16} /> {showMobileFilters ? "Hide Filters" : "Show Filters"}

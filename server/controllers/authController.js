@@ -13,6 +13,7 @@ const {
   calculateDistance
 } = require("../services/securityService");
 const AuditLog = require("../models/AuditLog");
+const PasswordHistory = require("../models/PasswordHistory");
 
 // In-memory re-authentication tokens (5-min TTL)
 const reAuthTokens = new Map();
@@ -743,10 +744,17 @@ const verifyPasswordChange = async (req, res) => {
     user.lastPasswordChange = Date.now();
     user.lastWeeklyVerification = Date.now();
 
-    // Keep only last 3 passwords
-    user.previousPasswords.unshift(hashedPassword);
-    if (user.previousPasswords.length > 3) {
-      user.previousPasswords.pop();
+    // Keep only last 3 passwords in history
+    await PasswordHistory.create({
+      userId: user._id,
+      passwordHash: hashedPassword
+    });
+
+    // Cleanup old history (keep only last 3)
+    const history = await PasswordHistory.find({ userId: user._id }).sort({ createdAt: -1 });
+    if (history.length > 3) {
+      const toDelete = history.slice(3).map(h => h._id);
+      await PasswordHistory.deleteMany({ _id: { $in: toDelete } });
     }
 
     await user.save();

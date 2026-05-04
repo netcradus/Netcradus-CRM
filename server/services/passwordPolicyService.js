@@ -25,21 +25,23 @@ const validateStrength = (password) => {
     return { valid: true };
 };
 
+const PasswordHistory = require("../models/PasswordHistory");
+
 /**
  * Compares new password against history to prevent reuse
  */
 const checkHistory = async (userId, newPlainPassword) => {
-    const user = await User.findById(userId);
-    if (!user || !user.previousPasswords || user.previousPasswords.length === 0) {
+    const history = await PasswordHistory.find({ userId }).sort({ createdAt: -1 });
+    if (!history || history.length === 0) {
         return { valid: true };
     }
 
-    for (const storedHash of user.previousPasswords) {
-        const isMatch = await bcrypt.compare(newPlainPassword, storedHash);
+    for (const record of history) {
+        const isMatch = await bcrypt.compare(newPlainPassword, record.passwordHash);
         if (isMatch) {
             return {
                 valid: false,
-                message: `You cannot reuse any of your last ${user.previousPasswords.length} passwords.`
+                message: `You cannot reuse any of your last ${history.length} passwords.`
             };
         }
     }

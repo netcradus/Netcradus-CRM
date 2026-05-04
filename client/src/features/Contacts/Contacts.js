@@ -176,9 +176,9 @@ function Contacts() {
     }
   };
 
-  const downloadSalarySlip = async (contactId, index, filename) => {
+  const downloadSalarySlip = async (contactId, slipId, filename) => {
     try {
-      const res = await fetch(apiUrl(`/api/contacts/${contactId}/salary-slips/${index}/download`), {
+      const res = await fetch(apiUrl(`/api/contacts/salary-slips/${slipId}/download`), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (!res.ok) {
@@ -191,7 +191,7 @@ function Contacts() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = filename || `salary-slip-${index + 1}.pdf`;
+      link.download = filename || `salary-slip.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -382,7 +382,7 @@ function Contacts() {
                   <button
                     type="button"
                     className="btn-secondary btn-secondary-sm"
-                    onClick={() => downloadSalarySlip(sensitiveData._id, i, slip.filename)}
+                    onClick={() => downloadSalarySlip(sensitiveData._id, slip._id, slip.filename)}
                   >
                     Download
                   </button>

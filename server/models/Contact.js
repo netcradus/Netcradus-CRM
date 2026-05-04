@@ -35,29 +35,6 @@ const ContactSchema = new mongoose.Schema(
     
     // Sensitive Fields
     salary: { type: Number },
-    salarySlips: [{
-      filename: String,
-      path: String,
-      uploadedAt: { type: Date, default: Date.now },
-      month: { type: String, trim: true },
-      year: { type: Number },
-      payDate: { type: Date },
-      basicSalary: { type: Number, default: 0 },
-      hra: { type: Number, default: 0 },
-      conveyance: { type: Number, default: 0 },
-      bonus: { type: Number, default: 0 },
-      specialAllowance: { type: Number, default: 0 },
-      providentFund: { type: Number, default: 0 },
-      professionalTax: { type: Number, default: 0 },
-      otherDeductions: { type: Number, default: 0 },
-      grossPay: { type: Number, default: 0 },
-      netPay: { type: Number, default: 0 },
-      notes: { type: String, trim: true },
-      generatedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    }],
     leaves: { type: Number, default: 0 },
     
     // PII (Personal Identifiable Information)

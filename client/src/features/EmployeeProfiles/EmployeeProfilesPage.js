@@ -191,10 +191,10 @@ function EmployeeProfilesPage() {
     }
   };
 
-  const onDownloadSalarySlip = async (contactId, index, filename) => {
+  const onDownloadSalarySlip = async (contactId, slipId, filename) => {
     try {
       const response = await axios.get(
-        apiUrl(`/api/contacts/${contactId}/salary-slips/${index}/download`),
+        apiUrl(`/api/contacts/salary-slips/${slipId}/download`),
         {
           headers,
           responseType: "blob",
@@ -204,7 +204,7 @@ function EmployeeProfilesPage() {
       const blobUrl = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = filename || `salary-slip-${index + 1}.pdf`;
+      link.download = filename || `salary-slip.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -470,7 +470,7 @@ function EmployeeProfilesPage() {
                             type="button"
                             className="salary-download-button"
                             onClick={() =>
-                              onDownloadSalarySlip(selectedProfile._id, index, slip.filename)
+                              onDownloadSalarySlip(selectedProfile._id, slip._id, slip.filename)
                             }
                           >
                             Download

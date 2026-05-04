@@ -1,4 +1,5 @@
 const Contact = require("../models/Contact");
+const SalarySlip = require("../models/SalarySlip");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const LeaveApplication = require("../models/LeaveApplication");
@@ -97,7 +98,7 @@ const buildContactFromUser = (user, contactDoc) => {
         interviewSchedule: null,
         isActive: true,
         salary: null,
-        salarySlips: [],
+        salarySlipsCount: 0,
         leaves: 0,
         contactNumber: "",
         address: "",
@@ -643,23 +644,22 @@ exports.getSalarySlipList = async (req, res) => {
             return res.status(403).json({ message: "You are not allowed to view these salary slips." });
         }
 
-        const salarySlips = (contact.salarySlips || []).map((slip, index) => ({
-            index,
-            filename: slip.filename,
-            uploadedAt: slip.uploadedAt,
-            month: slip.month,
-            year: slip.year,
-            netPay: slip.netPay,
-            grossPay: slip.grossPay,
-        }));
+        const salarySlips = await SalarySlip.find({ contactId: contact._id }).sort({ createdAt: -1 });
 
         res.json({
             success: true,
             data: {
                 contactId: contact._id,
                 contactName: contact.name,
-                salarySlips,
-            },
+                salarySlips: salarySlips.map(slip => ({
+                    _id: slip._id,
+                    filename: slip.filename,
+                    uploadedAt: slip.uploadedAt,
+                    month: slip.month,
+                    year: slip.year,
+                    netPay: slip.netPay
+                }))
+            }
         });
     } catch (err) {
         res.status(500).json({ message: "Server Error" });
@@ -668,18 +668,14 @@ exports.getSalarySlipList = async (req, res) => {
 
 exports.downloadSalarySlip = async (req, res) => {
     try {
-        const contact = await resolveContactRecord(req.params.id);
+        const salarySlip = await SalarySlip.findById(req.params.id);
+        if (!salarySlip) return res.status(404).json({ message: "Salary slip not found." });
+
+        const contact = await resolveContactRecord(salarySlip.contactId);
         if (!contact) return res.status(404).json({ message: "Contact not found" });
 
         if (!canAccessSalarySlips(req.user, contact)) {
             return res.status(403).json({ message: "You are not allowed to download this salary slip." });
-        }
-
-        const index = Number.parseInt(req.params.index, 10);
-        const salarySlip = contact.salarySlips?.[index];
-
-        if (!Number.isInteger(index) || !salarySlip) {
-            return res.status(404).json({ message: "Salary slip not found." });
         }
 
         if (salarySlip.path) {
@@ -692,7 +688,7 @@ exports.downloadSalarySlip = async (req, res) => {
         }
 
         const pdfBuffer = renderSalarySlipPdfBuffer(contact, salarySlip);
-        const downloadName = (salarySlip.filename || `salary-slip-${index + 1}.pdf`).replace(/\.html$/i, ".pdf");
+        const downloadName = (salarySlip.filename || `salary-slip-${salarySlip.month}-${salarySlip.year}.pdf`).replace(/\.html$/i, ".pdf");
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
         res.send(pdfBuffer);
@@ -722,15 +718,18 @@ exports.generateSalarySlip = async (req, res) => {
             return res.status(404).json({ message: "Employee profile not found" });
         }
 
-        const slip = buildSalarySlipRecord(payload, req.user._id);
-        contact.salarySlips = Array.isArray(contact.salarySlips) ? contact.salarySlips : [];
-        contact.salarySlips.unshift(slip);
-        await contact.save();
+        const slipData = {
+            ...payload,
+            contactId: contact._id,
+            generatedBy: req.user._id
+        };
+        const newSlip = new SalarySlip(slipData);
+        await newSlip.save();
 
         try {
             await createNotifications({
                 userIds: [user._id],
-                message: `Your salary slip for ${slip.month} ${slip.year} is now available.`,
+                message: `Your salary slip for ${newSlip.month} ${newSlip.year} is now available.`,
                 targetPath: "/my-profile",
             });
         } catch (notificationError) {
@@ -739,7 +738,7 @@ exports.generateSalarySlip = async (req, res) => {
 
         res.json({
             message: `Salary slip generated for ${contact.name}`,
-            salarySlips: contact.salarySlips,
+            slip: newSlip,
         });
     } catch (err) {
         console.error("Generate Salary Slip Error:", err);
