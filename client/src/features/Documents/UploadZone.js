@@ -8,11 +8,6 @@ const MAX_SIZE_BYTES = 50 * 1024 * 1024;
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
-const formatBytes = (bytes) => {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
 // Redefine locally so no circular dep on fileHelpers
 const ALLOWED_EXTS_LABEL = "images, PDF, Word, Excel, PowerPoint, CSV, TXT";
 

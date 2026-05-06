@@ -5,12 +5,8 @@ import {
   Plus,
   Download,
   Clock3,
-  BadgeDollarSign,
-  CircleDashed,
-  BriefcaseBusiness,
 }from "lucide-react";
 import {
-  PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, Tooltip,
   BarChart, Bar, CartesianGrid,
   ResponsiveContainer
@@ -99,35 +95,21 @@ useEffect(() => {
   // 🔥 RECENT 3 DEALS
   const recentDeals = filteredDeals.slice(0, 3);
 
-  // 🔥 METRICS
-  const openDeals = deals.filter((d) => d.status === "open").length;
-
-  const wonDeals = deals.filter((d) => d.status === "won");
-
-  const revenue = wonDeals.reduce(
-    (acc, d) => acc + Number(d.value || 0),
-    0
-  );
-
-  const conversionRate = deals.length
-    ? ((wonDeals.length / deals.length) * 100).toFixed(1)
-    : 0;
-
-    // 📊 STATUS DATA (Pie Chart)
-const statusData = [
-  {
-    name: "In Progress",
-    value: deals.filter(d => d.status === "In Progress").length,
-  },
-  {
-    name: "Won",
-    value: deals.filter(d => d.status === "Won").length,
-  },
-  {
-    name: "Lost",
-    value: deals.filter(d => d.status === "Lost").length,
-  },
-];
+  // 📊 STATUS DATA (Pie Chart)
+  // const statusData = [
+  //   {
+  //     name: "In Progress",
+  //     value: deals.filter(d => d.status === "In Progress").length,
+  //   },
+  //   {
+  //     name: "Won",
+  //     value: deals.filter(d => d.status === "Won").length,
+  //   },
+  //   {
+  //     name: "Lost",
+  //     value: deals.filter(d => d.status === "Lost").length,
+  //   },
+  // ];
 
 // 📈 REVENUE TREND (Line Chart)
 const revenueTrend = deals.map((d, index) => ({

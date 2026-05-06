@@ -4,7 +4,7 @@ import "./Calls.css";
 
 function Calls() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [calls, setCalls] = useState([
+  const [calls] = useState([
     { id: 1, caller: "Alice", recipient: "Bob", date: "2026-02-26", status: "Scheduled", duration: "10m" },
     { id: 2, caller: "Charlie", recipient: "David", date: "2026-02-25", status: "Completed", duration: "5m" },
   ]);

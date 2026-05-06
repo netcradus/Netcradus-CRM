@@ -23,7 +23,6 @@ import HRDashboard from "./HRDashboard";
 import TechDashboard from "./TechDashboard";
 import DigitalMediaDashboard from "./DigitalMediaDashboard";
 import { apiUrl } from "../../config/api";
-import { useNavigate } from "react-router-dom";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
@@ -36,7 +35,6 @@ const formatRoleLabel = (role = "general") =>
         .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const SuperUserDashboard = () => {
-  const navigate = useNavigate();
   const previewRef = useRef(null);
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
@@ -44,7 +42,6 @@ const SuperUserDashboard = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const userName = localStorage.getItem("userName") || "Super User";
-  const userRole = localStorage.getItem("userRole") || "super_user";
   const token = localStorage.getItem("token");
 
   useEffect(() => {

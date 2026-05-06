@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { apiUrl } from "../../../config/api";
-import { AlertTriangle, RefreshCw, Eye, Settings, ExternalLink } from "lucide-react";
+import { AlertTriangle, RefreshCw, Settings, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../Documents.css";
 import QuotaModal from "./QuotaModal";

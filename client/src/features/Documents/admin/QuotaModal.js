@@ -7,7 +7,6 @@ import "../Documents.css";
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
 const QuotaModal = ({ user, onClose }) => {
-  const [storage, setStorage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newQuota, setNewQuota] = useState("");
   const [reason, setReason] = useState("");
@@ -17,15 +16,13 @@ const QuotaModal = ({ user, onClose }) => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const { data } = await axios.get(
+        await axios.get(
           apiUrl(`/api/documents/admin/user/${user.userId}/files?limit=0`),
           { headers: authHeaders() }
         );
         // Build a simple storage object from what we have
-        setStorage({ usedMB: user.usedMB, quotaMB: user.quotaMB, quotaHistory: [] });
         setNewQuota(String(user.quotaMB));
       } catch (err) {
-        setStorage({ usedMB: user.usedMB, quotaMB: user.quotaMB, quotaHistory: [] });
         setNewQuota(String(user.quotaMB));
       } finally {
         setLoading(false);

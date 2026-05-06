@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MoreVertical, Trash2, FolderOpen, Plus } from "lucide-react";
+import { MoreVertical, Trash2, Plus } from "lucide-react";
 
 // Role-specific folder icons
 const FOLDER_ICONS = {

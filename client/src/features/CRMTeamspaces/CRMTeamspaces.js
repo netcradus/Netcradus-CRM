@@ -27,17 +27,16 @@
 
 import React, { useState } from 'react';
 import { FaUsers } from 'react-icons/fa';
-import Sidebar from '../../components/Dashboard/Sidebar';
 import "./CRMTeamspaces.css";
 
 const CRMTeamspaces = () => {
   // Sample team members
-  const [teamMembers, setTeamMembers] = useState([
+  const [teamMembers] = useState([
 
   ]);
 
   // Sample tasks
-  const [tasks, setTasks] = useState([
+  const [tasks] = useState([
 
   ]);
 

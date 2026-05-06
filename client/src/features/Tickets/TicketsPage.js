@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
-import { FaTicketAlt, FaPaperclip, FaComment, FaInfoCircle, FaCheckDouble } from "react-icons/fa";
+import { FaTicketAlt, FaComment, FaInfoCircle } from "react-icons/fa";
 import "./TicketsPage.css";
 
 const TicketsPage = () => {
     const [tickets, setTickets] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [selectedTicket, setSelectedTicket] = useState(null);
     const [newTicket, setNewTicket] = useState({ title: "", description: "", category: "Technical", priority: "medium", attachments: [] });
     const [newComment, setNewComment] = useState("");
     const [newInfo, setNewInfo] = useState("");
@@ -17,7 +16,7 @@ const TicketsPage = () => {
     const token = localStorage.getItem("token");
     const canManageTickets = userRole === "super_user";
 
-    const fetchTickets = async () => {
+    const fetchTickets = useCallback(async () => {
         try {
             const res = await axios.get(apiUrl("/api/tickets"), {
                 headers: { Authorization: `Bearer ${token}` }
@@ -26,11 +25,11 @@ const TicketsPage = () => {
         } catch (err) {
             console.error("Error fetching tickets:", err);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         fetchTickets();
-    }, [token]);
+    }, [fetchTickets]);
 
     const handleCreateTicket = async (e) => {
         e.preventDefault();

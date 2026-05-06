@@ -1,5 +1,4 @@
 import React from "react";
-import Sidebar from "../../components/Dashboard/Sidebar";
 import "./Reports.css";
 
 function Reports() {

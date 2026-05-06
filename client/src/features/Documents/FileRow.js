@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Eye, Download, Trash2, Pencil, FolderInput, MoreVertical } from "lucide-react";
-import { getFileType, formatBytes, formatDate, getViewUrl, getDownloadUrl } from "./fileHelpers";
+import { getFileType, formatBytes, formatDate, getDownloadUrl } from "./fileHelpers";
 import RenameModal from "./RenameModal";
 import MoveModal from "./MoveModal";
 
