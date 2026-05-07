@@ -8,8 +8,8 @@ const TicketsPage = () => {
     const [tickets, setTickets] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [newTicket, setNewTicket] = useState({ title: "", description: "", category: "Technical", priority: "medium", attachments: [] });
-    const [newComment, setNewComment] = useState("");
-    const [newInfo, setNewInfo] = useState("");
+    const [commentDrafts, setCommentDrafts] = useState({});
+    const [infoDrafts, setInfoDrafts] = useState({});
     
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("userId");
@@ -58,11 +58,14 @@ const TicketsPage = () => {
     };
 
     const handleAddComment = async (id) => {
+        const comment = commentDrafts[id]?.trim();
+        if (!comment) return;
+
         try {
-            await axios.post(apiUrl(`/api/tickets/${id}/comment`), { message: newComment }, {
+            await axios.post(apiUrl(`/api/tickets/${id}/comment`), { message: comment }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setNewComment("");
+            setCommentDrafts(prev => ({ ...prev, [id]: "" }));
             fetchTickets();
         } catch (err) {
             console.error(err);
@@ -70,11 +73,14 @@ const TicketsPage = () => {
     };
 
     const handleAddInfo = async (id) => {
+        const info = infoDrafts[id]?.trim();
+        if (!info) return;
+
         try {
-            await axios.post(apiUrl(`/api/tickets/${id}/info`), { message: newInfo }, {
+            await axios.post(apiUrl(`/api/tickets/${id}/info`), { message: info }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setNewInfo("");
+            setInfoDrafts(prev => ({ ...prev, [id]: "" }));
             fetchTickets();
         } catch (err) {
             console.error(err);
@@ -140,13 +146,21 @@ const TicketsPage = () => {
                         <div className="comment-box">
                             {canManageTickets ? (
                                 <div className="input-flex">
-                                    <input placeholder="Add a resolution comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+                                    <input
+                                        placeholder="Add a resolution comment..."
+                                        value={commentDrafts[ticket._id] || ""}
+                                        onChange={(e) => setCommentDrafts(prev => ({ ...prev, [ticket._id]: e.target.value }))}
+                                    />
                                     <button onClick={() => handleAddComment(ticket._id)}><FaComment /></button>
                                 </div>
                             ) : (
                                 ticket.raisedBy?._id === userId && (
                                     <div className="input-flex">
-                                        <input placeholder="Add more information..." value={newInfo} onChange={(e) => setNewInfo(e.target.value)} />
+                                        <input
+                                            placeholder="Add more information..."
+                                            value={infoDrafts[ticket._id] || ""}
+                                            onChange={(e) => setInfoDrafts(prev => ({ ...prev, [ticket._id]: e.target.value }))}
+                                        />
                                         <button onClick={() => handleAddInfo(ticket._id)}><FaInfoCircle /></button>
                                     </div>
                                 )

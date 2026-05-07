@@ -912,6 +912,12 @@ body {
   color: #172033;
 }
 
+:root[data-theme="light"] .employee-profile-form label {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 :root[data-theme="light"] .employee-profile-form label,
 :root[data-theme="light"] .my-profile-form label,
 :root[data-theme="light"] .interviews-form label span,
