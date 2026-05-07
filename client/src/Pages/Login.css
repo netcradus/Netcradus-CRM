@@ -298,15 +298,14 @@ body,
 }
 
 .lp-brand-orbit {
-  margin: 14px 0 10px;
-  min-height: 220px;
   position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 40px auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
-
 .lp-orbit-grid {
   position: absolute;
   inset: 14px 10% 14px 10%;
@@ -320,76 +319,69 @@ body,
 
 .lp-orbit-core {
   position: relative;
-  width: 270px;
-  height: 205px;
+  width: 320px;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .lp-orbit-ring {
   position: absolute;
-  inset: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.08);
-  transform: translate(-50%, -50%);
 }
-
 .lp-orbit-ring-a {
-  width: 214px;
-  height: 144px;
-  border-color: rgba(255, 138, 0, 0.36);
-  box-shadow: 0 0 20px rgba(255, 138, 0, 0.14);
-  animation: lpOrbitA 12s linear infinite;
+  width: 220px;
+  height: 220px;
 }
 
 .lp-orbit-ring-b {
-  width: 176px;
-  height: 176px;
-  border-color: rgba(255, 45, 143, 0.28);
-  animation: lpOrbitB 10s linear infinite reverse;
+  width: 300px;
+  height: 300px;
 }
 
 .lp-orbit-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 88px;
-  height: 88px;
-  transform: translate(-50%, -50%);
-  border-radius: 28px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, rgba(255, 138, 0, 0.16), rgba(255, 45, 143, 0.14));
-  border: 1px solid rgba(255, 148, 106, 0.24);
-  color: var(--lp-text);
-  box-shadow: 0 0 40px rgba(255, 95, 61, 0.18);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  z-index: 2;
 }
 
 .lp-orbit-node {
   position: absolute;
-  padding: 8px 12px;
+  padding: 10px 18px;
   border-radius: 999px;
-  background: var(--lp-chip-bg);
-  border: 1px solid var(--lp-chip-border);
-  color: var(--lp-chip-text);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  backdrop-filter: blur(10px);
 }
 
 .lp-orbit-node-a {
-  top: 10px;
-  left: 12px;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .lp-orbit-node-b {
-  right: -4px;
-  top: 48%;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .lp-orbit-node-c {
-  bottom: 8px;
-  left: 30px;
+  left: -10px;
+  bottom: 40px;
 }
+
 
 @keyframes lpOrbitA {
   from { transform: translate(-50%, -50%) rotate(0deg); }
@@ -693,12 +685,16 @@ body,
   }
 
   .lp-brand-orbit {
-    min-height: 180px;
+  min-height: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   }
 
   .lp-orbit-core {
-    width: 235px;
-    height: 180px;
+    width: 260px;
+  height: 260px;
+  position: relative;
   }
 }
 
@@ -721,4 +717,13 @@ body,
     font-size: 11px;
     padding: 8px 12px;
   }
+}
+.lp-orbit-ring-a {
+  width: 180px;
+  height: 180px;
+}
+
+.lp-orbit-ring-b {
+  width: 250px;
+  height: 250px;
 }

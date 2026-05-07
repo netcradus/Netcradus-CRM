@@ -155,7 +155,7 @@ body, html {
   padding: 11px 24px;
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all 0.18s ease;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.5px;
@@ -185,7 +185,7 @@ body, html {
 .btn-primary:hover::before { width: 300px; height: 300px; }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 15px 40px rgba(255, 75, 43, 0.4);
 }
 
@@ -329,24 +329,22 @@ body, html {
 }
 
 .deals-table th {
-  background: linear-gradient(135deg, rgba(255, 75, 43, 0.08), rgba(14, 165, 233, 0.05));
-  color: var(--primary-accent);
-  font-weight: 700;
+    font-size: 12px;
   text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--border-light);
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  font-weight: 700;
+  background: rgba(255,255,255,0.03);
+  
 }
 
-.deals-table td { color: var(--text-primary); }
+.deals-table td { color: #e2e8f0;
+  font-size: 14px;}
 
-.deals-table tbody tr { transition: all var(--transition-base); }
+.deals-table tbody tr { transition: background 0.2s ease }
 
 .deals-table tbody tr:hover {
-  background: rgba(255, 75, 43, 0.05);
+  background: rgba(255,255,255,0.05);
 }
 
 /* Also support generic nc-table class */
@@ -580,10 +578,11 @@ td svg:hover {
 
   .deals-table tr {
     background: var(--bg-secondary);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 10px;
     padding: var(--spacing-lg);
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
     border: 1px solid var(--border-color);
+    overflow:hidden;
   }
 
   .deals-table td {
