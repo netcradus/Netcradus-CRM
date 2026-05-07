@@ -61,6 +61,12 @@ function MyProfilePage() {
   const onSubmit = async (event) => {
     event.preventDefault();
     try {
+      // Validate emergency contact name - no numbers allowed
+      if (form.emergencyContactName && /\d/.test(form.emergencyContactName)) {
+        setError("Emergency Contact Name should not contain numbers");
+        setMessage("");
+        return;
+      }
       setSaving(true);
       const { data } = await axios.put(apiUrl("/api/contacts/profiles/me"), form, {
         headers: { Authorization: `Bearer ${token}` },
