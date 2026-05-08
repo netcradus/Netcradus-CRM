@@ -438,20 +438,26 @@ body,
 
 .lp-input-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .lp-icon {
   position: absolute;
-  left: 15px;
+  left: 20px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--lp-icon-color);
+  pointer-events: none;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
 }
 
-.lp-input {
+.lp-input-wrap .lp-input {
   width: 100%;
   height: 52px;
-  padding: 0 16px 0 46px;
+  padding: 0 16px 0 68px !important;
   border-radius: 16px;
   border: 1px solid var(--lp-input-border);
   background: var(--lp-input-bg);
@@ -461,19 +467,19 @@ body,
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
-.lp-input::placeholder {
+.lp-input-wrap .lp-input::placeholder {
   color: var(--lp-placeholder);
 }
 
-.lp-input:hover,
-.lp-input:focus {
+.lp-input-wrap .lp-input:hover,
+.lp-input-wrap .lp-input:focus {
   transform: translateY(-1px);
   border-color: rgba(255, 148, 106, 0.38);
   box-shadow: 0 0 0 4px rgba(255, 95, 61, 0.12);
 }
 
-.lp-input-pr {
-  padding-right: 48px;
+.lp-input-wrap .lp-input-pr {
+  padding-right: 52px !important;
 }
 
 .lp-eye {
