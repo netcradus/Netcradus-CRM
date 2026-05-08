@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
-import "./Documents.css";
+import { ChevronRight, Database, FolderPlus, Upload, ShieldAlert, Cloud } from "lucide-react";
 
 import StorageHeader from "./StorageHeader";
 import FolderSidebar from "./FolderSidebar";
@@ -33,10 +33,10 @@ const useToast = () => {
 
 // ── Toast renderer ────────────────────────────────────────────────────────────
 const ToastContainer = ({ toasts }) => (
-  <div className="drive-toast">
+  <div style={{ position: 'fixed', bottom: 'var(--space-6)', right: 'var(--space-6)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
     {toasts.map(t => (
-      <div key={t.id} className={`drive-toast-item ${t.type}`}>
-        {t.type === "success" ? "✅" : "❌"} {t.message}
+      <div key={t.id} className={`badge badge-${t.type === 'success' ? 'success' : 'error'}`} style={{ padding: 'var(--space-3) var(--space-4)', boxShadow: 'var(--shadow-lg)' }}>
+        {t.message}
       </div>
     ))}
   </div>
@@ -88,7 +88,6 @@ const MyStoragePage = () => {
       }
     } catch (err) {
       if (err.response?.status === 404) {
-        // Storage not provisioned yet
         setStorage(null);
       } else {
         push(err.response?.data?.message || "Failed to load storage info.", "error");
@@ -120,7 +119,6 @@ const MyStoragePage = () => {
       // Client-side sort
       if (sortBy === "name") docs.sort((a, b) => (a.originalName || "").localeCompare(b.originalName || ""));
       if (sortBy === "size") docs.sort((a, b) => (b.fileSizeBytes || 0) - (a.fileSizeBytes || 0));
-      // "date" is already default server sort
 
       setFiles(docs);
       setPagination(data.pagination || { page: 1, pages: 1, total: docs.length, limit: 20 });
@@ -135,7 +133,6 @@ const MyStoragePage = () => {
     if (storage) fetchFiles(1);
   }, [activeFolderId, mimeFilter, sortBy, storage]); // eslint-disable-line
 
-  // Debounce search
   useEffect(() => {
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
@@ -144,7 +141,7 @@ const MyStoragePage = () => {
     return () => clearTimeout(searchTimer.current);
   }, [search]); // eslint-disable-line
 
-  // ── Folder selection ───────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleFolderSelect = (folderId, name) => {
     setActiveFolderId(folderId);
@@ -152,16 +149,12 @@ const MyStoragePage = () => {
     setSearch("");
   };
 
-  // ── Upload success ─────────────────────────────────────────────────────────
-
   const handleUploadSuccess = (newDoc) => {
     setFiles(prev => [newDoc, ...prev]);
-    fetchStorage(); // refresh quota
+    fetchStorage(); 
     push(`"${newDoc.originalName}" uploaded.`);
     setShowUpload(false);
   };
-
-  // ── Delete file ────────────────────────────────────────────────────────────
 
   const handleDeleteFile = async (docId, name) => {
     try {
@@ -174,8 +167,6 @@ const MyStoragePage = () => {
     }
   };
 
-  // ── Rename file ────────────────────────────────────────────────────────────
-
   const handleRenameFile = async (docId, newName) => {
     try {
       const { data } = await axios.patch(apiUrl(`/api/documents/${docId}/rename`), { newName }, { headers: authHeaders() });
@@ -186,19 +177,15 @@ const MyStoragePage = () => {
     }
   };
 
-  // ── Move file ──────────────────────────────────────────────────────────────
-
   const handleMoveFile = async (docId, targetFolderId, targetName) => {
     try {
       await axios.patch(apiUrl(`/api/documents/${docId}/move`), { targetFolderId }, { headers: authHeaders() });
-      setFiles(prev => prev.filter(f => f._id !== docId)); // remove from current view
+      setFiles(prev => prev.filter(f => f._id !== docId)); 
       push(`File moved to "${targetName}".`);
     } catch (err) {
       push(err.response?.data?.message || "Move failed.", "error");
     }
   };
-
-  // ── Create custom folder ───────────────────────────────────────────────────
 
   const handleCreateFolder = async (folderName) => {
     try {
@@ -213,8 +200,6 @@ const MyStoragePage = () => {
       throw err;
     }
   };
-
-  // ── Delete custom folder ───────────────────────────────────────────────────
 
   const handleDeleteFolder = async (folderName) => {
     try {
@@ -239,64 +224,68 @@ const MyStoragePage = () => {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (storageLoading) {
-    return (
-      <div className="drive-page">
-        <div className="drive-loading" style={{ flex: 1 }}>
-          <div className="drive-spinner" />
-          <span>Loading your drive…</span>
-        </div>
-      </div>
-    );
-  }
+  if (storageLoading) return <div className="dashboard-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="btn-spinner" /></div>;
 
   if (!storage) {
     return (
-      <div className="drive-page">
-        <div className="drive-no-storage">
-          <div style={{ fontSize: "3rem" }}>☁️</div>
-          <h2>Drive Not Ready</h2>
-          <p>Your personal Drive storage is being set up. Please check back in a moment, or contact your administrator.</p>
+      <div className="dashboard-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="empty-state">
+           <Cloud size={48} className="icon" />
+           <h3>Cloud Drive Unavailable</h3>
+           <p>Your storage is being provisioned or is currently unavailable.</p>
         </div>
-        <ToastContainer toasts={toasts} />
       </div>
     );
   }
 
   return (
-    <div className="drive-page">
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="page-header" style={{ flexShrink: 0 }}>
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>Drive</span><ChevronRight size={10} /><span>{activeFolderName}</span>
+           </div>
+           <h1 className="title">Cloud Storage</h1>
+           <p className="subtitle">Secure file management and document hosting.</p>
+        </div>
+        <div className="page-header-right" style={{ display: 'flex', gap: 'var(--space-2)' }}>
+           <button className="btn btn-secondary" onClick={() => setShowAddFolder(true)}><FolderPlus size={16} /> New Folder</button>
+           <button className="btn btn-primary" onClick={() => setShowUpload(!showUpload)}><Upload size={16} /> Upload File</button>
+        </div>
+      </div>
+
       {targetUserId && (
-        <div style={{ background: "var(--nc-primary)", color: "#fff", padding: "8px 16px", fontSize: "0.85rem", fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>👀 Admin Mode: Viewing storage for {targetUserName || targetUserId}</span>
-          <a href="/admin/storage" style={{ color: "#fff", textDecoration: "underline", fontSize: "0.8rem" }}>Back to Admin</a>
+        <div className="badge badge-warning" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-4)', width: '100%', justifyContent: 'center' }}>
+          <ShieldAlert size={14} style={{ marginRight: '8px' }} />
+          Admin Mode: Viewing storage for {targetUserName || targetUserId}
         </div>
       )}
-      <StorageHeader
-        storage={storage}
-        onUpgradeClick={() => window.location.href = "/tickets"}
-      />
 
-      <div className="drive-body">
-        <FolderSidebar
-          storage={storage}
-          activeFolderId={activeFolderId}
-          onFolderSelect={handleFolderSelect}
-          onAddFolder={() => setShowAddFolder(true)}
-          onDeleteFolder={handleDeleteFolder}
-        />
+      <StorageHeader storage={storage} onUpgradeClick={() => {}} />
 
-        <div className="drive-main">
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 'var(--space-6)', flex: 1, minHeight: 0, marginTop: 'var(--space-6)' }}>
+        <div className="nc-card" style={{ padding: 'var(--space-4)', overflowY: 'auto' }}>
+          <FolderSidebar
+            storage={storage}
+            activeFolderId={activeFolderId}
+            onFolderSelect={handleFolderSelect}
+            onAddFolder={() => setShowAddFolder(true)}
+            onDeleteFolder={handleDeleteFolder}
+          />
+        </div>
+
+        <div className="nc-card" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {showUpload && (
-            <UploadZone
-              folderId={activeFolderId}
-              folderName={activeFolderName}
-              storage={storage}
-              targetUserId={targetUserId}
-              onSuccess={handleUploadSuccess}
-              onClose={() => setShowUpload(false)}
-            />
+            <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-base)' }}>
+               <UploadZone
+                folderId={activeFolderId}
+                folderName={activeFolderName}
+                storage={storage}
+                targetUserId={targetUserId}
+                onSuccess={handleUploadSuccess}
+                onClose={() => setShowUpload(false)}
+              />
+            </div>
           )}
 
           <FileListPanel

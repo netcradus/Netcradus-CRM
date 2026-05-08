@@ -3,17 +3,16 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../Dashboard/Sidebar";
 import Topbar from "../Topbar/Topbar";
 import ChatLauncher from "../Chat/ChatLauncher";
-import "./MainLayout.css";
 
 const MainLayout = () => {
   return (
-    <div className="layout">
+    <div className="dashboard-layout">
       <Sidebar />
-      <div className="main-content">
+      <div className="dashboard-main">
         <Topbar />
-        <div className="page-shell">
+        <main className="dashboard-content">
           <Outlet />
-        </div>
+        </main>
       </div>
       <ChatLauncher />
     </div>

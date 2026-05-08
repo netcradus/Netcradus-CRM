@@ -322,10 +322,10 @@ export function ChatProvider({ children }) {
   }, [onlineUsers]);
 
   useEffect(() => {
-    if (!selectedConversationId && conversations.length) {
+    if (!selectedConversationId && conversations.length && !launcherOpen) {
       setSelectedConversationId(conversations[0]._id);
     }
-  }, [conversations, selectedConversationId]);
+  }, [conversations, selectedConversationId, launcherOpen]);
 
   useEffect(() => {
     if (selectedConversationId && !messagesByConversation[selectedConversationId]) {
@@ -468,6 +468,7 @@ export function ChatProvider({ children }) {
 
     return () => {
       socket.off("socket:ready", handleReady);
+
       socket.off("connect", handleReady);
       socket.off("disconnect", handleDisconnect);
       socket.off("new_message", handleNewMessage);
@@ -479,7 +480,8 @@ export function ChatProvider({ children }) {
       disconnectAppSocket();
       socketRef.current = null;
     };
-  }, [currentUserId, fetchConversations, markConversationRead, selectedConversationId, token]);
+  }, [currentUserId, markConversationRead, selectedConversationId, token]);
+
 
   const value = useMemo(() => ({
     conversations,

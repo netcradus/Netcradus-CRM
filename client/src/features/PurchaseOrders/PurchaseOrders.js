@@ -1,112 +1,88 @@
 import React, { useState } from "react";
-import { FaBoxes } from "react-icons/fa";
-import "./PurchaseOrders.css";
+import { PackageCheck, Plus, Search, ChevronRight, Truck, Trash2, Eye } from "lucide-react";
 
 const PurchaseOrders = () => {
-  const [orders, setOrders] = useState([
-    
-  ]);
-
+  const [orders, setOrders] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newOrder, setNewOrder] = useState({ id: "", vendor: "", amount: "", status: "pending", date: "" });
+  const [form, setForm] = useState({ id: "", vendor: "", amount: "", status: "pending", date: "" });
 
-  const handleView = (id) => alert(`Viewing details of ${id}`);
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete ${id}?`)) {
-      setOrders(orders.filter(order => order.id !== id));
-    }
-  };
-
-  const handleInputChange = (e) => {
-    setNewOrder({ ...newOrder, [e.target.name]: e.target.value });
-  };
-
-  const handleAddOrder = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setOrders([...orders, newOrder]);
-    setNewOrder({ id: "", vendor: "", amount: "", status: "pending", date: "" });
+    setOrders([...orders, form]);
+    setForm({ id: "", vendor: "", amount: "", status: "pending", date: "" });
     setShowModal(false);
   };
 
   return (
-    <div className="po-container">
-      <h2 className="po-heading"><FaBoxes /> Purchase Orders</h2>
-
-      <div className="po-actions">
-        <button className="po-add-btn" onClick={() => setShowModal(true)}>
-          + Add New Purchase Order
-        </button>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>Inventory</span><ChevronRight size={10} /><span>Purchase Orders</span>
+           </div>
+           <h1 className="title">Purchase Orders</h1>
+           <p className="subtitle">Track procurement and vendor supply orders.</p>
+        </div>
+        <div className="page-header-right">
+           <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> New PO</button>
+        </div>
       </div>
 
-      <table className="po-table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Vendor</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-  {orders.map((order, index) => (
-    <tr key={index}>
-      <td data-label="Order ID">{order.id}</td>
-      <td data-label="Vendor">{order.vendor}</td>
-      <td data-label="Amount">{order.amount}</td>
-      <td data-label="Status">
-        <span className={`po-status ${order.status}`}>
-          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-        </span>
-      </td>
-      <td data-label="Date">{order.date}</td>
-     <td data-label="Actions" className="po-actions-cell">
-  <div className="po-button-group"> {/* Added this wrapper */}
-    <button
-      className="po-action-btn view"
-      onClick={() => handleView(order.id)}
-    >
-      View
-    </button>
-    <button
-      className="po-action-btn delete"
-      onClick={() => handleDelete(order.id)}
-    >
-      Delete
-    </button>
-  </div>
-</td>
-    </tr>
-  ))}
-</tbody>
-      </table>
+      <div className="nc-card">
+         <table className="nc-table">
+            <thead>
+               <tr><th>Order ID</th><th>Vendor</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+               {orders.map((o, i) => (
+                 <tr key={i}>
+                    <td><span style={{ fontWeight: 'var(--font-bold)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>{o.id}</span></td>
+                    <td style={{ fontWeight: 'var(--font-semibold)' }}>{o.vendor}</td>
+                    <td>₹ {Number(o.amount).toLocaleString()}</td>
+                    <td><span className={`badge badge-${o.status === 'completed' ? 'success' : o.status === 'cancelled' ? 'error' : 'warning'}`}>{o.status}</span></td>
+                    <td>{o.date}</td>
+                    <td>
+                       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                          <button className="btn btn-ghost" style={{ padding: 'var(--space-1)' }}><Eye size={14} /></button>
+                          <button className="btn btn-ghost" style={{ padding: 'var(--space-1)', color: 'var(--color-error)' }} onClick={() => setOrders(orders.filter(ord => ord.id !== o.id))}><Trash2 size={14} /></button>
+                       </div>
+                    </td>
+                 </tr>
+               ))}
+               {orders.length === 0 && (
+                 <tr><td colSpan="6" style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>No purchase orders found.</td></tr>
+               )}
+            </tbody>
+         </table>
+      </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="po-modal-overlay">
-          <div className="po-modal-content">
-            <h3>Add New Purchase Order</h3>
-            <form onSubmit={handleAddOrder}>
-              <input type="text" name="id" placeholder="Order ID" value={newOrder.id} onChange={handleInputChange} required />
-              <input type="text" name="vendor" placeholder="Vendor Name" value={newOrder.vendor} onChange={handleInputChange} required />
-              <input type="text" name="amount" placeholder="Amount" value={newOrder.amount} onChange={handleInputChange} required />
-              <select name="status" value={newOrder.status} onChange={handleInputChange}>
-                {/* <p><strong>Date:</strong> {selectedOrder.date}</p>
-            <div className="po-modal-buttons">
-              <button className="po-cancel-btn" onClick={() => setShowViewModal(false)}>Close</button>
-            </div> */}
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <input type="date" name="date" value={newOrder.date} onChange={handleInputChange} required />
-              <div className="po-modal-buttons">
-                <button type="submit" className="po-add-btn">Save</button>
-                <button type="button" className="po-cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
-              </div>
-            </form>
-          </div>
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+              <div className="nc-modal-header"><h3>New Purchase Order</h3></div>
+              <form className="form" onSubmit={handleSubmit}>
+                 <div className="form-field">
+                    <label className="form-label">Order ID</label>
+                    <input className="form-input" required name="id" value={form.id} onChange={e => setForm({...form, id: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Vendor Name</label>
+                    <input className="form-input" required name="vendor" value={form.vendor} onChange={e => setForm({...form, vendor: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Total Amount (₹)</label>
+                    <input className="form-input" type="number" required name="amount" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Order Date</label>
+                    <input className="form-input" type="date" required name="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+                 </div>
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save PO</button>
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                 </div>
+              </form>
+           </div>
         </div>
       )}
     </div>

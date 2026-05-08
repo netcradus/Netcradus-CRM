@@ -1,52 +1,28 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { format, parseISO } from "date-fns";
-import { Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { formatInTimeZone } from "date-fns-tz";
+import { Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp, Clock, History, Calendar } from "lucide-react";
 import { apiUrl } from "../../config/api";
-import "./Attendance.css";
 
-function getAuthHeaders() {
-  return { Authorization: `Bearer ${localStorage.getItem("token")}` };
-}
+function getAuthHeaders() { return { Authorization: `Bearer ${localStorage.getItem("token")}` }; }
 
-const STATUS_BADGE = {
-  present: { label: "Present", cls: "badge-present" },
-  absent: { label: "Absent", cls: "badge-absent" },
-  half_day: { label: "Half Day", cls: "badge-half" },
-  on_leave: { label: "On Leave", cls: "badge-leave" },
-  holiday: { label: "Holiday", cls: "badge-holiday" },
-  weekend: { label: "Weekend", cls: "badge-weekend" },
+const formatSeconds = (s = 0) => {
+  const safe = Math.max(0, Math.floor(s));
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const sc = safe % 60;
+  return [h, m, sc].map(v => String(v).padStart(2, "0")).join(":");
 };
 
-const BREAK_TYPES = [
-  { value: "lunch", label: "Lunch (1 hr)" },
-  { value: "short", label: "Short Break" },
-  { value: "custom", label: "Custom" },
-];
-
-const formatSeconds = (seconds = 0) => {
-  const safeSeconds = Math.max(0, Math.floor(seconds));
-  const hrs = Math.floor(safeSeconds / 3600);
-  const mins = Math.floor((safeSeconds % 3600) / 60);
-  const secs = safeSeconds % 60;
-  return [hrs, mins, secs].map((value) => String(value).padStart(2, "0")).join(":");
+const formatMinutesSummary = (m = 0) => {
+  const safe = Math.max(0, Math.floor(m));
+  const h = Math.floor(safe / 60);
+  const mn = safe % 60;
+  if (!h) return `${mn} min`;
+  if (!mn) return `${h} hr`;
+  return `${h} hr ${mn} min`;
 };
-
-const formatMinutesSummary = (minutes = 0) => {
-  const safeMinutes = Math.max(0, Math.floor(minutes));
-  const hrs = Math.floor(safeMinutes / 60);
-  const mins = safeMinutes % 60;
-  if (!hrs) return `${mins} min`;
-  if (!mins) return `${hrs} hr`;
-  return `${hrs} hr ${mins} min`;
-};
-
-const prettifyRole = (value = "") =>
-  String(value)
-    .split("_")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 
 export default function AttendancePage() {
   const [statusData, setStatusData] = useState(null);
@@ -56,410 +32,181 @@ export default function AttendancePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showRegForm, setShowRegForm] = useState(false);
-  const [showBreakLog, setShowBreakLog] = useState(false);
-  const [selectedBreakType, setSelectedBreakType] = useState("lunch");
   const [regForm, setRegForm] = useState({ date: "", punchIn: "", punchOut: "", reason: "" });
-  const [regLoading, setRegLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [tick, setTick] = useState(Date.now());
-  const [punchOutSummary, setPunchOutSummary] = useState(null);
   const LIMIT = 20;
 
   const fetchStatus = useCallback(async () => {
     try {
       const { data } = await axios.get(apiUrl("/api/attendance/current-status"), { headers: getAuthHeaders() });
       setStatusData(data.data);
-    } catch (e) {
-      setStatusData(null);
-    }
+    } catch (e) { setStatusData(null); }
   }, []);
 
   const fetchRecords = useCallback(async () => {
     try {
       const { data } = await axios.get(apiUrl(`/api/attendance/my?page=${page}&limit=${LIMIT}`), { headers: getAuthHeaders() });
       setRecords(data.data || []);
-    } catch (e) {
-      setRecords([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setRecords([]); }
+    finally { setLoading(false); }
   }, [page]);
 
-  useEffect(() => {
-    fetchStatus();
-    fetchRecords();
-  }, [fetchStatus, fetchRecords]);
+  useEffect(() => { fetchStatus(); fetchRecords(); }, [fetchStatus, fetchRecords]);
 
   useEffect(() => {
     const interval = setInterval(() => setTick(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleAction = async (type, body = {}) => {
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
-    try {
-      const { data } = await axios.post(apiUrl(`/api/attendance/${type}`), body, { headers: getAuthHeaders() });
-      setSuccess(data.message || "Action completed.");
-      if (type === "punch-out") {
-        setPunchOutSummary(data.data || null);
-      }
-      await fetchStatus();
-      await fetchRecords();
-    } catch (e) {
-      setError(e.response?.data?.message || "Action failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleRegularize = async (e) => {
-    e.preventDefault();
-    setRegLoading(true);
-    setError("");
-    setSuccess("");
-    try {
-      await axios.post(apiUrl("/api/attendance/regularize"), regForm, { headers: getAuthHeaders() });
-      setSuccess("Regularization request submitted.");
-      setShowRegForm(false);
-      setRegForm({ date: "", punchIn: "", punchOut: "", reason: "" });
-    } catch (e) {
-      setError(e.response?.data?.message || "Request failed.");
-    } finally {
-      setRegLoading(false);
-    }
-  };
-
   const liveMetrics = useMemo(() => {
-    if (!statusData?.record) {
-      return { workSeconds: 0, breakSeconds: 0, overtimeSeconds: 0, totalBreakMinutes: 0 };
-    }
-
-    const record = statusData.record;
-    const serverTimeMs = statusData.serverTime ? new Date(statusData.serverTime).getTime() : Date.now();
-    const deltaSeconds = Math.max(0, Math.floor((tick - serverTimeMs) / 1000));
-    const isOpenShift = record.punchIn && !record.punchOut;
-    const isOnBreak = record.isOnBreak;
-
-    const baseWorkSeconds = statusData.elapsedWorkSeconds || 0;
-    const baseBreakSeconds = statusData.ongoingBreakDurationSeconds || 0;
-    const workSeconds = isOpenShift && !isOnBreak ? baseWorkSeconds + deltaSeconds : baseWorkSeconds;
-    const breakSeconds = isOnBreak ? baseBreakSeconds + deltaSeconds : 0;
-    const totalBreakMinutes = (statusData.totalBreakDurationMinutes || 0) + (isOnBreak ? deltaSeconds / 60 : 0);
-    const overtimeSeconds = Math.max(0, workSeconds - (8 * 60 * 60));
-
-    return { workSeconds, breakSeconds, overtimeSeconds, totalBreakMinutes };
+    if (!statusData?.record) return { workSeconds: 0, breakSeconds: 0, overtimeSeconds: 0, totalBreakMinutes: 0 };
+    const r = statusData.record;
+    const srvMs = statusData.serverTime ? new Date(statusData.serverTime).getTime() : Date.now();
+    const dSec = Math.max(0, Math.floor((tick - srvMs) / 1000));
+    const isOpen = r.punchIn && !r.punchOut;
+    const isBreak = r.isOnBreak;
+    const bWork = statusData.elapsedWorkSeconds || 0;
+    const bBreak = statusData.ongoingBreakDurationSeconds || 0;
+    const workSeconds = isOpen && !isBreak ? bWork + dSec : bWork;
+    const breakSeconds = isBreak ? bBreak + dSec : 0;
+    const totalBreakMinutes = (statusData.totalBreakDurationMinutes || 0) + (isBreak ? dSec / 60 : 0);
+    return { workSeconds, breakSeconds, totalBreakMinutes };
   }, [statusData, tick]);
 
-  const record = statusData?.record;
-  const breaks = statusData?.breaks || [];
-  const nowStatus = record?.status;
-  const userRole = localStorage.getItem("userRole");
-  const userName = localStorage.getItem("userName") || "User";
-  const isPunchedIn = record?.punchIn && !record?.punchOut;
-  const isPunchedOut = Boolean(record?.punchOut);
-  const isOnBreak = Boolean(record?.isOnBreak);
+  const handleAction = async (type, body = {}) => {
+    setSubmitting(true);
+    try {
+      await axios.post(apiUrl(`/api/attendance/${type}`), body, { headers: getAuthHeaders() });
+      fetchStatus(); fetchRecords();
+    } catch (e) { setError(e.response?.data?.message || "Action failed"); }
+    finally { setSubmitting(false); }
+  };
 
-  if (["super_user"].includes(userRole)) {
-    return (
-      <div className="att-page">
-        <div className="att-header">
-          <h1 className="att-title">Attendance Control</h1>
-          <p className="att-subtitle">{format(new Date(), "EEEE, dd MMMM yyyy")}</p>
-        </div>
-        <div className="att-exempt-card glass-panel">
-          <div className="exempt-icon">Shield</div>
-          <h2>Exempt Account</h2>
-          <p>As an elevated account, you are exempt from attendance tracking. Use the Team Dashboard to monitor staff in real time.</p>
-          <button className="btn-primary" onClick={() => window.location.href = "/admin/attendance"}>
-            Go to Team Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const isPunchedIn = statusData?.record?.punchIn && !statusData?.record?.punchOut;
+  const isOnBreak = statusData?.record?.isOnBreak;
 
   return (
-    <div className="att-page">
-      <section className="att-hero">
-        <div className="att-hero-copy">
-          <span className="att-hero-badge">Attendance Workspace</span>
-          <h1 className="att-hero-title">
-            Welcome, <span>{userName}</span>
-          </h1>
-          <p className="att-hero-subtitle">Role: <strong>{prettifyRole(userRole)}</strong></p>
-          <p className="att-subtitle">{format(new Date(), "EEEE, dd MMMM yyyy")}</p>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Daily Attendance</h1>
+          <p className="subtitle">{format(new Date(), "EEEE, dd MMMM yyyy")}</p>
         </div>
-        <div className="att-hero-side">
-          <div className="att-live-title">
-            <span className="live-dot" />
-            <span>Attendance System Live</span>
-          </div>
-          <div className="att-live-panels">
-            <div className="att-summary-box">
-              <span className="att-time-label">Work Timer</span>
-              <strong className={`att-live-value ${liveMetrics.workSeconds >= (8 * 60 * 60) ? "att-live-value--done" : ""}`}>
-                {formatSeconds(liveMetrics.workSeconds)}
-              </strong>
-            </div>
-            <div className={`att-summary-box ${isOnBreak ? "att-summary-box--break" : ""}`}>
-              <span className="att-time-label">Break Time</span>
-              <strong className={`att-live-value ${isOnBreak ? "att-live-value--break" : ""}`}>
-                {formatSeconds(isOnBreak ? liveMetrics.breakSeconds : Math.round(liveMetrics.totalBreakMinutes * 60))}
-              </strong>
-              <small>{isOnBreak ? "Break running now" : `${formatMinutesSummary(liveMetrics.totalBreakMinutes)} taken today`}</small>
-            </div>
-          </div>
+        <div className="page-header-right">
+          <button className="btn btn-ghost" onClick={() => setShowRegForm(true)}>Regularize</button>
         </div>
-      </section>
-
-      <section className="att-insight-grid">
-        <article className="att-insight-card att-insight-card--status">
-          <span className="att-insight-label">Current Status</span>
-          <strong className="att-insight-value">{STATUS_BADGE[nowStatus]?.label || "Not Marked"}</strong>
-          <small>{isOnBreak ? "Break in progress" : isPunchedOut ? "Shift closed for today" : isPunchedIn ? "Shift is active" : "Ready to start your day"}</small>
-        </article>
-        <article className="att-insight-card">
-          <span className="att-insight-label">Net Work</span>
-          <strong className="att-insight-value">{formatMinutesSummary((record?.netWorkDurationMinutes ?? Math.floor(liveMetrics.workSeconds / 60)) || 0)}</strong>
-          <small>Live working time excluding breaks</small>
-        </article>
-        <article className="att-insight-card">
-          <span className="att-insight-label">Break Taken</span>
-          <strong className="att-insight-value">{formatMinutesSummary(liveMetrics.totalBreakMinutes)}</strong>
-          <small>{breaks.length} recorded break(s) today</small>
-        </article>
-        <article className="att-insight-card">
-          <span className="att-insight-label">Overtime</span>
-          <strong className="att-insight-value">{liveMetrics.overtimeSeconds > 0 ? formatMinutesSummary(liveMetrics.overtimeSeconds / 60) : "None"}</strong>
-          <small>{record?.isLate ? `Late by ${record.lateByMinutes || 0} min` : "On-time trend today"}</small>
-        </article>
-      </section>
-
-      <div className="att-header">
-        <div>
-          <h2 className="att-section-title">Today Overview</h2>
-        </div>
-        <button className="btn-secondary" onClick={() => setShowRegForm(true)}>
-          + Regularize
-        </button>
       </div>
 
-      {error && <div className="att-alert att-alert-error">{error}</div>}
-      {success && <div className="att-alert att-alert-success">{success}</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card">
+          <span className="metric-label">Work Duration</span>
+          <span className="metric-value" style={{ color: liveMetrics.workSeconds >= 28800 ? 'var(--color-success)' : 'inherit' }}>
+            {formatSeconds(liveMetrics.workSeconds)}
+          </span>
+          <span className="metric-trend">Shift Target: 08:00:00</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Break Duration</span>
+          <span className="metric-value" style={{ color: isOnBreak ? 'var(--color-warning)' : 'inherit' }}>
+            {formatSeconds(isOnBreak ? liveMetrics.breakSeconds : liveMetrics.totalBreakMinutes * 60)}
+          </span>
+          <span className="metric-trend">{isOnBreak ? 'Active Break' : 'Total Taken'}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Current Status</span>
+          <span className="metric-value" style={{ fontSize: 'var(--text-lg)' }}>
+             {isOnBreak ? "On Break" : isPunchedIn ? "Punched In" : statusData?.record?.punchOut ? "Shift Done" : "Not In"}
+          </span>
+        </div>
+      </div>
 
-      <div className="att-today-card">
-        <div className="att-today-left">
-          <div className="att-today-status">
-            {nowStatus ? (
-              <span className={`badge ${STATUS_BADGE[nowStatus]?.cls}`}>
-                {STATUS_BADGE[nowStatus]?.label || nowStatus}
-              </span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-6)' }}>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)' }}>Control Center</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {!isPunchedIn && !statusData?.record?.punchOut ? (
+              <button className="btn btn-primary" style={{ height: '56px', fontSize: 'var(--text-lg)' }} onClick={() => handleAction('punch-in')}>
+                <LogIn size={20} /> Punch In
+              </button>
+            ) : isPunchedIn ? (
+              <button className="btn btn-primary" style={{ height: '56px', fontSize: 'var(--text-lg)', background: 'var(--color-error)' }} onClick={() => handleAction('punch-out')}>
+                <LogOut size={20} /> Punch Out
+              </button>
             ) : (
-              <span className="badge badge-absent">Not Marked</span>
+              <div className="badge badge-success" style={{ textAlign: 'center', padding: 'var(--space-4)' }}>Work Day Completed</div>
             )}
-            {isOnBreak && <span className="badge badge-half">On Break</span>}
-          </div>
 
-          {isOnBreak && (
-            <div className="att-today-metrics">
-              <div className="att-summary-box att-summary-box--break">
-                <span className="att-time-label">Break Timer</span>
-                <strong className="att-live-value att-live-value--break">{formatSeconds(liveMetrics.breakSeconds)}</strong>
-                <small>Work timer paused</small>
-              </div>
-            </div>
-          )}
-
-          <div className="att-today-times">
-            <div className="att-time-item">
-              <span className="att-time-label">Punch In</span>
-              <span className="att-time-value">{record?.punchIn ? format(parseISO(record.punchIn), "hh:mm a") : "—"}</span>
-            </div>
-            <div className="att-time-item">
-              <span className="att-time-label">Punch Out</span>
-              <span className="att-time-value">{record?.punchOut ? format(parseISO(record.punchOut), "hh:mm a") : "—"}</span>
-            </div>
-            <div className="att-time-item">
-              <span className="att-time-label">Total Break</span>
-              <span className="att-time-value">{formatMinutesSummary(liveMetrics.totalBreakMinutes)}</span>
-            </div>
-            <div className="att-time-item">
-              <span className="att-time-label">Overtime</span>
-              <span className="att-time-value">{liveMetrics.overtimeSeconds > 0 ? formatMinutesSummary(liveMetrics.overtimeSeconds / 60) : "No overtime"}</span>
-            </div>
-          </div>
-
-          {isPunchedIn && !isPunchedOut && (
-            <div className="att-break-row">
-              {!isOnBreak && (
-                <select className="nc-select att-break-select" value={selectedBreakType} onChange={(e) => setSelectedBreakType(e.target.value)}>
-                  {BREAK_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </select>
-              )}
-              {!isOnBreak ? (
-                <button className="btn-punch btn-punch-break" disabled={submitting} onClick={() => handleAction("break-start", { breakType: selectedBreakType })}>
-                  <Coffee size={16} /> Start Break
-                </button>
-              ) : (
-                <button className="btn-punch btn-punch-resume" disabled={submitting} onClick={() => handleAction("break-end")}>
-                  <PlayCircle size={16} /> End Break
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="att-break-log">
-            <button type="button" className="att-break-toggle" onClick={() => setShowBreakLog((value) => !value)}>
-              <span>Breaks Log</span>
-              {showBreakLog ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-            {showBreakLog && (
-              <div className="att-break-list">
-                {breaks.length ? breaks.map((item) => (
-                  <div key={item._id || `${item.breakStart}-${item.breakType}`} className="att-break-item">
-                    <div>
-                      <strong>{item.breakType || "Break"}</strong>
-                      <span>
-                        {item.breakStart ? format(parseISO(item.breakStart), "hh:mm a") : "--"}
-                        {" - "}
-                        {item.breakEnd ? format(parseISO(item.breakEnd), "hh:mm a") : "In progress"}
-                      </span>
-                    </div>
-                    <em>{formatMinutesSummary(item.breakDurationMinutes || 0)}</em>
-                  </div>
-                )) : <div className="att-empty-inline">No breaks recorded yet.</div>}
-              </div>
+            {isPunchedIn && (
+              <button className={`btn btn-ghost`} style={{ height: '48px', border: '1px solid var(--color-border)' }} onClick={() => handleAction(isOnBreak ? 'break-end' : 'break-start', { breakType: 'lunch' })}>
+                {isOnBreak ? <><PlayCircle size={18} /> End Break</> : <><Coffee size={18} /> Start Lunch Break</>}
+              </button>
             )}
-          </div>
-        </div>
-
-        <div className="att-punch-btns">
-          {!isPunchedIn && !isPunchedOut && (
-            <button className="btn-punch btn-punch-in" disabled={submitting} onClick={() => handleAction("punch-in")}>
-              <LogIn size={16} /> Punch In
-            </button>
-          )}
-          {isPunchedIn && (
-            <button className="btn-punch btn-punch-out" disabled={submitting} onClick={() => handleAction("punch-out")}>
-              <LogOut size={16} /> Punch Out
-            </button>
-          )}
-          {isPunchedOut && <span className="att-done-label">Day Complete</span>}
-        </div>
-      </div>
-
-      {punchOutSummary && (
-        <div className="att-summary-card">
-          <div className="att-summary-head">
-            <h2>Punch Out Summary</h2>
-            <button type="button" className="btn-secondary" onClick={() => setPunchOutSummary(null)}>Close</button>
-          </div>
-          <div className="att-summary-grid">
-            <div className="stat-card stat-neutral">
-              <div className="stat-value">
-                {punchOutSummary.punchIn && punchOutSummary.punchOut
-                  ? formatMinutesSummary((new Date(punchOutSummary.punchOut) - new Date(punchOutSummary.punchIn)) / 60000)
-                  : "—"}
+            
+            <div style={{ marginTop: 'var(--space-2)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>Punch In:</span>
+                <span style={{ fontWeight: 'var(--font-semibold)' }}>{statusData?.record?.punchIn ? formatInTimeZone(parseISO(statusData.record.punchIn), "Asia/Kolkata", "hh:mm a") : "--:--"}</span>
               </div>
-              <div className="stat-label">Total Time in Office</div>
-            </div>
-            <div className="stat-card stat-warn">
-              <div className="stat-value">{formatMinutesSummary(punchOutSummary.totalBreakDurationMinutes || 0)}</div>
-              <div className="stat-label">Total Break Time</div>
-            </div>
-            <div className="stat-card stat-success">
-              <div className="stat-value">{formatMinutesSummary(punchOutSummary.netWorkDurationMinutes || 0)}</div>
-              <div className="stat-label">Net Work Time</div>
-            </div>
-            <div className="stat-card stat-info">
-              <div className="stat-value">{punchOutSummary.overtimeMinutes > 0 ? formatMinutesSummary(punchOutSummary.overtimeMinutes) : "No overtime"}</div>
-              <div className="stat-label">Overtime</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>Punch Out:</span>
+                <span style={{ fontWeight: 'var(--font-semibold)' }}>{statusData?.record?.punchOut ? formatInTimeZone(parseISO(statusData.record.punchOut), "Asia/Kolkata", "hh:mm a") : "--:--"}</span>
+              </div>
             </div>
           </div>
         </div>
-      )}
 
-      <div className="att-section">
-        <h2 className="att-section-title">My Attendance History</h2>
-        {loading ? (
-          <div className="att-loading">Loading records…</div>
-        ) : records.length === 0 ? (
-          <div className="att-empty">No records found.</div>
-        ) : (
-          <div className="att-table-wrap">
-            <table className="att-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Punch In</th>
-                  <th>Punch Out</th>
-                  <th>Break Duration</th>
-                  <th>Net Work</th>
-                  <th>Overtime</th>
-                  <th>Late</th>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)' }}>Attendance History</h3>
+          <table className="nc-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>In</th>
+                <th>Out</th>
+                <th>Net Work</th>
+                <th>Break</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r, idx) => (
+                <tr key={r._id || idx}>
+                  <td>{r.shiftDate ? formatInTimeZone(parseISO(r.shiftDate), "Asia/Kolkata", "dd MMM") : "--"}</td>
+                  <td><span className={`badge badge-${r.status === 'present' ? 'success' : r.status === 'absent' ? 'error' : 'warning'}`}>{r.status}</span></td>
+                  <td>{r.punchIn ? formatInTimeZone(parseISO(r.punchIn), "Asia/Kolkata", "hh:mm a") : "--"}</td>
+                  <td>{r.punchOut ? formatInTimeZone(parseISO(r.punchOut), "Asia/Kolkata", "hh:mm a") : "--"}</td>
+                  <td>{formatMinutesSummary(r.netWorkDurationMinutes || 0)}</td>
+                  <td>{formatMinutesSummary(r.totalBreakDurationMinutes || 0)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r._id}>
-                    <td>{r.shiftDate ? format(parseISO(r.shiftDate), "dd MMM yyyy") : "—"}</td>
-                    <td><span className={`badge ${STATUS_BADGE[r.status]?.cls || ""}`}>{STATUS_BADGE[r.status]?.label || r.status}</span></td>
-                    <td>{r.punchIn ? format(parseISO(r.punchIn), "hh:mm a") : "—"}</td>
-                    <td>{r.punchOut ? format(parseISO(r.punchOut), "hh:mm a") : "—"}</td>
-                    <td>{formatMinutesSummary(r.totalBreakDurationMinutes || 0)}</td>
-                    <td>{r.netWorkDurationMinutes != null ? formatMinutesSummary(r.netWorkDurationMinutes) : (r.workingHours != null ? `${r.workingHours.toFixed(2)} h` : "—")}</td>
-                    <td>{r.overtimeMinutes > 0 ? formatMinutesSummary(r.overtimeMinutes) : (r.overtimeHours > 0 ? `+${r.overtimeHours.toFixed(2)} h` : "—")}</td>
-                    <td>{r.isLate ? <span className="badge badge-absent">Late</span> : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="att-pagination">
-              <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className="btn-page">Prev</button>
-              <span>Page {page}</span>
-              <button disabled={records.length < LIMIT} onClick={() => setPage((p) => p + 1)} className="btn-page">Next</button>
-            </div>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+            <button className="btn btn-ghost" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+            <button className="btn btn-ghost" onClick={() => setPage(p => p + 1)}>Next</button>
           </div>
-        )}
+        </div>
       </div>
 
       {showRegForm && (
-        <div className="att-modal-overlay" onClick={() => setShowRegForm(false)}>
-          <div className="att-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="att-modal-header">
-              <h3>Request Regularization</h3>
-              <button onClick={() => setShowRegForm(false)} className="modal-close">x</button>
-            </div>
-            <form onSubmit={handleRegularize} className="att-form">
-              <div className="form-group">
-                <label>Date</label>
-                <input type="date" required value={regForm.date} onChange={(e) => setRegForm({ ...regForm, date: e.target.value })} />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Punch In Time</label>
-                  <input type="time" value={regForm.punchIn} onChange={(e) => setRegForm({ ...regForm, punchIn: e.target.value })} />
+        <div className="nc-modal-overlay" onClick={() => setShowRegForm(false)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+             <div className="nc-modal-header"><h3>Regularization</h3></div>
+             <form onSubmit={e => e.preventDefault()} className="form">
+                <div className="form-field">
+                   <label className="form-label">Date</label>
+                   <input className="form-input" type="date" required value={regForm.date} onChange={e => setRegForm({...regForm, date: e.target.value})} />
                 </div>
-                <div className="form-group">
-                  <label>Punch Out Time</label>
-                  <input type="time" value={regForm.punchOut} onChange={(e) => setRegForm({ ...regForm, punchOut: e.target.value })} />
+                <div className="form-field">
+                   <label className="form-label">Reason</label>
+                   <textarea className="form-input" rows={3} required value={regForm.reason} onChange={e => setRegForm({...regForm, reason: e.target.value})} />
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Reason <span className="required">*</span></label>
-                <textarea required rows={3} placeholder="Explain why this regularization is needed..." value={regForm.reason} onChange={(e) => setRegForm({ ...regForm, reason: e.target.value })} />
-              </div>
-              {error && <div className="att-alert att-alert-error">{error}</div>}
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowRegForm(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={regLoading}>
-                  {regLoading ? "Submitting..." : "Submit Request"}
-                </button>
-              </div>
-            </form>
+                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                  <button className="btn btn-primary" style={{ flex: 1 }}>Submit</button>
+                  <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowRegForm(false)}>Cancel</button>
+                </div>
+             </form>
           </div>
         </div>
       )}

@@ -1,322 +1,202 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { FaUsersCog } from "react-icons/fa";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { formatInTimeZone } from "date-fns-tz";
+import { parseISO } from "date-fns";
 import axios from "axios";
+import { Plus, Trash2, Key, ShieldCheck, ShieldAlert } from "lucide-react";
 import { apiUrl } from "../../config/api";
-import "./UserManagement.css";
 
 const formatRoleLabel = (role = "") =>
-  role === "admin"
-    ? "Administrator"
-    : String(role)
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+  role === "admin" ? "Administrator" : String(role).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setLoading] = useState(true);
+  const [, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "sales",
-  });
-
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "sales" });
   const [pwdUserId, setPwdUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
-  const [accessReason, setAccessReason] = useState("");
 
   const token = localStorage.getItem("token");
 
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(apiUrl("/api/auth/users"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers(res.data);
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load users");
-    } finally {
-      setLoading(false);
-    }
+      const res = await axios.get(apiUrl("/api/auth/users"), { headers: { Authorization: `Bearer ${token}` } });
+      setUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { setError("Failed to load users"); }
+    finally { setLoading(false); }
   }, [token]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const onChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-
-    if (error) setError("");
-    if (success) setSuccess("");
-  };
+  const filteredUsers = useMemo(() => {
+    const needle = search.toLowerCase();
+    return users.filter(u => (u.name||"").toLowerCase().includes(needle) || (u.email||"").toLowerCase().includes(needle) || (u.role||"").toLowerCase().includes(needle));
+  }, [users, search]);
 
   const onCreateUser = async (e) => {
     e.preventDefault();
-
     try {
-      const res = await axios.post(apiUrl("/api/auth/users"), form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setSuccess(res.data?.message || "User created successfully");
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        role: "sales",
-      });
+      await axios.post(apiUrl("/api/auth/users"), form, { headers: { Authorization: `Bearer ${token}` } });
+      setSuccess("User created successfully");
+      setShowModal(false);
+      setForm({ name: "", email: "", password: "", role: "sales" });
       fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to create user");
-    }
-  };
-
-  const onDeleteUser = async (id) => {
-    if (!window.confirm("Delete this user?")) return;
-
-    try {
-      await axios.delete(apiUrl(`/api/auth/users/${id}`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setSuccess("User deleted successfully");
-      fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Delete failed");
-    }
-  };
-
-  const onUpdateUser = async (user, field, value) => {
-    try {
-      await axios.patch(
-        apiUrl(`/api/auth/users/${user._id}`),
-        { [field]: value },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSuccess(`${field} updated for ${user.name}`);
-      fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Update failed");
-    }
+    } catch (err) { setError("Failed to create user"); }
   };
 
   const onChangePassword = async (id) => {
-    if (!newPassword) {
-      setError("New password required");
-      return;
-    }
-
+    if (!newPassword) return;
     try {
-      await axios.put(
-        apiUrl(`/api/auth/users/${id}/password`),
-        { password: newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setSuccess("Password updated successfully");
+      await axios.put(apiUrl(`/api/auth/users/${id}/password`), { password: newPassword }, { headers: { Authorization: `Bearer ${token}` } });
+      setSuccess("Password updated");
       setPwdUserId(null);
       setNewPassword("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Update failed");
-    }
+    } catch (err) { setError("Failed to update password"); }
   };
 
   const onToggleUserAccess = async (user) => {
-    const nextDisabledState = !user.isDisabled;
-    const reason = nextDisabledState
-      ? (accessReason || window.prompt(`Reason for disabling ${user.name}?`, "Temporarily disabled by Super Admin") || "")
-      : "";
-
     try {
-      const res = await axios.patch(
-        apiUrl(`/api/auth/users/${user._id}/access`),
-        { isDisabled: nextDisabledState, reason },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setSuccess(res.data?.message || "User access updated successfully");
-      setAccessReason("");
+      await axios.patch(apiUrl(`/api/auth/users/${user._id}/access`), { isDisabled: !user.isDisabled, reason: user.isDisabled ? "" : "Disabled by Admin" }, { headers: { Authorization: `Bearer ${token}` } });
       fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update access");
-    }
+    } catch (err) { setError("Access update failed"); }
   };
 
   return (
-    <div className="admin-panel">
-      <h2 className="admin-panel-title">
-        <FaUsersCog /> Administrator User Management
-      </h2>
-
-      {error && <div className="admin-alert admin-alert-error">{error}</div>}
-      {success && <div className="admin-alert admin-alert-success">{success}</div>}
-
-      <div className="admin-grid">
-        <section className="admin-card">
-          <h3>Create New User</h3>
-          <p className="admin-warning-note">
-            <strong>Note:</strong> For security, only one primary Administrator account is permitted.
-          </p>
-
-          <form onSubmit={onCreateUser} className="admin-form">
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={onChange}
-              placeholder="Full Name"
-              required
-            />
-
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={onChange}
-              placeholder="User Email"
-              required
-            />
-
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={onChange}
-              placeholder="Password"
-              required
-            />
-
-            <select name="role" value={form.role} onChange={onChange}>
-              <option value="admin">Administrator</option>
-              <option value="management">Management</option>
-              <option value="sales">Sales</option>
-              <option value="support">Support</option>
-              <option value="hr">HR</option>
-              <option value="it">IT</option>
-              <option value="digital_media">Digital Media</option>
-            </select>
-
-            <button type="submit">Create User</button>
-          </form>
-        </section>
-
-        <section className="admin-card">
-          <h3>All Users</h3>
-
-          {loading ? (
-            <p className="admin-muted">Loading users...</p>
-          ) : (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>User ID</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Access</th>
-                    <th>Full Name</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {users.length > 0 ? (
-                    users.map((user) => (
-                      <tr key={user._id}>
-                        <td data-label="User ID">{user.userId || "-"}</td>
-                        <td data-label="Email">{user.email}</td>
-                        <td data-label="Role">
-                          <span className={`role-badge role-${user.role}`}>
-                            {formatRoleLabel(user.role)}
-                          </span>
-                        </td>
-                        <td data-label="Access">
-                          <span className={`role-badge ${user.isDisabled ? "role-management" : "role-sales"}`}>
-                            {user.isDisabled ? "Disabled" : "Active"}
-                          </span>
-                        </td>
-                        <td data-label="Full Name">
-                          <input
-                            className="inline-edit-input"
-                            defaultValue={user.name}
-                            onBlur={(e) => {
-                              if (e.target.value !== user.name) {
-                                onUpdateUser(user, "name", e.target.value);
-                              }
-                            }}
-                          />
-                        </td>
-                        <td data-label="Created">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
-                        </td>
-                        <td data-label="Actions">
-                          {user.role !== "super_user" && (
-                            <button className="btn-delete" onClick={() => onDeleteUser(user._id)}>
-                              Delete
-                            </button>
-                          )}
-
-                          {user.role !== "super_user" && (
-                            <button
-                              className={user.isDisabled ? "btn-save" : "btn-cancel"}
-                              onClick={() => onToggleUserAccess(user)}
-                            >
-                              {user.isDisabled ? "Enable Login" : "Disable Login"}
-                            </button>
-                          )}
-
-                          {pwdUserId === user._id ? (
-                            <>
-                              <input
-                                type="password"
-                                placeholder="New password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                              />
-                              <button className="btn-save" onClick={() => onChangePassword(user._id)}>
-                                Save
-                              </button>
-                              <button
-                                className="btn-cancel"
-                                onClick={() => {
-                                  setPwdUserId(null);
-                                  setNewPassword("");
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <button className="btn-edit" onClick={() => setPwdUserId(user._id)}>
-                              Change Password
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="admin-muted">
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">User Management</h1>
+          <p className="subtitle">Manage user accounts, roles and access permissions.</p>
+        </div>
+        <div className="page-header-right" style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <div className="form-field" style={{ marginBottom: 0 }}>
+             <input className="form-input" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '200px' }} />
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={16} /> Create User
+          </button>
+        </div>
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card">
+          <span className="metric-label">Total Users</span>
+          <span className="metric-value">{users.length}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Active Now</span>
+          <span className="metric-value" style={{ color: 'var(--color-success)' }}>{users.filter(u => !u.isDisabled).length}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Disabled Accounts</span>
+          <span className="metric-value" style={{ color: 'var(--color-error)' }}>{users.filter(u => u.isDisabled).length}</span>
+        </div>
+      </div>
+
+      {success && <div className="badge badge-success" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-4)', width: '100%' }}>{success}</div>}
+
+      <div className="nc-card">
+        <table className="nc-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map(u => (
+              <tr key={u._id}>
+                <td>
+                   <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 'var(--font-semibold)' }}>{u.name}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{u.email}</span>
+                   </div>
+                </td>
+                <td><span className={`badge badge-ghost`}>{formatRoleLabel(u.role)}</span></td>
+                <td>
+                  <span className={`badge badge-${u.isDisabled ? 'error' : 'success'}`}>
+                    {u.isDisabled ? 'Disabled' : 'Active'}
+                  </span>
+                </td>
+                <td>{u.createdAt ? formatInTimeZone(parseISO(u.createdAt), "Asia/Kolkata", "dd/MM/yyyy") : "-"}</td>
+                <td>
+                   <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <button className="btn btn-ghost" onClick={() => onToggleUserAccess(u)} title={u.isDisabled ? "Enable" : "Disable"}>
+                        {u.isDisabled ? <ShieldCheck size={16} color="var(--color-success)" /> : <ShieldAlert size={16} color="var(--color-warning)" />}
+                      </button>
+                      <button className="btn btn-ghost" onClick={() => setPwdUserId(u._id)} title="Reset Password"><Key size={16} /></button>
+                      {u.role !== 'super_user' && (
+                        <button className="btn btn-ghost" style={{ color: 'var(--color-error)' }} onClick={async () => {
+                          if(window.confirm("Delete user?")) {
+                            await axios.delete(apiUrl(`/api/auth/users/${u._id}`), { headers: { Authorization: `Bearer ${token}` } });
+                            fetchUsers();
+                          }
+                        }}><Trash2 size={16} /></button>
+                      )}
+                   </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && (
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+            <div className="nc-modal-header"><h3>Create New User</h3></div>
+            <form onSubmit={onCreateUser} className="form">
+              <div className="form-field">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Email Address</label>
+                <input className="form-input" type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Temporary Password</label>
+                <input className="form-input" type="password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Role</label>
+                <select className="form-select" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
+                   <option value="admin">Administrator</option><option value="management">Management</option><option value="sales">Sales</option><option value="support">Support</option><option value="hr">HR</option><option value="it">IT</option><option value="digital_media">Digital Media</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Create User</button>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {pwdUserId && (
+        <div className="nc-modal-overlay" onClick={() => setPwdUserId(null)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+            <div className="nc-modal-header"><h3>Reset Password</h3></div>
+            <div className="form">
+              <div className="form-field">
+                <label className="form-label">New Password</label>
+                <input className="form-input" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onChangePassword(pwdUserId)}>Update Password</button>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPwdUserId(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

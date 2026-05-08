@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, FolderPlus } from "lucide-react";
 
 const AddFolderModal = ({ existingFolders, onSubmit, onClose }) => {
   const [name, setName] = useState("");
@@ -29,32 +29,44 @@ const AddFolderModal = ({ existingFolders, onSubmit, onClose }) => {
   };
 
   return (
-    <div className="drive-modal-overlay" onClick={onClose}>
-      <div className="drive-modal" onClick={e => e.stopPropagation()}>
-        <button className="drive-modal-close" onClick={onClose}><X size={18} /></button>
-        <h3>📂 Create New Folder</h3>
-        <p>Use letters, numbers, and hyphens only. Max 50 characters.</p>
-        <input
-          className="drive-modal-input"
-          type="text"
-          placeholder="e.g. my-reports"
-          value={name}
-          onChange={e => { setName(e.target.value); setError(""); }}
-          onKeyDown={e => e.key === "Enter" && handleSubmit()}
-          autoFocus
-          maxLength={60}
-        />
-        {clean && name !== clean && (
-          <p style={{ fontSize: "0.75rem", color: "var(--nc-text-muted)", marginBottom: 8 }}>
-            Will be saved as: <strong>{clean}</strong>
-          </p>
-        )}
-        {error && <p style={{ color: "#f87171", fontSize: "0.8rem", marginBottom: 10 }}>{error}</p>}
-        <div className="drive-modal-actions">
-          <button className="drive-btn drive-btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
-          <button className="drive-btn drive-btn-primary" onClick={handleSubmit} disabled={loading || !clean}>
-            {loading ? "Creating…" : "Create Folder"}
-          </button>
+    <div className="nc-modal-overlay" onClick={onClose}>
+      <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+        <div className="nc-modal-header">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <FolderPlus size={18} color="var(--color-accent)" />
+              <h3>Create Folder</h3>
+           </div>
+        </div>
+        
+        <div className="form" style={{ marginTop: 'var(--space-4)' }}>
+           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>Use letters, numbers, and hyphens only. Max 50 characters.</p>
+           
+           <div className="form-field">
+              <label className="form-label">Folder Name</label>
+              <input
+                className="form-input"
+                type="text"
+                placeholder="e.g. project-assets"
+                value={name}
+                onChange={e => { setName(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                autoFocus
+                maxLength={60}
+              />
+              {clean && name !== clean && (
+                <div style={{ fontSize: "10px", color: "var(--color-text-muted)", marginTop: '4px' }}>
+                  Preview: <span style={{ color: 'var(--color-accent)', fontWeight: 'var(--font-semibold)' }}>{clean}</span>
+                </div>
+              )}
+              {error && <div className="form-error">{error}</div>}
+           </div>
+
+           <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-8)' }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSubmit} disabled={loading || !clean}>
+                {loading ? "Creating..." : "Create Folder"}
+              </button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose} disabled={loading}>Cancel</button>
+           </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,11 @@ const invoiceSchema = new mongoose.Schema(
     customer: { type: String, required: true, trim: true },
     amount: { type: Number, required: true },
     dueDate: { type: Date, required: true },
-    status: { type: String, enum: ["Paid", "Unpaid"], default: "Unpaid" },
+    status: {
+      type: String,
+      enum: ["Paid", "Unpaid", "Partially Paid", "Cancelled"],
+      default: "Unpaid",
+    },
     sourceType: {
       type: String,
       enum: ["manual", "expense"],

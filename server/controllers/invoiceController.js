@@ -2,12 +2,14 @@ const Invoice = require("../models/Invoice");
 const Expense = require("../models/Expense");
 
 const normalizeExpenseTitle = (value = "") => String(value || "").trim().toLowerCase();
+const sendSuccess = (res, statusCode, data, message) =>
+  res.status(statusCode).json({ success: true, message, data });
 
 // Get all invoices
 exports.getInvoices = async (req, res) => {
   try {
     const invoices = await Invoice.find().sort({ createdAt: -1 });
-    res.json(invoices);
+    sendSuccess(res, 200, invoices);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -19,7 +21,7 @@ exports.createInvoice = async (req, res) => {
     const { customer, amount, dueDate, status } = req.body;
     const invoice = new Invoice({ customer, amount, dueDate, status, sourceType: "manual" });
     const savedInvoice = await invoice.save();
-    res.status(201).json(savedInvoice);
+    sendSuccess(res, 201, savedInvoice, "Invoice created successfully");
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -65,7 +67,7 @@ exports.generateInvoiceFromExpense = async (req, res) => {
     });
 
     const savedInvoice = await invoice.save();
-    res.status(201).json(savedInvoice);
+    sendSuccess(res, 201, savedInvoice, "Invoice generated successfully");
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -76,7 +78,7 @@ exports.getInvoiceById = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ message: "Invoice not found" });
-    res.json(invoice);
+    sendSuccess(res, 200, invoice);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -87,7 +89,7 @@ exports.updateInvoice = async (req, res) => {
   try {
     const updatedInvoice = await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updatedInvoice) return res.status(404).json({ message: "Invoice not found" });
-    res.json(updatedInvoice);
+    sendSuccess(res, 200, updatedInvoice, "Invoice updated successfully");
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -98,7 +100,7 @@ exports.deleteInvoice = async (req, res) => {
   try {
     const deletedInvoice = await Invoice.findByIdAndDelete(req.params.id);
     if (!deletedInvoice) return res.status(404).json({ message: "Invoice not found" });
-    res.json({ message: "Invoice deleted successfully" });
+    sendSuccess(res, 200, { _id: deletedInvoice._id }, "Invoice deleted successfully");
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

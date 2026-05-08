@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
-import "./styles/global.css";
+
 import { ChatProvider } from "./context/ChatContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -69,10 +69,15 @@ const PasswordManager          = lazy(() => import("./features/PasswordManager/P
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
-  const token = localStorage.getItem("token");
-  const userRole = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const rawToken = localStorage.getItem("token");
+  const rawRole = localStorage.getItem("userRole");
+  
+  const token = (rawToken && rawToken !== "null" && rawToken !== "undefined") ? rawToken : null;
+  const userRole = (rawRole && rawRole !== "null" && rawRole !== "undefined") ? String(rawRole).trim().toLowerCase() : null;
   
   if (!token || !userRole) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
     return <Navigate to="/login" replace />;
   }
 
@@ -144,7 +149,14 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/messages" element={<ChatPanel />} />
+              <Route
+                path="/messages"
+                element={
+                  <div className="dashboard-container chat-page-shell">
+                    <ChatPanel />
+                  </div>
+                }
+              />
               <Route path="/tickets" element={<TicketsPage />} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               
@@ -169,6 +181,11 @@ const App = () => {
               <Route path="/contacts" element={<Contacts />} />
 
               {/* Management Hub Routes */}
+              <Route path="/management" element={
+                <RoleRoute roles={["super_user", "management"]}>
+                  <Navigate to="/management/business/overview" replace />
+                </RoleRoute>
+              } />
               <Route path="/management/business/clients" element={
                 <RoleRoute roles={["super_user", "management"]}>
                   <ManagementHub />

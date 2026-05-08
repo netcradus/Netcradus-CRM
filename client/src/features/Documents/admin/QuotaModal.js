@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { apiUrl } from "../../../config/api";
 import { X } from "lucide-react";
-import "../Documents.css";
+// import "../Documents.css";
+
 
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 

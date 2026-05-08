@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Receipt } from "lucide-react";
+import { Receipt, Plus, Pencil, Trash2 } from "lucide-react";
+import { formatInTimeZone } from "date-fns-tz";
+import { parseISO } from "date-fns";
 import { apiUrl } from "../../config/api";
-import "./ExpensesPage.css";
 
 const EXPENSE_API = apiUrl("/api/expenses");
 
@@ -15,17 +16,9 @@ const defaultExpenseForm = {
   notes: "",
 };
 
-const formatCurrency = (value) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value) || 0);
-
-const normalizeTitle = (value = "") => value.trim().toLowerCase();
-const getLineTotal = (expense) => (Number(expense.amount) || 0) * (Number(expense.quantity) || 1);
-const formatAdminDisplay = (value = "") =>
-  String(value).trim().toLowerCase() === "admin" ? "Administrator" : value;
+const formatCurrency = (v) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(v) || 0);
+const normalizeTitle = (v = "") => v.trim().toLowerCase();
+const getLineTotal = (e) => (Number(e.amount) || 0) * (Number(e.quantity) || 1);
 
 function ExpensesPage() {
   const token = localStorage.getItem("token");
@@ -34,538 +27,168 @@ function ExpensesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [expenseForm, setExpenseForm] = useState(defaultExpenseForm);
-  const [editExpenseId, setEditExpenseId] = useState(null);
-  const [editForm, setEditForm] = useState(defaultExpenseForm);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  const requestConfig = useMemo(
-    () => ({
-      headers: { Authorization: `Bearer ${token}` },
-    }),
-    [token]
-  );
+  const requestConfig = useMemo(() => ({ headers: { Authorization: `Bearer ${token}` } }), [token]);
 
   const fetchExpenses = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(EXPENSE_API, requestConfig);
-      setExpenses(res.data);
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load expenses");
-    } finally {
-      setLoading(false);
-    }
+      setExpenses(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { setError("Failed to load expenses"); }
+    finally { setLoading(false); }
   }, [requestConfig]);
 
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
 
-  const groupedTotals = useMemo(() => {
-    const groups = new Map();
+  const grandTotal = useMemo(() => expenses.reduce((sum, e) => sum + getLineTotal(e), 0), [expenses]);
 
-    expenses.forEach((expense) => {
-      const normalized = normalizeTitle(expense.title);
-      if (!normalized) return;
-
-      if (!groups.has(normalized)) {
-        groups.set(normalized, {
-          key: normalized,
-          title: expense.title.trim(),
-          totalAmount: 0,
-          totalQuantity: 0,
-          entryCount: 0,
-          category: expense.category || "Misc",
-        });
-      }
-
-      const group = groups.get(normalized);
-      group.totalAmount += getLineTotal(expense);
-      group.totalQuantity += Number(expense.quantity) || 1;
-      group.entryCount += 1;
-    });
-
-    return Array.from(groups.values()).sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [expenses]);
-
-  const grandTotal = useMemo(
-    () => expenses.reduce((sum, expense) => sum + getLineTotal(expense), 0),
-    [expenses]
-  );
-
-  const resetMessages = () => {
-    if (error) setError("");
-    if (success) setSuccess("");
-  };
-
-  const handleAddExpense = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    resetMessages();
-
     try {
-      await axios.post(EXPENSE_API, expenseForm, requestConfig);
+      if (editingId) {
+        await axios.put(`${EXPENSE_API}/${editingId}`, expenseForm, requestConfig);
+      } else {
+        await axios.post(EXPENSE_API, expenseForm, requestConfig);
+      }
+      fetchExpenses();
+      setShowModal(false);
       setExpenseForm(defaultExpenseForm);
-      setSuccess("Expense added successfully");
-      fetchExpenses();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to add expense");
-    }
-  };
-
-  const handleDeleteExpense = async (id) => {
-    if (!window.confirm("Delete this expense?")) return;
-    resetMessages();
-
-    try {
-      await axios.delete(`${EXPENSE_API}/${id}`, requestConfig);
-      setSuccess("Expense deleted successfully");
-      fetchExpenses();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete expense");
-    }
-  };
-
-  const handleUpdateExpense = async (id) => {
-    resetMessages();
-
-    try {
-      await axios.put(`${EXPENSE_API}/${id}`, editForm, requestConfig);
-      setEditExpenseId(null);
-      setSuccess("Expense updated successfully");
-      fetchExpenses();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update expense");
-    }
+      setEditingId(null);
+    } catch (err) { setError("Failed to save expense"); }
   };
 
   return (
-    <div className="expenses-page">
-      <div className="expenses-hero">
-        <div>
-          <h1 className="expenses-title">
-            <Receipt size={24} />
-            Expenses
-          </h1>
-          <p className="expenses-subtitle">
-            Add expenses, manage entries, and view total spend by item.
-          </p>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Expense Management</h1>
+          <p className="subtitle">Track office expenses, salaries and travel costs.</p>
         </div>
-
-        <div className="expenses-total-card">
-          <span className="expenses-total-label">Grand Total</span>
-          <strong>{formatCurrency(grandTotal)}</strong>
+        <div className="page-header-right">
+          <button className="btn btn-primary" onClick={() => { setEditingId(null); setExpenseForm(defaultExpenseForm); setShowModal(true); }}>
+            <Plus size={16} /> Add Expense
+          </button>
         </div>
       </div>
 
-      {error && <div className="expenses-alert expenses-alert-error">{error}</div>}
-      {success && <div className="expenses-alert expenses-alert-success">{success}</div>}
-
-      <div className="expenses-layout">
-        <section className="expenses-card">
-          <h2>Add Expense</h2>
-
-          <form onSubmit={handleAddExpense} className="expenses-form">
-            <input
-              placeholder="Expense title"
-              value={expenseForm.title}
-              onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-              required
-            />
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Unit amount"
-              value={expenseForm.amount}
-              onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-              required
-            />
-
-            <input
-              type="number"
-              min="1"
-              step="1"
-              placeholder="Quantity"
-              value={expenseForm.quantity}
-              onChange={(e) => setExpenseForm({ ...expenseForm, quantity: e.target.value })}
-              required
-            />
-
-            <select
-              value={expenseForm.category}
-              onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-            >
-              <option>Travel</option>
-              <option>Food</option>
-              <option>Salary</option>
-              <option>Office</option>
-              <option>Misc</option>
-            </select>
-
-            <input
-              type="date"
-              value={expenseForm.date}
-              onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
-              required
-            />
-
-            <textarea
-              placeholder="Notes (optional)"
-              value={expenseForm.notes}
-              onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })}
-              rows="4"
-            />
-
-            <button type="submit">Add Expense</button>
-          </form>
-        </section>
-
-        <section className="expenses-card">
-          <div className="expenses-card-header">
-            <h2>Expense Totals</h2>
-            <span>{groupedTotals.length} grouped items</span>
-          </div>
-
-          <div className="expenses-table-wrap expenses-table-wrap--summary">
-            <table className="expenses-table expenses-table--summary">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Entries</th>
-                  <th>Quantity</th>
-                  <th>Category</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupedTotals.length ? (
-                  groupedTotals.map((item) => (
-                    <tr key={item.key}>
-                      <td data-label="Title"><span className="expenses-cell-value">{item.title}</span></td>
-                      <td data-label="Entries"><span className="expenses-cell-value">{item.entryCount}</span></td>
-                      <td data-label="Quantity"><span className="expenses-cell-value">{item.totalQuantity}</span></td>
-                      <td data-label="Category"><span className="expenses-cell-value">{item.category}</span></td>
-                      <td data-label="Total"><span className="expenses-cell-value">{formatCurrency(item.totalAmount)}</span></td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="expenses-empty">
-                      No grouped totals yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card">
+          <span className="metric-label">Total Spend</span>
+          <span className="metric-value">{formatCurrency(grandTotal)}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Entries</span>
+          <span className="metric-value">{expenses.length}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Avg. Expense</span>
+          <span className="metric-value">{formatCurrency(expenses.length ? grandTotal / expenses.length : 0)}</span>
+        </div>
       </div>
 
-      <section className="expenses-card">
-        <div className="expenses-card-header">
-          <h2>All Expense Entries</h2>
-          <span>{loading ? "Loading..." : `${expenses.length} entries`}</span>
+      <div className="nc-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)' }}>Expense Entries</h3>
         </div>
-
-        <div className="expenses-table-wrap expenses-table-wrap--entries expenses-desktop-only">
-          <table className="expenses-table expenses-table--entries">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Unit Amount</th>
-                <th>Quantity</th>
-                <th>Line Total</th>
-                <th>Category</th>
-                <th>Date</th>
-                <th>Added By</th>
-                <th>Notes</th>
-                <th>Actions</th>
+        <table className="nc-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Quantity</th>
+              <th>Unit Amount</th>
+              <th>Total</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map(e => (
+              <tr key={e._id}>
+                <td>
+                   <div style={{ fontWeight: 'var(--font-semibold)' }}>{e.title}</div>
+                   {e.notes && <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{e.notes}</div>}
+                </td>
+                <td><span className="badge badge-ghost">{e.category}</span></td>
+                <td>{e.quantity || 1}</td>
+                <td>{formatCurrency(e.amount)}</td>
+                <td style={{ fontWeight: 'var(--font-bold)' }}>{formatCurrency(getLineTotal(e))}</td>
+                <td>{e.date ? formatInTimeZone(parseISO(e.date), "Asia/Kolkata", "dd/MM/yyyy") : "—"}</td>
+                <td>
+                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <button className="btn btn-ghost" onClick={() => {
+                        setEditingId(e._id);
+                        setExpenseForm({
+                          ...e,
+                          date: e.date ? e.date.substring(0, 10) : ""
+                        });
+                        setShowModal(true);
+                      }}><Pencil size={14} /></button>
+                      <button className="btn btn-ghost" style={{ color: 'var(--color-error)' }} onClick={async () => {
+                        if(window.confirm("Delete expense?")) {
+                          await axios.delete(`${EXPENSE_API}/${e._id}`, requestConfig);
+                          fetchExpenses();
+                        }
+                      }}><Trash2 size={14} /></button>
+                   </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {!loading && expenses.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="expenses-empty">
-                    No expenses found.
-                  </td>
-                </tr>
-              ) : (
-                expenses.map((expense) => (
-                  <tr key={expense._id}>
-                    <td data-label="Title">
-                      {editExpenseId === expense._id ? (
-                        <input
-                          value={editForm.title}
-                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                        />
-                      ) : (
-                        <span className="expenses-cell-value">{expense.title}</span>
-                      )}
-                    </td>
-                    <td data-label="Amount">
-                      {editExpenseId === expense._id ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={editForm.amount}
-                          onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                        />
-                      ) : (
-                        <span className="expenses-cell-value">{formatCurrency(expense.amount)}</span>
-                      )}
-                    </td>
-                    <td data-label="Quantity">
-                      {editExpenseId === expense._id ? (
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={editForm.quantity}
-                          onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                        />
-                      ) : (
-                        <span className="expenses-cell-value">{expense.quantity || 1}</span>
-                      )}
-                    </td>
-                    <td data-label="Line Total"><span className="expenses-cell-value">{formatCurrency(getLineTotal(expense))}</span></td>
-                    <td data-label="Category">
-                      {editExpenseId === expense._id ? (
-                        <select
-                          value={editForm.category}
-                          onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                        >
-                          <option>Travel</option>
-                          <option>Food</option>
-                          <option>Salary</option>
-                          <option>Office</option>
-                          <option>Misc</option>
-                        </select>
-                      ) : (
-                        <span className="expenses-cell-value">{expense.category}</span>
-                      )}
-                    </td>
-                    <td data-label="Date">
-                      {editExpenseId === expense._id ? (
-                        <input
-                          type="date"
-                          value={editForm.date?.substring(0, 10) || ""}
-                          onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                        />
-                      ) : (
-                        <span className="expenses-cell-value">{new Date(expense.date).toLocaleDateString()}</span>
-                      )}
-                    </td>
-                    <td data-label="Added By"><span className="expenses-cell-value">{formatAdminDisplay(expense.createdBy?.name || "Unknown")}</span></td>
-                    <td data-label="Notes">
-                      {editExpenseId === expense._id ? (
-                        <textarea
-                          rows="2"
-                          value={editForm.notes}
-                          onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                        />
-                      ) : (
-                        <span className="expenses-cell-value">{expense.notes || "-"}</span>
-                      )}
-                    </td>
-                    <td data-label="Actions" className="expenses-actions">
-                      {editExpenseId === expense._id ? (
-                        <>
-                          <button className="btn-save" onClick={() => handleUpdateExpense(expense._id)}>
-                            Save
-                          </button>
-                          <button className="btn-cancel" onClick={() => setEditExpenseId(null)}>
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="btn-edit"
-                            onClick={() => {
-                              setEditExpenseId(expense._id);
-                              setEditForm({
-                                title: expense.title,
-                                amount: expense.amount,
-                                quantity: expense.quantity || 1,
-                                category: expense.category,
-                                date: expense.date,
-                                notes: expense.notes || "",
-                              });
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button className="btn-delete" onClick={() => handleDeleteExpense(expense._id)}>
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+            ))}
+            {expenses.length === 0 && !loading && (
+              <tr><td colSpan="7" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--space-8)' }}>No expenses recorded</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && (
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px' }}>
+            <div className="nc-modal-header">
+              <h3>{editingId ? "Edit Expense" : "Add Expense"}</h3>
+            </div>
+            <form onSubmit={handleSubmit} className="form">
+              <div className="form-field">
+                <label className="form-label">Expense Title</label>
+                <input className="form-input" required value={expenseForm.title} onChange={e => setExpenseForm({...expenseForm, title: e.target.value})} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                <div className="form-field">
+                  <label className="form-label">Unit Amount (₹)</label>
+                  <input className="form-input" type="number" step="0.01" required value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Quantity</label>
+                  <input className="form-input" type="number" min="1" required value={expenseForm.quantity} onChange={e => setExpenseForm({...expenseForm, quantity: e.target.value})} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                <div className="form-field">
+                  <label className="form-label">Category</label>
+                  <select className="form-select" value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
+                    <option>Travel</option><option>Food</option><option>Salary</option><option>Office</option><option>Misc</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Date</label>
+                  <input className="form-input" type="date" required value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} />
+                </div>
+              </div>
+              <div className="form-field">
+                <label className="form-label">Notes (Optional)</label>
+                <textarea className="form-input" rows={2} value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})} />
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Expense</button>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
         </div>
-
-        <div className="expenses-mobile-list expenses-mobile-only">
-          {!loading && expenses.length === 0 ? (
-            <div className="expenses-mobile-empty">No expenses found.</div>
-          ) : (
-            expenses.map((expense) => (
-              <article key={expense._id} className="expenses-mobile-card">
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Title</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <input
-                        value={editForm.title}
-                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      />
-                    ) : (
-                      expense.title
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Unit Amount</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editForm.amount}
-                        onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                      />
-                    ) : (
-                      formatCurrency(expense.amount)
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Quantity</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={editForm.quantity}
-                        onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                      />
-                    ) : (
-                      expense.quantity || 1
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Line Total</span>
-                  <div className="expenses-mobile-value">{formatCurrency(getLineTotal(expense))}</div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Category</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <select
-                        value={editForm.category}
-                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                      >
-                        <option>Travel</option>
-                        <option>Food</option>
-                        <option>Salary</option>
-                        <option>Office</option>
-                        <option>Misc</option>
-                      </select>
-                    ) : (
-                      expense.category
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Date</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <input
-                        type="date"
-                        value={editForm.date?.substring(0, 10) || ""}
-                        onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                      />
-                    ) : (
-                      new Date(expense.date).toLocaleDateString()
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Added By</span>
-                  <div className="expenses-mobile-value">{formatAdminDisplay(expense.createdBy?.name || "Unknown")}</div>
-                </div>
-
-                <div className="expenses-mobile-row">
-                  <span className="expenses-mobile-label">Notes</span>
-                  <div className="expenses-mobile-value">
-                    {editExpenseId === expense._id ? (
-                      <textarea
-                        rows="2"
-                        value={editForm.notes}
-                        onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                      />
-                    ) : (
-                      expense.notes || "-"
-                    )}
-                  </div>
-                </div>
-
-                <div className="expenses-mobile-row expenses-mobile-row--actions">
-                  <span className="expenses-mobile-label">Actions</span>
-                  <div className="expenses-actions expenses-mobile-actions">
-                    {editExpenseId === expense._id ? (
-                      <>
-                        <button className="btn-save" onClick={() => handleUpdateExpense(expense._id)}>
-                          Save
-                        </button>
-                        <button className="btn-cancel" onClick={() => setEditExpenseId(null)}>
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="btn-edit"
-                          onClick={() => {
-                            setEditExpenseId(expense._id);
-                            setEditForm({
-                              title: expense.title,
-                              amount: expense.amount,
-                              quantity: expense.quantity || 1,
-                              category: expense.category,
-                              date: expense.date,
-                              notes: expense.notes || "",
-                            });
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button className="btn-delete" onClick={() => handleDeleteExpense(expense._id)}>
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
+      )}
     </div>
   );
 }

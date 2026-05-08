@@ -2,7 +2,8 @@ import React from "react";
 import { Search } from "lucide-react";
 import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
-import "./Topbar.css";
+// import "./Topbar.css";
+
 
 const Topbar = () => {
   const userName = localStorage.getItem("userName") || "User";
@@ -12,8 +13,7 @@ const Topbar = () => {
     <header className="topbar">
       <div className="topbar-left">
         <div className="topbar-logo-mark">
-          <span className="topbar-orbit" />
-          <span className="topbar-orbit-inner" />
+          {initials}
         </div>
         <div className="topbar-title">
           <div className="topbar-product-logo-wrap">
@@ -24,16 +24,15 @@ const Topbar = () => {
       </div>
 
       <div className="topbar-right">
-        <ThemeToggle className="topbar-theme-toggle" compact />
-
         <div className="topbar-search">
-          <Search size={16} />
+          <Search size={14} />
           <input
             placeholder="Search leads, accounts, deals..."
             aria-label="Global search"
           />
         </div>
 
+        <ThemeToggle className="topbar-theme-toggle" compact />
         <NotificationButton />
 
         <div className="topbar-avatar" title={userName}>

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
-import { FaUser, FaTicketAlt, FaCheckSquare, FaFilter } from "react-icons/fa";
 import {
   ResponsiveContainer,
   PieChart,
@@ -18,20 +17,19 @@ import {
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import { useNavigate } from "react-router-dom";
-import "./AdminDashboard.css";
 
 const TASK_COLORS = {
-  pending: "#ff8a00",
-  in_progress: "#38bdf8",
-  completed: "#22c55e",
-  reviewed: "#a78bfa",
+  pending: "var(--color-warning)",
+  in_progress: "var(--color-accent)",
+  completed: "var(--color-success)",
+  reviewed: "var(--color-info)",
 };
 
 const TICKET_COLORS = {
-  open: "#ff8a00",
-  "in-progress": "#38bdf8",
-  resolved: "#22c55e",
-  closed: "#a78bfa",
+  open: "var(--color-warning)",
+  "in-progress": "var(--color-accent)",
+  resolved: "var(--color-success)",
+  closed: "var(--color-text-muted)",
 };
 
 const formatDate = (value) => {
@@ -103,7 +101,7 @@ const ManagementDashboard = () => {
     return Object.entries(grouped).map(([name, value]) => ({
       name,
       value,
-      color: TASK_COLORS[name] || "#64748b",
+      color: TASK_COLORS[name] || "var(--color-bg-elevated)",
     }));
   }, [dashboardData.tasks]);
 
@@ -116,7 +114,7 @@ const ManagementDashboard = () => {
     return Object.entries(grouped).map(([name, value]) => ({
       name,
       count: value,
-      fill: TICKET_COLORS[name] || "#64748b",
+      fill: TICKET_COLORS[name] || "var(--color-bg-elevated)",
     }));
   }, [dashboardData.tickets]);
 
@@ -130,101 +128,54 @@ const ManagementDashboard = () => {
     [dashboardData.tickets]
   );
 
-  const ticketPriorityData = useMemo(() => {
-    const priorityColors = {
-      low: "#94a3b8",
-      medium: "#f59e0b",
-      high: "#fb7185",
-      urgent: "#ef4444",
-    };
-
-    const grouped = dashboardData.tickets.reduce((acc, ticket) => {
-      const priority = (ticket.priority || "medium").toLowerCase();
-      acc[priority] = (acc[priority] || 0) + 1;
-      return acc;
-    }, {});
-
-    return ["low", "medium", "high", "urgent"].map((name) => ({
-      name,
-      total: grouped[name] || 0,
-      fill: priorityColors[name],
-    }));
-  }, [dashboardData.tickets]);
-
   const workPulseData = useMemo(() => {
     const totals = {
       Leads: dashboardData.leads.length,
       Tasks: dashboardData.tasks.length,
       Tickets: dashboardData.tickets.length,
       Active: dashboardData.tasks.filter((task) => task.status === "in_progress").length,
-      Closed: dashboardData.tickets.filter((ticket) => ["resolved", "closed"].includes(ticket.status)).length,
     };
-
     return Object.entries(totals).map(([label, value]) => ({ label, value }));
   }, [dashboardData]);
 
   return (
-    <div className="admin-dashboard management-view">
-      <div className="admin-hero">
-        <div className="admin-hero-left">
-          <div className="admin-badge netcradus-badge">
-            <FaUser />
-            <span>NETCRADUS Management Panel</span>
-          </div>
-          <h1>
-            Hello, <span>{userName}</span>
-          </h1>
-          <p>Track your live leads, assigned tasks, support tickets, and daily progress from one workspace.</p>
-        </div>
-        <div className="admin-hero-right">
-          <AttendanceWidget />
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Management Dashboard</h1>
+          <p className="subtitle">Performance metrics and operations workspace.</p>
         </div>
       </div>
 
-      <div className="management-stats-grid admin-metrics">
-        <div className="stat-card glass metric-card gradient-1" onClick={() => navigate("/leads")}>
-          <div className="stat-icon metric-icon"><FaUser /></div>
-          <div className="stat-info">
-            <h3 className="metric-value">{stats.leads}</h3>
-            <p className="metric-label">My Leads</p>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card" onClick={() => navigate("/leads")} style={{ cursor: 'pointer' }}>
+          <span className="metric-label">My Leads</span>
+          <span className="metric-value">{stats.leads}</span>
         </div>
-        <div className="stat-card glass metric-card gradient-2" onClick={() => navigate("/tasks")}>
-          <div className="stat-icon metric-icon"><FaCheckSquare /></div>
-          <div className="stat-info">
-            <h3 className="metric-value">{stats.tasks}</h3>
-            <p className="metric-label">My Tasks</p>
-          </div>
+        <div className="nc-stat-card" onClick={() => navigate("/tasks")} style={{ cursor: 'pointer' }}>
+          <span className="metric-label">My Tasks</span>
+          <span className="metric-value">{stats.tasks}</span>
         </div>
-        <div className="stat-card glass metric-card gradient-3" onClick={() => navigate("/tickets")}>
-          <div className="stat-icon metric-icon"><FaTicketAlt /></div>
-          <div className="stat-info">
-            <h3 className="metric-value">{stats.tickets}</h3>
-            <p className="metric-label">Support Tickets</p>
-          </div>
+        <div className="nc-stat-card" onClick={() => navigate("/tickets")} style={{ cursor: 'pointer' }}>
+          <span className="metric-label">Support Tickets</span>
+          <span className="metric-value">{stats.tickets}</span>
         </div>
-        <div className="stat-card glass metric-card" onClick={() => navigate("/tasks")}>
-          <div className="stat-icon metric-icon"><FaFilter /></div>
-          <div className="stat-info">
-            <h3 className="metric-value">{stats.activeTasks}</h3>
-            <p className="metric-label">Active Tasks</p>
-          </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Active Tasks</span>
+          <span className="metric-value" style={{ color: 'var(--color-accent)' }}>{stats.activeTasks}</span>
         </div>
       </div>
 
-      <div className="admin-grid">
-        <div className="admin-charts glass netcradus-panel">
-          <div className="card-header">
-            <h3>Ticket Status Snapshot</h3>
-            <span className="chip">Live</span>
-          </div>
-          <ResponsiveContainer width="100%" height={320}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Ticket Status Snapshot</h3>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={ticketStatusData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="count" radius={[10, 10, 0, 0]}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
+              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {ticketStatusData.map((entry) => (
                   <Cell key={entry.name} fill={entry.fill} />
                 ))}
@@ -232,142 +183,86 @@ const ManagementDashboard = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="admin-side glass netcradus-panel">
-          <div className="card-header">
-            <h3>Task Breakdown</h3>
-            <span className="chip">Today</span>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Task Breakdown</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie data={taskStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="value">
+                {taskStatusData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginTop: 'var(--space-4)', justifyContent: 'center' }}>
+            {taskStatusData.map((item, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '11px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }} />
+                <span>{item.name}</span>
+              </div>
+            ))}
           </div>
-          <div className="pie-wrap">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={taskStatusData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={92}
-                  paddingAngle={4}
-                >
-                  {taskStatusData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <ul className="insight-list">
-            <li>
-              <span>Open Tickets</span>
-              <strong>{dashboardData.tickets.filter((ticket) => ticket.status === "open").length}</strong>
-            </li>
-            <li>
-              <span>In Progress Tasks</span>
-              <strong>{dashboardData.tasks.filter((task) => task.status === "in_progress").length}</strong>
-            </li>
-            <li>
-              <span>Completed Tasks</span>
-              <strong>{dashboardData.tasks.filter((task) => ["completed", "reviewed"].includes(task.status)).length}</strong>
-            </li>
-            <li>
-              <span>Recent Leads</span>
-              <strong>{dashboardData.leads.slice(0, 5).length}</strong>
-            </li>
-          </ul>
         </div>
       </div>
 
-      <div className="admin-grid" style={{ marginTop: "20px" }}>
-        <div className="admin-charts glass netcradus-panel">
-          <div className="card-header">
-            <h3>Ticket Priority Snapshot</h3>
-            <span className="chip">Live tickets</span>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={ticketPriorityData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="total" radius={[10, 10, 0, 0]}>
-                {ticketPriorityData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="admin-side glass netcradus-panel">
-          <div className="card-header">
-            <h3>Work Pulse</h3>
-            <span className="chip">Realtime</span>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Work Pulse</h3>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={workPulseData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-              <XAxis dataKey="label" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
               <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#ff5f3d"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#ff8a00" }}
-                activeDot={{ r: 6 }}
-              />
+              <Line type="monotone" dataKey="value" stroke="var(--color-accent)" strokeWidth={2} dot={{r: 4}} />
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Shift Status</h3>
+          <AttendanceWidget />
+        </div>
       </div>
 
-      <div className="admin-grid" style={{ marginTop: "20px" }}>
-        <div className="admin-charts glass netcradus-panel">
-          <div className="card-header">
-            <h3>Recent Tasks</h3>
-            <span className="chip">Latest 4</span>
-          </div>
-          <ul className="insight-list">
-            {recentTasks.length ? (
-              recentTasks.map((task) => (
-                <li key={task._id}>
-                  <span>{task.title}</span>
-                  <strong>{formatDate(task.dueDate)}</strong>
-                </li>
-              ))
-            ) : (
-              <li>
-                <span>No recent tasks</span>
-                <strong>--</strong>
-              </li>
-            )}
-          </ul>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Recent Tasks</h3>
+          <table className="nc-table">
+            <thead>
+              <tr><th>Title</th><th>Due Date</th></tr>
+            </thead>
+            <tbody>
+              {recentTasks.map(task => (
+                <tr key={task._id}>
+                  <td>{task.title}</td>
+                  <td>{formatDate(task.dueDate)}</td>
+                </tr>
+              ))}
+              {recentTasks.length === 0 && <tr><td colSpan="2" style={{textAlign: 'center', color: 'var(--color-text-muted)'}}>No recent tasks</td></tr>}
+            </tbody>
+          </table>
         </div>
-
-        <div className="admin-side glass netcradus-panel">
-          <div className="card-header">
-            <h3>Recent Tickets</h3>
-            <span className="chip">Latest 4</span>
-          </div>
-          <ul className="insight-list">
-            {recentTickets.length ? (
-              recentTickets.map((ticket) => (
-                <li key={ticket._id}>
-                  <span>{ticket.ticketId} - {ticket.title}</span>
-                  <strong>{ticket.status}</strong>
-                </li>
-              ))
-            ) : (
-              <li>
-                <span>No recent tickets</span>
-                <strong>--</strong>
-              </li>
-            )}
-          </ul>
+        <div className="nc-card">
+          <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Recent Tickets</h3>
+          <table className="nc-table">
+            <thead>
+              <tr><th>ID</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {recentTickets.map(ticket => (
+                <tr key={ticket._id}>
+                  <td>{ticket.ticketId}</td>
+                  <td>
+                    <span className={`badge badge-${ticket.status === 'resolved' ? 'success' : 'warning'}`}>
+                      {ticket.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {recentTickets.length === 0 && <tr><td colSpan="2" style={{textAlign: 'center', color: 'var(--color-text-muted)'}}>No recent tickets</td></tr>}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
