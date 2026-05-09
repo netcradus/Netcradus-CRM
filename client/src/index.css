@@ -111,9 +111,9 @@
   --color-overlay: rgba(18, 14, 10, 0.4);
 
   --color-text-primary: #1c1916;
-  --color-text-secondary: #534b43;
-  --color-text-muted: #7a7065;
-  --color-text-faint: #9c9287;
+  --color-text-secondary: #3f352e;
+  --color-text-muted: #65584f;
+  --color-text-faint: #85786d;
   --color-text-inverse: #fff8f2;
 
   --color-border: rgba(26, 16, 10, 0.08);
@@ -125,6 +125,100 @@
   --shadow-lg: 0 28px 60px rgba(40, 30, 20, 0.16);
   --shadow-xl: 0 34px 90px rgba(40, 30, 20, 0.18);
   --shadow-2xl: 0 42px 120px rgba(40, 30, 20, 0.2);
+}
+
+[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 250, 245, 0.98) 0%, rgba(248, 240, 233, 0.98) 100%);
+  border-right-color: rgba(26, 16, 10, 0.08);
+  box-shadow: 18px 0 50px rgba(40, 30, 20, 0.08);
+}
+
+[data-theme="light"] .sidebar-brand,
+[data-theme="light"] .sidebar-footer {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+[data-theme="light"] .sidebar-item,
+[data-theme="light"] .sidebar-submenu-item {
+  color: #4b4038;
+}
+
+[data-theme="light"] .sidebar-item:hover,
+[data-theme="light"] .sidebar-submenu-item:hover {
+  color: #1f1713;
+  border-color: rgba(26, 16, 10, 0.08);
+}
+
+[data-theme="light"] .sidebar-item.is-active,
+[data-theme="light"] .sidebar-item.is-parent-active,
+[data-theme="light"] .sidebar-submenu-item.is-active {
+  color: #2a1810;
+  background: linear-gradient(135deg, rgba(232, 66, 10, 0.16), rgba(255, 184, 150, 0.38));
+}
+
+[data-theme="light"] .sidebar-submenu {
+  border-left-color: rgba(26, 16, 10, 0.08);
+}
+
+[data-theme="light"] .topbar {
+  background: rgba(255, 250, 245, 0.88);
+  border-bottom-color: rgba(26, 16, 10, 0.08);
+}
+
+[data-theme="light"] .topbar-search,
+[data-theme="light"] .theme-toggle,
+[data-theme="light"] .bell-pill,
+[data-theme="light"] .popup-action,
+[data-theme="light"] .topbar-menu-btn {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(26, 16, 10, 0.08);
+  color: var(--color-text-secondary);
+}
+
+[data-theme="light"] .topbar-avatar {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(26, 16, 10, 0.08);
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .topbar-subtitle,
+[data-theme="light"] .topbar-search input,
+[data-theme="light"] .bell-label {
+  color: var(--color-text-secondary);
+}
+
+[data-theme="light"] .topbar-search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+[data-theme="light"] .chat-launcher__panel,
+[data-theme="light"] .chat-panel,
+[data-theme="light"] .chat-thread,
+[data-theme="light"] .chat-sidebar {
+  color: var(--color-text-primary);
+}
+
+[data-theme="light"] .chat-panel,
+[data-theme="light"] .chat-sidebar {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+[data-theme="light"] .chat-thread {
+  background:
+    linear-gradient(180deg, rgba(252, 247, 242, 0.96) 0%, rgba(247, 239, 232, 0.98) 100%);
+}
+
+[data-theme="light"] .chat-thread__header,
+[data-theme="light"] .chat-composer {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+[data-theme="light"] .chat-thread__identity p,
+[data-theme="light"] .chat-message__meta,
+[data-theme="light"] .chat-conversation__preview,
+[data-theme="light"] .chat-conversation__time,
+[data-theme="light"] .chat-sidebar__count {
+  color: var(--color-text-muted);
 }
 
 *, *::before, *::after {
@@ -215,6 +309,15 @@ ol {
   display: flex;
   min-height: 100vh;
   position: relative;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  border: 0;
+  background: rgba(5, 6, 10, 0.7);
+  backdrop-filter: blur(6px);
 }
 
 .sidebar {
@@ -402,7 +505,8 @@ ol {
   flex-direction: column;
 }
 
-.sidebar.is-expanded + .dashboard-main {
+.sidebar.is-expanded + .dashboard-main,
+.dashboard-main.is-sidebar-expanded {
   margin-left: var(--sidebar-expanded);
 }
 
@@ -433,6 +537,27 @@ ol {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.topbar-menu-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-base), background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.topbar-menu-btn:hover,
+.topbar-menu-btn.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
 }
 
 .topbar-left {
@@ -1072,6 +1197,26 @@ td {
   font-family: var(--font-heading);
   font-size: var(--text-xl);
   letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.user-management-toolbar {
+  flex-wrap: wrap;
+}
+
+.employee-profiles-layout {
+  min-height: min(72vh, 860px);
+  align-items: start;
+}
+
+.employee-profiles-detail-pane {
+  min-height: 0;
+}
+
+.contacts-sensitive-grid,
+.employee-profile-form-grid,
+.employee-profile-payroll-grid {
+  min-width: 0;
 }
 
 .admin-usage-bar {
@@ -2130,8 +2275,12 @@ td {
 
 @media (max-width: 768px) {
   .sidebar {
-    width: 0;
+    width: min(292px, calc(100vw - 48px));
     transform: translateX(-100%);
+  }
+
+  .sidebar.is-mobile-open {
+    transform: translateX(0);
   }
 
   .dashboard-main,
@@ -2161,6 +2310,53 @@ td {
     max-width: 150px;
   }
 
+  .topbar-menu-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .sidebar-brand-text,
+  .sidebar-item-text,
+  .sidebar-submenu-text,
+  .sidebar-item-caret {
+    opacity: 1;
+    transform: none;
+  }
+
+  .sidebar-submenu {
+    margin-left: 12px;
+    padding-left: 12px;
+  }
+
+  .nc-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .nc-table thead,
+  .nc-table tbody,
+  .nc-table tr {
+    white-space: nowrap;
+  }
+
+  .nc-modal-overlay {
+    padding: 14px;
+  }
+
+  .nc-modal-content {
+    width: min(100%, 100vw - 28px) !important;
+    max-height: min(88vh, 100vh - 28px);
+  }
+
+  .nc-modal-header,
+  .form,
+  .nc-form {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
   .chat-panel {
     grid-template-columns: 1fr;
   }
@@ -2184,6 +2380,21 @@ td {
 
   .chat-bubble {
     max-width: 88%;
+  }
+
+  .employee-profiles-layout,
+  .employee-profile-form-grid,
+  .employee-profile-payroll-grid,
+  .contacts-sensitive-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .employee-profiles-layout {
+    min-height: auto;
+  }
+
+  .employee-profiles-detail-pane {
+    padding-right: 0 !important;
   }
 }
 
@@ -2215,5 +2426,13 @@ td {
 
   .popup-box {
     right: -8px;
+  }
+
+  .page-header-right {
+    width: 100%;
+  }
+
+  .page-header-right > * {
+    width: 100%;
   }
 }

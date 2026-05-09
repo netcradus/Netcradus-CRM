@@ -7,9 +7,10 @@ import SupportDashboard from "./SupportDashboard.js";
 import HRDashboard from "./HRDashboard.js";
 import TechDashboard from "./TechDashboard.js";
 import DigitalMediaDashboard from "./DigitalMediaDashboard.js";
+import { normalizeRole } from "../../config/access";
 
 function Dashboard() {
-  const userRole = localStorage.getItem("userRole");
+  const userRole = normalizeRole(localStorage.getItem("userRole"));
 
   const renderDashboard = () => {
     switch (userRole) {

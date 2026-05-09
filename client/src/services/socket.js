@@ -29,7 +29,8 @@ export function getAppSocket(token) {
   errorLogged = false;
 
   socketInstance = io(SOCKET_BASE_URL, {
-    transports: ["polling", "websocket"],
+    transports: ["polling"],
+    upgrade: false,
     reconnection: true,
     reconnectionDelay: getBackoffDelay(),
     reconnectionDelayMax: 30000,

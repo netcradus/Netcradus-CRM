@@ -169,7 +169,7 @@ function ExpensesPage() {
                 <div className="form-field">
                   <label className="form-label">Category</label>
                   <select className="form-select" value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}>
-                    <option>Travel</option><option>Food</option><option>Salary</option><option>Office</option><option>Misc</option>
+                    <option>Travel</option><option>Food</option><option>Salary</option><option>Office</option><option>Misc</option><option>Others</option>
                   </select>
                 </div>
                 <div className="form-field">

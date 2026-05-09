@@ -71,6 +71,36 @@ function EmployeeProfilesPage() {
     finally { setSaving(false); }
   };
 
+  const generateSalarySlip = async () => {
+    if (!selectedUserId) return;
+
+    try {
+      await axios.post(apiUrl(`/api/contacts/profiles/${selectedUserId}/salary-slips`), salarySlipForm, { headers });
+      setMessage("Salary slip generated successfully");
+      fetchProfiles();
+    } catch (err) {
+      setError("Failed to generate salary slip");
+    }
+  };
+
+  const downloadSalarySlip = async (slipId, filename = "salary-slip.pdf") => {
+    try {
+      const response = await axios.get(apiUrl(`/api/contacts/salary-slips/${slipId}/download`), {
+        headers,
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError("Failed to download salary slip");
+    }
+  };
+
   const filteredProfiles = profiles.filter(p => (p.name||"").toLowerCase().includes(search.toLowerCase()) || (p.email||"").toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -82,7 +112,7 @@ function EmployeeProfilesPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 'var(--space-6)', height: 'calc(100vh - 200px)' }}>
+      <div className="employee-profiles-layout" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 'var(--space-6)' }}>
         <div className="nc-card" style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-4)' }}>
            <div className="form-field" style={{ marginBottom: 'var(--space-4)' }}>
               <div style={{ position: 'relative' }}>
@@ -106,7 +136,7 @@ function EmployeeProfilesPage() {
            </div>
         </div>
 
-        <div style={{ overflowY: 'auto', paddingRight: 'var(--space-2)' }}>
+        <div className="employee-profiles-detail-pane" style={{ overflowY: 'auto', paddingRight: 'var(--space-2)' }}>
           {selectedProfile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
               <form className="nc-card form" onSubmit={onUpdate}>
@@ -117,7 +147,7 @@ function EmployeeProfilesPage() {
                   </button>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                   <div className="form-field">
                     <label className="form-label">Full Name</label>
                     <input className="form-input" value={form.name || ""} onChange={e => setForm({...form, name: e.target.value})} />
@@ -148,7 +178,7 @@ function EmployeeProfilesPage() {
                 
                 <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
                   <h4 style={{ marginBottom: 'var(--space-3)' }}>Contact Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                     <div className="form-field">
                       <label className="form-label">Phone</label>
                       <input className="form-input" value={form.contactNumber || ""} onChange={e => setForm({...form, contactNumber: e.target.value})} />
@@ -167,10 +197,10 @@ function EmployeeProfilesPage() {
 
               <div className="nc-card">
                 <h3 style={{ marginBottom: 'var(--space-4)' }}>Payroll & Salary Slips</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
+                <div className="employee-profile-payroll-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
                   <div className="form">
                     <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-3)' }}>Generate New Slip</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                    <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                       <div className="form-field">
                         <label className="form-label">Month</label>
                         <input className="form-input" placeholder="e.g. May" value={salarySlipForm.month || ""} onChange={e => setSalarySlipForm({...salarySlipForm, month: e.target.value})} />
@@ -180,7 +210,7 @@ function EmployeeProfilesPage() {
                         <input className="form-input" type="number" value={salarySlipForm.year || ""} onChange={e => setSalarySlipForm({...salarySlipForm, year: e.target.value})} />
                       </div>
                     </div>
-                    <button className="btn btn-primary" style={{ width: '100%' }}>Generate Slip</button>
+                    <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={generateSalarySlip}>Generate Slip</button>
                   </div>
                   
                   <div>
@@ -192,7 +222,7 @@ function EmployeeProfilesPage() {
                             <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-bold)' }}>{s.month} {s.year}</div>
                             <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Net: ₹{s.netPay?.toLocaleString('en-IN')}</div>
                           </div>
-                          <button className="btn btn-ghost" style={{ padding: 'var(--space-2)' }}><Download size={14} /></button>
+                          <button className="btn btn-ghost" style={{ padding: 'var(--space-2)' }} onClick={() => downloadSalarySlip(s._id, s.filename)}><Download size={14} /></button>
                         </div>
                       )) : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>No slips generated yet.</p>}
                     </div>

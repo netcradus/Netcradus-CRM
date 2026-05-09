@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { formatInTimeZone } from "date-fns-tz";
 import { parseISO } from "date-fns";
 import axios from "axios";
-import { Plus, Trash2, Key, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, Key, ShieldCheck, ShieldAlert, Eye, EyeOff } from "lucide-react";
 import { apiUrl } from "../../config/api";
 
 const formatRoleLabel = (role = "") =>
@@ -18,6 +18,8 @@ const UserManagement = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "sales" });
   const [pwdUserId, setPwdUserId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -44,6 +46,7 @@ const UserManagement = () => {
       setSuccess("User created successfully");
       setShowModal(false);
       setForm({ name: "", email: "", password: "", role: "sales" });
+      setShowCreatePassword(false);
       fetchUsers();
     } catch (err) { setError("Failed to create user"); }
   };
@@ -55,6 +58,7 @@ const UserManagement = () => {
       setSuccess("Password updated");
       setPwdUserId(null);
       setNewPassword("");
+      setShowResetPassword(false);
     } catch (err) { setError("Failed to update password"); }
   };
 
@@ -72,7 +76,7 @@ const UserManagement = () => {
           <h1 className="title">User Management</h1>
           <p className="subtitle">Manage user accounts, roles and access permissions.</p>
         </div>
-        <div className="page-header-right" style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <div className="page-header-right user-management-toolbar" style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <div className="form-field" style={{ marginBottom: 0 }}>
              <input className="form-input" placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: '200px' }} />
           </div>
@@ -163,7 +167,12 @@ const UserManagement = () => {
               </div>
               <div className="form-field">
                 <label className="form-label">Temporary Password</label>
-                <input className="form-input" type="password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+                <div style={{ position: "relative" }}>
+                  <input className="form-input" type={showCreatePassword ? "text" : "password"} required value={form.password} onChange={e => setForm({...form, password: e.target.value})} style={{ paddingRight: "48px" }} />
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowCreatePassword((current) => !current)} style={{ position: "absolute", top: "50%", right: "8px", transform: "translateY(-50%)", minHeight: "36px", minWidth: "36px", padding: 0 }}>
+                    {showCreatePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className="form-field">
                 <label className="form-label">Role</label>
@@ -187,7 +196,12 @@ const UserManagement = () => {
             <div className="form">
               <div className="form-field">
                 <label className="form-label">New Password</label>
-                <input className="form-input" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                <div style={{ position: "relative" }}>
+                  <input className="form-input" type={showResetPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ paddingRight: "48px" }} />
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowResetPassword((current) => !current)} style={{ position: "absolute", top: "50%", right: "8px", transform: "translateY(-50%)", minHeight: "36px", minWidth: "36px", padding: 0 }}>
+                    {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
                 <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onChangePassword(pwdUserId)}>Update Password</button>

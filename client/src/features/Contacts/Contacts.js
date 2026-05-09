@@ -169,7 +169,7 @@ function Contacts() {
                  </div>
                  <button className="btn btn-ghost" onClick={() => setSensitiveData(null)}><X size={16} /></button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
+              <div className="contacts-sensitive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
                  <div className="nc-card" style={{ padding: 'var(--space-3)', background: 'var(--color-bg-elevated)' }}>
                     <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Current Salary</span>
                     <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' }}>₹ {Number(sensitiveData.salary || 0).toLocaleString()}</div>
@@ -179,7 +179,7 @@ function Contacts() {
                     <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' }}>{sensitiveData.leaves || 0} Days</div>
                  </div>
               </div>
-              <div style={{ marginTop: 'var(--space-6)' }}>
+              <div style={{ marginTop: 'var(--space-6)', overflowWrap: 'anywhere' }}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}><Phone size={14} color="var(--color-text-muted)" /> <span>{sensitiveData.contactNumber || "N/A"}</span></div>
                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}><MapPin size={14} color="var(--color-text-muted)" style={{ marginTop: '4px' }} /> <span>{sensitiveData.address || "N/A"}</span></div>
               </div>
@@ -188,7 +188,7 @@ function Contacts() {
                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                     {sensitiveData.salarySlips?.map((s, i) => (
                       <div key={i} className="nc-card" style={{ padding: 'var(--space-2) var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-bg-base)' }}>
-                         <span style={{ fontSize: 'var(--text-xs)' }}>{s.filename}</span>
+                         <span style={{ fontSize: 'var(--text-xs)', overflowWrap: 'anywhere' }}>{s.filename}</span>
                          <button className="btn btn-ghost" style={{ padding: 'var(--space-1)' }} onClick={() => downloadSalarySlip(s._id, s.filename)}><Download size={14} /></button>
                       </div>
                     ))}

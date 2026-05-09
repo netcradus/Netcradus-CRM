@@ -44,6 +44,18 @@ const formatDate = (value) => {
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 };
 
+const getAuthConfig = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
+
+const asArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.projects)) return payload.projects;
+  if (Array.isArray(payload?.columns)) return payload.columns;
+  return [];
+};
+
 function TechDashboard({ preview = false }) {
   const [columns, setColumns] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -57,11 +69,11 @@ function TechDashboard({ preview = false }) {
     const fetchBoardData = async () => {
       try {
         const [{ data: cols }, { data: projs }] = await Promise.all([
-          axios.get(BASE_COLUMNS),
-          axios.get(BASE_PROJECTS),
+          axios.get(BASE_COLUMNS, getAuthConfig()),
+          axios.get(BASE_PROJECTS, getAuthConfig()),
         ]);
-        setColumns(cols || []);
-        setProjects(projs || []);
+        setColumns(asArray(cols));
+        setProjects(asArray(projs));
         setBoardError("");
       } catch (error) {
         setColumns([]);
@@ -105,7 +117,7 @@ function TechDashboard({ preview = false }) {
     const name = newProject.trim();
     if (!name) return;
     try {
-      const { data } = await axios.post(BASE_COLUMNS, { name, color: "var(--color-accent)" });
+      const { data } = await axios.post(BASE_COLUMNS, { name, color: "var(--color-accent)" }, getAuthConfig());
       setColumns(curr => [...curr, data]);
       setNewProject("");
     } catch (error) {

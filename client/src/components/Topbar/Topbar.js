@@ -1,17 +1,28 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { PanelLeft, Search } from "lucide-react";
 import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
 // import "./Topbar.css";
 
 
-const Topbar = () => {
+const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
   const userName = localStorage.getItem("userName") || "User";
   const initials = userName.slice(0, 2).toUpperCase();
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   return (
     <header className="topbar">
       <div className="topbar-left">
+        {isMobile && (
+          <button
+            type="button"
+            className={`topbar-menu-btn ${isSidebarExpanded ? "is-active" : ""}`}
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft size={18} />
+          </button>
+        )}
         <div className="topbar-logo-mark">
           {initials}
         </div>

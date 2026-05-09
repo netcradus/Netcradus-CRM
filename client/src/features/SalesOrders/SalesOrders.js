@@ -8,7 +8,7 @@ const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
 });
 
-const STATUS_OPTIONS = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
+const STATUS_OPTIONS = ["Pending", "Shipped", "Delivered"];
 
 function SalesOrders() {
   const [orders, setOrders] = useState([]);
@@ -24,7 +24,7 @@ function SalesOrders() {
     try {
       setLoading(true);
       const res = await axios.get(API, getHeaders());
-      setOrders(res.data.data || []);
+      setOrders(Array.isArray(res.data) ? res.data : []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, []);
