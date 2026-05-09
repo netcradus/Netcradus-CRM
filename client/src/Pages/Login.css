@@ -21,6 +21,38 @@ body,
   --lp-accent-1: #ff8a00;
   --lp-accent-2: #ff5f3d;
   --lp-accent-3: #ff2d8f;
+  --lp-panel-bg: linear-gradient(180deg, rgba(23, 20, 30, 0.94) 0%, rgba(17, 15, 22, 0.98) 100%);
+  --lp-panel-border: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  --lp-chip-bg: rgba(255, 255, 255, 0.035);
+  --lp-chip-border: rgba(255, 255, 255, 0.08);
+  --lp-chip-text: #f3edf3;
+  --lp-icon-color: #b6aebf;
+  --lp-input-bg: rgba(19, 18, 28, 0.98);
+  --lp-input-border: rgba(255, 255, 255, 0.08);
+  --lp-input-text: #f4f2f7;
+  --lp-placeholder: #9892a2;
+  --lp-copy-text: rgba(244, 242, 247, 0.72);
+}
+
+[data-theme="light"] {
+  --lp-bg-0: #fff8f2;
+  --lp-bg-1: #fff0e7;
+  --lp-bg-2: #f7e6ef;
+  --lp-border-soft: rgba(44, 26, 18, 0.08);
+  --lp-text: #211712;
+  --lp-muted: #65584f;
+  --lp-soft: #5d5048;
+  --lp-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 243, 238, 0.96) 100%);
+  --lp-panel-border: linear-gradient(180deg, rgba(232, 66, 10, 0.16), rgba(44, 26, 18, 0.06));
+  --lp-chip-bg: rgba(255, 255, 255, 0.78);
+  --lp-chip-border: rgba(44, 26, 18, 0.08);
+  --lp-chip-text: #2d1e18;
+  --lp-icon-color: #77685e;
+  --lp-input-bg: rgba(255, 255, 255, 0.95);
+  --lp-input-border: rgba(44, 26, 18, 0.1);
+  --lp-input-text: #1f1713;
+  --lp-placeholder: #8e7f74;
+  --lp-copy-text: rgba(33, 23, 18, 0.68);
 }
 
 .lp-root {
@@ -438,20 +470,26 @@ body,
 
 .lp-input-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .lp-icon {
   position: absolute;
-  left: 15px;
+  left: 20px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--lp-icon-color);
+  pointer-events: none;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
 }
 
-.lp-input {
+.lp-input-wrap .lp-input {
   width: 100%;
   height: 52px;
-  padding: 0 16px 0 46px;
+  padding: 0 16px 0 68px !important;
   border-radius: 16px;
   border: 1px solid var(--lp-input-border);
   background: var(--lp-input-bg);
@@ -461,19 +499,25 @@ body,
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
-.lp-input::placeholder {
+.lp-input-wrap .lp-input::placeholder {
   color: var(--lp-placeholder);
 }
 
-.lp-input:hover,
-.lp-input:focus {
+.lp-input-wrap input[type="email"],
+.lp-input-wrap input[type="password"],
+.lp-input-wrap input[type="text"] {
+  padding-left: 68px !important;
+}
+
+.lp-input-wrap .lp-input:hover,
+.lp-input-wrap .lp-input:focus {
   transform: translateY(-1px);
   border-color: rgba(255, 148, 106, 0.38);
   box-shadow: 0 0 0 4px rgba(255, 95, 61, 0.12);
 }
 
-.lp-input-pr {
-  padding-right: 48px;
+.lp-input-wrap .lp-input-pr {
+  padding-right: 52px !important;
 }
 
 .lp-eye {

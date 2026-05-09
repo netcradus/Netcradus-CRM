@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { FaEnvelope } from "react-icons/fa";
-import "./SalesInbox.css";
+import React, { useState, useEffect, useCallback } from "react";
+import { Mail, Plus, Search, ChevronRight, Trash2, CheckCircle, Clock, Inbox, Send, Archive } from "lucide-react";
 import { apiUrl } from "../../config/api";
 
 const SalesInbox = () => {
@@ -8,233 +7,147 @@ const SalesInbox = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newMessage, setNewMessage] = useState({
-    subject: "",
-    sender: "",
-    recipient: "",
-    message: "",
-    category: "General",
-    status: "Unread",
-    date: new Date().toISOString(),
-  });
+  const [newMessage, setNewMessage] = useState({ subject: "", sender: "", recipient: "", message: "", category: "General", status: "Unread", date: new Date().toISOString() });
 
-  // Fetch emails from backend
-  useEffect(() => {
-    fetchInbox();
-  }, []);
-
-  const fetchInbox = async () => {
+  const fetchInbox = useCallback(async () => {
     try {
+      setLoading(true);
       const res = await fetch(apiUrl("/api/sales-inbox"));
       const data = await res.json();
-      setInboxData(data);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching inbox:", err);
-      setLoading(false);
-    }
-  };
+      setInboxData(data || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }, []);
 
-  // Toggle Read/Unread
+  useEffect(() => { fetchInbox(); }, [fetchInbox]);
+
   const toggleStatus = async (id) => {
     const msg = inboxData.find((m) => m._id === id);
     const updatedStatus = msg.status === "Unread" ? "Read" : "Unread";
-
     try {
-      const res = await fetch(apiUrl(`/api/sales-inbox/${id}`), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: updatedStatus }),
-      });
+      const res = await fetch(apiUrl(`/api/sales-inbox/${id}`), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: updatedStatus }) });
       const updatedMsg = await res.json();
       setInboxData(inboxData.map((m) => (m._id === id ? updatedMsg : m)));
-    } catch (err) {
-      console.error("Error updating status:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  // Delete email
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this message?")) return;
     try {
       await fetch(apiUrl(`/api/sales-inbox/${id}`), { method: "DELETE" });
       setInboxData(inboxData.filter((m) => m._id !== id));
-    } catch (err) {
-      console.error("Error deleting message:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  // Modal open/close
-  const openModal = () => setShowModal(true);
-  const closeModal = () => setShowModal(false);
-
-  // Handle form change
-  const handleChange = (e) => {
-    setNewMessage({ ...newMessage, [e.target.name]: e.target.value });
-  };
-
-  // Submit new message
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(apiUrl("/api/sales-inbox"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMessage),
-      });
+      const res = await fetch(apiUrl("/api/sales-inbox"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newMessage) });
       const savedMessage = await res.json();
       setInboxData([savedMessage, ...inboxData]);
-      setNewMessage({
-        subject: "",
-        sender: "",
-        recipient: "",
-        message: "",
-        category: "General",
-        status: "Unread",
-        date: new Date().toISOString(),
-      });
-      closeModal();
-    } catch (err) {
-      console.error("Error adding message:", err);
-    }
+      setNewMessage({ subject: "", sender: "", recipient: "", message: "", category: "General", status: "Unread", date: new Date().toISOString() });
+      setShowModal(false);
+    } catch (err) { console.error(err); }
   };
 
-  // Filter inbox by search
-  const filteredInbox = inboxData.filter(
-    (msg) =>
-      msg.subject.toLowerCase().includes(search.toLowerCase()) ||
-      msg.sender.toLowerCase().includes(search.toLowerCase())
-  );
-
-  if (loading) return <p>Loading inbox...</p>;
+  const filtered = inboxData.filter(m => m.subject.toLowerCase().includes(search.toLowerCase()) || m.sender.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="sales-inbox-container">
-      <h2 className="sales-inbox-heading"><FaEnvelope /> Sales Inbox</h2>
-
-      {/* Actions */}
-      <div className="sales-inbox-actions">
-        <button className="btn-primary" onClick={openModal}>
-          + Add New Sales
-        </button>
-        <input
-          type="text"
-          placeholder="Search inbox..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="inbox-search-bar"
-        />
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>Sales</span><ChevronRight size={10} /><span>Sales Inbox</span>
+           </div>
+           <h1 className="title">Sales Inbox</h1>
+           <p className="subtitle">Unified inbox for all client communications and lead outreach.</p>
+        </div>
+        <div className="page-header-right">
+           <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={16} /> Compose New</button>
+        </div>
       </div>
 
-      {/* Inbox Table */}
-      <div className="sales-inbox-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Category</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInbox.length > 0 ? (
-              filteredInbox.map((msg) => (
-                <tr key={msg._id}>
-  <td data-label="Subject">{msg.subject}</td>
-  <td data-label="From">{msg.sender}</td>
-  <td data-label="To">{msg.recipient}</td>
-  <td data-label="Date">
-    {new Date(msg.date).toLocaleDateString()}
-  </td>
-  <td data-label="Status">
-    <span
-      className={`badge ${msg.status.toLowerCase()}`}
-      onClick={() => toggleStatus(msg._id)}
-      style={{ cursor: "pointer" }}
-    >
-      {msg.status}
-    </span>
-  </td>
-  <td data-label="Category">{msg.category}</td>
-  <td data-label="Actions">
-    <button
-      className="delete-btn"
-      onClick={() => handleDelete(msg._id)}
-    >
-      Delete
-    </button>
-  </td>
-</tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ textAlign: "center" }}>
-                  No messages found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 'var(--space-8)' }}>
+         <aside>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+               <button className="btn btn-ghost" style={{ justifyContent: 'flex-start', background: 'var(--color-bg-elevated)' }}><Inbox size={16} style={{ marginRight: '12px' }} /> All Messages</button>
+               <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}><Clock size={16} style={{ marginRight: '12px' }} /> Recent</button>
+               <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}><Send size={16} style={{ marginRight: '12px' }} /> Sent</button>
+               <button className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}><Archive size={16} style={{ marginRight: '12px' }} /> Archived</button>
+            </div>
+         </aside>
+
+         <main>
+            <div className="nc-card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)' }}>
+               <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                  <input className="form-input" style={{ paddingLeft: '36px' }} placeholder="Search subject or sender..." value={search} onChange={e => setSearch(e.target.value)} />
+               </div>
+            </div>
+
+            <div className="nc-card">
+               <table className="nc-table">
+                  <thead>
+                     <tr><th>Subject</th><th>From / To</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody>
+                     {filtered.map((msg) => (
+                       <tr key={msg._id} className={msg.status === 'Unread' ? 'is-unread' : ''}>
+                          <td>
+                             <div style={{ fontWeight: msg.status === 'Unread' ? 'var(--font-bold)' : 'var(--font-semibold)' }}>{msg.subject}</div>
+                             <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{msg.message}</div>
+                          </td>
+                          <td>
+                             <div style={{ fontSize: 'var(--text-sm)' }}>{msg.sender}</div>
+                             <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{msg.recipient}</div>
+                          </td>
+                          <td style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{new Date(msg.date).toLocaleDateString()}</td>
+                          <td>
+                             <span className={`badge badge-${msg.status?.toLowerCase() === 'unread' ? 'error' : 'ghost'}`} onClick={() => toggleStatus(msg._id)} style={{ cursor: 'pointer' }}>{msg.status}</span>
+                          </td>
+                          <td>
+                             <button className="btn btn-ghost" style={{ color: 'var(--color-error)', padding: 'var(--space-1)' }} onClick={() => handleDelete(msg._id)}><Trash2 size={14} /></button>
+                          </td>
+                       </tr>
+                     ))}
+                     {filtered.length === 0 && !loading && (
+                       <tr><td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>Inbox is empty.</td></tr>
+                     )}
+                  </tbody>
+               </table>
+            </div>
+         </main>
       </div>
 
-      {/* Add Sales Modal */}
       {showModal && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Add New Sales</h3>
-            <form onSubmit={handleSubmit}>
-              <input
-                type="text"
-                name="subject"
-                placeholder="Subject"
-                value={newMessage.subject}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="sender"
-                placeholder="From"
-                value={newMessage.sender}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="recipient"
-                placeholder="To"
-                value={newMessage.recipient}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="category"
-                placeholder="Category"
-                value={newMessage.category}
-                onChange={handleChange}
-              />
-              <textarea
-                name="message"
-                placeholder="Message content"
-                value={newMessage.message}
-                onChange={handleChange}
-                required
-              />
-              <div className="modal-buttons">
-                <button type="submit" className="btn-primary">
-                  Save
-                </button>
-                <button type="button" className="btn-cancel" onClick={closeModal}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px' }}>
+              <div className="nc-modal-header"><h3>Compose Sales Message</h3></div>
+              <form className="form" onSubmit={handleSubmit}>
+                 <div className="form-field">
+                    <label className="form-label">Subject</label>
+                    <input className="form-input" required name="subject" value={newMessage.subject} onChange={e => setNewMessage({...newMessage, subject: e.target.value})} />
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                    <div className="form-field">
+                       <label className="form-label">From</label>
+                       <input className="form-input" required name="sender" value={newMessage.sender} onChange={e => setNewMessage({...newMessage, sender: e.target.value})} />
+                    </div>
+                    <div className="form-field">
+                       <label className="form-label">To</label>
+                       <input className="form-input" required name="recipient" value={newMessage.recipient} onChange={e => setNewMessage({...newMessage, recipient: e.target.value})} />
+                    </div>
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Message Content</label>
+                    <textarea className="form-input" required rows={5} name="message" value={newMessage.message} onChange={e => setNewMessage({...newMessage, message: e.target.value})} />
+                 </div>
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Send Message</button>
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                 </div>
+              </form>
+           </div>
         </div>
       )}
     </div>

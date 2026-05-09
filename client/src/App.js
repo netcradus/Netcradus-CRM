@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
-import "./styles/global.css";
+
 import { ChatProvider } from "./context/ChatContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -12,6 +12,7 @@ import ResetPassword from "./Pages/ResetPassword";
 
 /* ========== Layout ========== */
 import MainLayout from "./components/Layout/MainLayout";
+import { ACCESS_GROUPS, canAccess, normalizeRole } from "./config/access";
 
 /* ========== Lazy Modules ========== */
 const WelcomeAnimation         = lazy(() => import("./Pages/WelcomeAnimation"));
@@ -69,10 +70,15 @@ const PasswordManager          = lazy(() => import("./features/PasswordManager/P
 
 /* ========== Protected Wrapper ========== */
 function ProtectedLayout() {
-  const token = localStorage.getItem("token");
-  const userRole = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const rawToken = localStorage.getItem("token");
+  const rawRole = localStorage.getItem("userRole");
+  
+  const token = (rawToken && rawToken !== "null" && rawToken !== "undefined") ? rawToken : null;
+  const userRole = (rawRole && rawRole !== "null" && rawRole !== "undefined") ? String(rawRole).trim().toLowerCase() : null;
   
   if (!token || !userRole) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
     return <Navigate to="/login" replace />;
   }
 
@@ -86,12 +92,12 @@ function ProtectedLayout() {
 }
 
 function RoleRoute({ roles, children, redirectTo = "/dashboard" }) {
-  const role = String(localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const role = normalizeRole(localStorage.getItem("userRole"));
   const normalizedRoles = Array.isArray(roles)
-    ? roles.map((item) => String(item).trim().toLowerCase())
-    : [String(roles).trim().toLowerCase()];
+    ? roles.map(normalizeRole)
+    : [normalizeRole(roles)];
   
-  const allowed = normalizedRoles.includes(role);
+  const allowed = canAccess(role, normalizedRoles);
   if (!allowed) {
     return <Navigate to={redirectTo} replace />;
   }
@@ -144,8 +150,15 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/messages" element={<ChatPanel />} />
-              <Route path="/tickets" element={<TicketsPage />} />
+              <Route
+                path="/messages"
+                element={
+                  <div className="dashboard-container chat-page-shell">
+                    <ChatPanel />
+                  </div>
+                }
+              />
+              <Route path="/tickets" element={<RoleRoute roles={ACCESS_GROUPS.tickets}><TicketsPage /></RoleRoute>} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               
               <Route path="/employee-profiles" element={
@@ -161,14 +174,19 @@ const App = () => {
               } />
 
               {/* ---- Modules ---- */}
-              <Route path="/leads" element={<Leads />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/calls" element={<Calls />} />
-              <Route path="/cases" element={<Cases />} />
-              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/leads" element={<RoleRoute roles={ACCESS_GROUPS.crmLeads}><Leads /></RoleRoute>} />
+              <Route path="/accounts" element={<RoleRoute roles={ACCESS_GROUPS.crmAccounts}><Accounts /></RoleRoute>} />
+              <Route path="/tasks" element={<RoleRoute roles={ACCESS_GROUPS.tasks}><Tasks /></RoleRoute>} />
+              <Route path="/calls" element={<RoleRoute roles={ACCESS_GROUPS.calls}><Calls /></RoleRoute>} />
+              <Route path="/cases" element={<RoleRoute roles={ACCESS_GROUPS.cases}><Cases /></RoleRoute>} />
+              <Route path="/contacts" element={<RoleRoute roles={ACCESS_GROUPS.crmContacts}><Contacts /></RoleRoute>} />
 
               {/* Management Hub Routes */}
+              <Route path="/management" element={
+                <RoleRoute roles={["super_user", "management"]}>
+                  <Navigate to="/management/business/overview" replace />
+                </RoleRoute>
+              } />
               <Route path="/management/business/clients" element={
                 <RoleRoute roles={["super_user", "management"]}>
                   <ManagementHub />
@@ -200,20 +218,20 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/sales-orders" element={<SalesOrders />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/deals" element={<Deals />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/forecasts" element={<Forecasts />} />
-              <Route path="/meetings" element={<Meetings />} />
-              <Route path="/products" element={<Products />} />
+              <Route path="/sales" element={<RoleRoute roles={ACCESS_GROUPS.financeBusiness}><Sales /></RoleRoute>} />
+              <Route path="/sales-orders" element={<RoleRoute roles={ACCESS_GROUPS.financeBusiness}><SalesOrders /></RoleRoute>} />
+              <Route path="/reports" element={<RoleRoute roles={ACCESS_GROUPS.reports}><Reports /></RoleRoute>} />
+              <Route path="/deals" element={<RoleRoute roles={ACCESS_GROUPS.crmDeals}><Deals /></RoleRoute>} />
+              <Route path="/documents" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Documents /></RoleRoute>} />
+              <Route path="/forecasts" element={<RoleRoute roles={ACCESS_GROUPS.forecasts}><Forecasts /></RoleRoute>} />
+              <Route path="/meetings" element={<RoleRoute roles={ACCESS_GROUPS.meetings}><Meetings /></RoleRoute>} />
+              <Route path="/products" element={<RoleRoute roles={ACCESS_GROUPS.products}><Products /></RoleRoute>} />
               
               {/* Projects */}
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/new" element={<ProjectFormPage />} />
-              <Route path="/projects/:id" element={<ProjectDetailPage />} />
-              <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
+              <Route path="/projects" element={<RoleRoute roles={ACCESS_GROUPS.projects}><Projects /></RoleRoute>} />
+              <Route path="/projects/new" element={<RoleRoute roles={ACCESS_GROUPS.projects}><ProjectFormPage /></RoleRoute>} />
+              <Route path="/projects/:id" element={<RoleRoute roles={ACCESS_GROUPS.projects}><ProjectDetailPage /></RoleRoute>} />
+              <Route path="/projects/:id/edit" element={<RoleRoute roles={ACCESS_GROUPS.projects}><ProjectFormPage /></RoleRoute>} />
               
               <Route path="/showcase" element={
                 <RoleRoute roles="super_user" redirectTo="/unauthorized">
@@ -221,14 +239,14 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/quotes" element={<Quotes />} />
-              <Route path="/social" element={<Social />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/vendors" element={<Vendors />} />
-              <Route path="/crm-teamspaces" element={<CRMTeamspaces />} />
-              <Route path="/purchase-orders" element={<PurchaseOrders />} />
-              <Route path="/visits" element={<Visits />} />
-              <Route path="/solutions" element={<Solutions />} />
+              <Route path="/quotes" element={<RoleRoute roles={ACCESS_GROUPS.quotes}><Quotes /></RoleRoute>} />
+              <Route path="/social" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Social /></RoleRoute>} />
+              <Route path="/services" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Services /></RoleRoute>} />
+              <Route path="/vendors" element={<RoleRoute roles={ACCESS_GROUPS.vendors}><Vendors /></RoleRoute>} />
+              <Route path="/crm-teamspaces" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><CRMTeamspaces /></RoleRoute>} />
+              <Route path="/purchase-orders" element={<RoleRoute roles={ACCESS_GROUPS.purchaseOrders}><PurchaseOrders /></RoleRoute>} />
+              <Route path="/visits" element={<RoleRoute roles={ACCESS_GROUPS.visits}><Visits /></RoleRoute>} />
+              <Route path="/solutions" element={<RoleRoute roles={ACCESS_GROUPS.solutions}><Solutions /></RoleRoute>} />
               
               <Route path="/invoices" element={
                 <RoleRoute roles={["super_user", "admin"]}>
@@ -236,10 +254,10 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/sales-inbox" element={<SalesInbox />} />
-              <Route path="/campaigns" element={<Campaigns />} />
-              <Route path="/price-books" element={<PriceBooks />} />
-              <Route path="/ct" element={<CT />} />
+              <Route path="/sales-inbox" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><SalesInbox /></RoleRoute>} />
+              <Route path="/campaigns" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Campaigns /></RoleRoute>} />
+              <Route path="/price-books" element={<RoleRoute roles={ACCESS_GROUPS.priceBooks}><PriceBooks /></RoleRoute>} />
+              <Route path="/ct" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><CT /></RoleRoute>} />
 
               {/* Attendance */}
               <Route path="/attendance" element={<AttendancePage />} />
@@ -249,8 +267,8 @@ const App = () => {
                 </RoleRoute>
               } />
               <Route path="/leave" element={<LeavePage />} />
-              <Route path="/holidays" element={<HolidaysPage />} />
-              <Route path="/attendance-reports" element={<AttendanceReportsPage />} />
+              <Route path="/holidays" element={<RoleRoute roles={["super_user", "hr"]}><HolidaysPage /></RoleRoute>} />
+              <Route path="/attendance-reports" element={<RoleRoute roles={["super_user", "admin", "hr"]}><AttendanceReportsPage /></RoleRoute>} />
 
               <Route path="/admin/storage" element={
                 <RoleRoute roles="super_user">

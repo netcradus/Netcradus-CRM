@@ -1,655 +1,276 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import axios from "axios";
+import React, { useState, useMemo, useEffect } from "react";
 import {
-  Search,
-  ChevronDown,
-  Menu,
-  X,
-  Home,
-  Users,
-  Phone,
-  FileText,
-  Building2,
-  Handshake,
-  CheckSquare2,
-  CalendarClock,
-  Receipt,
-  ClipboardList,
-  BriefcaseBusiness,
-  BarChart3,
-  MapPin,
-  MessageCircle,
-  UserCircle2,
-  Layers3,
-  Shield,
-  Database,
-  FileLock,
-  Clock,
-  CalendarDays,
-  UmbrellaOff,
-  FileBarChart2,
-  HardDrive,
-  FolderKanban,
-  Presentation,
-  LogOut,
-  ShoppingCart,
-  PackagePlus,
-  KeyRound,
+  Home, Users, Briefcase, Ticket, Layout, Layers, Monitor, CircleDollarSign, 
+  FileText, Receipt, FileEdit, ShoppingCart, Package, Book, Database, Target, 
+  Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3, 
+  Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box, 
+  BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare, 
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight
 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { apiUrl } from "../../config/api";
-import "./Sidebar.css";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { ACCESS_GROUPS, canAccess } from "../../config/access";
 
-const managementMenu = {
-  label: "Management",
-  icon: <BriefcaseBusiness size={18} />,
-  children: [
-    {
-      label: "Business",
-      icon: <BriefcaseBusiness size={16} />,
-      children: [
-        { label: "Client Information", path: "/management/business/clients", icon: <Users size={16} /> },
-        { label: "Tender", path: "/management/business/tenders", icon: <FileText size={16} /> },
-        { label: "Other Business", path: "/management/business/overview", icon: <BarChart3 size={16} /> },
-      ],
-    },
-    {
-      label: "Day to Day",
-      icon: <ClipboardList size={16} />,
-      children: [
-        { label: "Purchases Done", path: "/management/day-to-day/purchases", icon: <ShoppingCart size={16} /> },
-        { label: "Items to Purchase", path: "/management/day-to-day/purchase-items", icon: <PackagePlus size={16} /> },
-        { label: "Invoices", path: "/management/day-to-day/invoices", icon: <Receipt size={16} /> },
-      ],
-    },
-  ],
-};
-
-const roleMenus = {
-  super_user: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "User Management", path: "/user-management", icon: <Users size={18} /> },
-    { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "Projects",
-      icon: <FolderKanban size={18} />,
-      children: [
-        { label: "Projects", path: "/projects", icon: <FolderKanban size={16} /> },
-        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
-      ],
-    },
-    {
-      label: "Finance",
-      icon: <Receipt size={18} />,
-      children: [
-        { label: "Expenses", path: "/expenses", icon: <Receipt size={16} /> },
-        { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
-      ],
-    },
-    {
-      label: "CRM",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
-        { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
-        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Client Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-      ],
-    },
-    {
-      label: "Sales & Marketing",
-      icon: <BarChart3 size={18} />,
-      children: [
-        { label: "Sales Orders", path: "/sales-orders", icon: <ClipboardList size={16} /> },
-        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
-      ],
-    },
-    managementMenu,
-    {
-      label: "HR & Attendance",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
-        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
-        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-        { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-        { label: "Showcase", path: "/showcase", icon: <Presentation size={16} /> },
-      ],
-    },
-    {
-      label: "Security",
-      icon: <Shield size={18} />,
-      children: [
-        { label: "Device Security", path: "/admin/devices", icon: <FileLock size={18} /> },
-        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={16} /> },
-      ],
-    },
-    { label: "Password Manager", path: "/password-manager", icon: <KeyRound size={18} /> },
-  ],
-  admin: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "Finance",
-      icon: <Receipt size={18} />,
-      children: [
-        { label: "Expenses", path: "/expenses", icon: <Receipt size={16} /> },
-        { label: "Invoices", path: "/invoices", icon: <FileText size={16} /> },
-      ],
-    },
-    {
-      label: "CRM",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Accounts", path: "/accounts", icon: <Building2 size={16} /> },
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-      ],
-    },
-    {
-      label: "HR & Attendance",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-      ],
-    },
-  ],
-  management: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    managementMenu,
-    { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-  ],
-  sales: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "Sales Workspace",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Leads", path: "/leads", icon: <Users size={16} /> },
-        { label: "Deals", path: "/deals", icon: <Handshake size={16} /> },
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Meetings", path: "/meetings", icon: <CalendarClock size={16} /> },
-        { label: "Visits", path: "/visits", icon: <MapPin size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-    { label: "Showcase", path: "/showcase", icon: <Presentation size={18} /> },
-  ],
-  support: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "Support Workspace",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Cases", path: "/cases", icon: <Handshake size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-  ],
-  hr: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "HR Workspace",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "Employee Profiles", path: "/employee-profiles", icon: <Users size={16} /> },
-        { label: "Interviews", path: "/interviews", icon: <CalendarClock size={16} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "Team Dashboard", path: "/admin/attendance", icon: <BarChart3 size={16} />, badge: true },
-        { label: "Attendance Reports", path: "/attendance-reports", icon: <FileBarChart2 size={16} /> },
-        { label: "Leave Requests", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-      ],
-    },
-    { label: "Contacts", path: "/contacts", icon: <Phone size={16} /> },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-  ],
-  it: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "IT Workspace",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Documents", path: "/documents", icon: <Phone size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-  ],
-  digital_media: [
-    { label: "Home", path: "/dashboard", icon: <Home size={18} /> },
-    { label: "My Profile", path: "/my-profile", icon: <UserCircle2 size={18} /> },
-    { label: "Support Tickets", path: "/tickets", icon: <MessageCircle size={18} /> },
-    {
-      label: "Media Workspace",
-      icon: <Layers3 size={18} />,
-      children: [
-        { label: "Tasks", path: "/tasks", icon: <CheckSquare2 size={16} /> },
-        { label: "Campaigns", path: "/campaigns", icon: <BarChart3 size={16} /> },
-        { label: "Social", path: "/social", icon: <MessageCircle size={16} /> },
-        { label: "Reports", path: "/reports", icon: <FileBarChart2 size={16} /> },
-      ],
-    },
-    {
-      label: "Personal",
-      icon: <Clock size={18} />,
-      children: [
-        { label: "Messages", path: "/messages", icon: <MessageCircle size={18} /> },
-        { label: "My Attendance", path: "/attendance", icon: <Clock size={16} /> },
-        { label: "My Leave", path: "/leave", icon: <UmbrellaOff size={16} /> },
-        { label: "Holiday Calendar", path: "/holidays", icon: <CalendarDays size={16} /> },
-      ],
-    },
-    { label: "My Drive", path: "/documents", icon: <HardDrive size={18} /> },
-  ],
-};
-
-const isItemActive = (item, pathname) => {
-  if (item.path && pathname === item.path) return true;
-  return Array.isArray(item.children) && item.children.some((child) => isItemActive(child, pathname));
-};
-
-const flattenMenuItems = (items = []) =>
-  items.flatMap((item) => (item.children ? flattenMenuItems(item.children) : item.path ? [item] : []));
-
-const stripShowcaseForRole = (items = [], userRole) =>
-  items
-    .map((item) => {
-      if (item.path === "/showcase" && userRole !== "super_user") return null;
-      if (!Array.isArray(item.children)) return item;
-      const children = stripShowcaseForRole(item.children, userRole).filter(Boolean);
-      if (!children.length && !item.path) return null;
-      return { ...item, children };
-    })
-    .filter(Boolean);
-
-const mapMenuForProjectsAccess = (items = [], userRole) => {
-  const filtered = stripShowcaseForRole(items, userRole);
-  const hasProjectsLink = flattenMenuItems(filtered).some((item) => item.path === "/projects");
-  if (hasProjectsLink) return filtered;
-
-  return [...filtered, { label: "Projects", path: "/projects", icon: <FolderKanban size={18} /> }];
-};
-
-function DropdownNode({ item, location, onLeafClick, getBadgeValue, depth = 0 }) {
-  const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-  const isActive = isItemActive(item, location.pathname);
-  const [open, setOpen] = useState(isActive);
-  const badgeValue = getBadgeValue(item);
-
-  useEffect(() => {
-    if (isActive) setOpen(true);
-  }, [isActive]);
-
-  if (!hasChildren) {
-    return (
-      <Link to={item.path} className={`dropdown-link ${isActive ? "active" : ""}`} onClick={onLeafClick}>
-        <span className="nav-icon">{item.icon}</span>
-        <span>{item.label}</span>
-        {badgeValue > 0 && <span className="sidebar-badge">{badgeValue}</span>}
-      </Link>
-    );
-  }
-
-  return (
-    <div className={`dropdown-node dropdown-depth-${depth}`}>
-      <button
-        type="button"
-        className={`dropdown-toggle ${isActive ? "active" : ""} ${open ? "open" : ""}`}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className="dropdown-toggle-main">
-          <span className="nav-icon">{item.icon}</span>
-          <span>{item.label}</span>
-        </span>
-        <span className={`nav-chevron ${open ? "rotated" : ""}`}>
-          <ChevronDown size={14} />
-        </span>
-      </button>
-      <div className={`dropdown-children ${open ? "open" : ""}`}>
-        <div className="dropdown-children-inner">
-          {item.children.map((child, index) => (
-            <DropdownNode
-              key={`${item.label}-${index}`}
-              item={child}
-              location={location}
-              onLeafClick={onLeafClick}
-              getBadgeValue={getBadgeValue}
-              depth={depth + 1}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NavGroup({ item, isHovered, isMobileOpen, location, onLinkClick, getBadgeValue }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const isChildActive = isItemActive(item, location.pathname);
-  const hasVisibleBadge = flattenMenuItems(item.children || []).some((child) => getBadgeValue(child) > 0);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!isHovered && !isMobileOpen) setOpen(false);
-  }, [isHovered, isMobileOpen]);
-
-  useEffect(() => {
-    if (isChildActive) setOpen(true);
-  }, [isChildActive]);
-
-  return (
-    <li className="nav-group" ref={ref}>
-      <button
-        className={`nav-group-btn ${isChildActive ? "group-active" : ""} ${open ? "group-open" : ""}`}
-        onClick={() => setOpen((current) => !current)}
-        title={!isHovered && !isMobileOpen ? item.label : undefined}
-      >
-        <span className="nav-icon">
-          {item.icon}
-          {!isHovered && !isMobileOpen && hasVisibleBadge && <span className="sidebar-badge-dot" />}
-        </span>
-        {(isHovered || isMobileOpen) && (
-          <>
-            <span className="nav-label">{item.label}</span>
-            <span className={`nav-chevron ${open ? "rotated" : ""}`}>
-              <ChevronDown size={14} />
-            </span>
-          </>
-        )}
-      </button>
-
-      {open && (
-        <div className="nav-dropdown">
-          <div className="dropdown-header">{item.label}</div>
-          <div className="dropdown-tree">
-            {item.children.map((child, index) => (
-              <DropdownNode
-                key={`${item.label}-${index}`}
-                item={child}
-                location={location}
-                onLeafClick={() => {
-                  setOpen(false);
-                  onLinkClick();
-                }}
-                getBadgeValue={getBadgeValue}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </li>
-  );
-}
-
-function Sidebar() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isHovered, setIsHovered] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [managementCounts, setManagementCounts] = useState({
-    purchasesThisPeriod: 0,
-    pendingPurchaseItems: 0,
-    outstandingInvoices: 0,
-  });
+const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, onHoverExpanded, onHoverCollapsed, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const [openSubmenu, setOpenSubmenu] = useState(null);
 
-  const fetchPendingCount = useCallback(async () => {
-    const role = localStorage.getItem("userRole");
-    if (!["super_user", "admin", "hr"].includes(role)) return;
-    try {
-      const { data } = await axios.get(apiUrl("/api/attendance/admin/pending-actions"), {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const count = (data.data?.pendingLeaves?.length || 0) + (data.data?.pendingRegularizations?.length || 0);
-      setPendingCount(count);
-    } catch (error) {
-      console.error("Failed to fetch pending counts", error);
-    }
-  }, []);
+  const role = userRole || "user";
+  const isDesktopCollapsed = !isExpanded && !isMobileOpen;
 
-  const fetchManagementCounts = useCallback(async () => {
-    const role = localStorage.getItem("userRole");
-    if (!["super_user", "management"].includes(role)) return;
-    try {
-      const { data } = await axios.get(apiUrl("/api/management/sidebar-summary"), {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setManagementCounts({
-        purchasesThisPeriod: Number(data.purchasesThisPeriod || 0),
-        pendingPurchaseItems: Number(data.pendingPurchaseItems || 0),
-        outstandingInvoices: Number(data.outstandingInvoices || 0),
-      });
-    } catch (error) {
-      console.error("Failed to fetch management counts", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPendingCount();
-    fetchManagementCounts();
-    const interval = setInterval(() => {
-      fetchPendingCount();
-      fetchManagementCounts();
-    }, 300000);
-    return () => clearInterval(interval);
-  }, [fetchPendingCount, fetchManagementCounts]);
-
-  const userRole = localStorage.getItem("userRole");
-  const menuItems = mapMenuForProjectsAccess(roleMenus[userRole] || [], userRole);
-
-  const getBadgeValue = useCallback(
-    (item) => {
-      if (item.badge) return pendingCount;
-      if (item.badgeKey) return Number(managementCounts[item.badgeKey] || 0);
-      return 0;
-    },
-    [managementCounts, pendingCount]
-  );
-
-  const filteredMenu = searchTerm
-    ? flattenMenuItems(menuItems).filter((item) => item.label.toLowerCase().includes(searchTerm.toLowerCase()))
-    : null;
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("passwordExpiryWarning");
+  const onLogout = () => {
+    localStorage.clear();
     navigate("/login");
   };
 
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [location.pathname]);
+  const getItemTargetPath = (item) => {
+    const visibleSubmenu = item.submenu?.filter((sub) => !sub.roles || canAccess(role, sub.roles)) || [];
+    if (visibleSubmenu.length) {
+      return visibleSubmenu[0].path;
+    }
+    return item.path || null;
+  };
+
+  const handleSubmenuToggle = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetPath = getItemTargetPath(item);
+
+    if (isDesktopCollapsed) {
+      onToggleExpanded?.();
+      setOpenSubmenu(item.label);
+      return;
+    }
+
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
+    setOpenSubmenu((prev) => (prev === item.label ? null : item.label));
+  };
+
+  const handleLeafNavigation = () => {
+    if (window.innerWidth <= 768) {
+      onCloseMobile?.();
+    }
+  };
+
+  const menuItems = useMemo(() => {
+    const items = [];
+    items.push({ label: "Home", icon: <Home size={20} />, path: "/dashboard", roles: ACCESS_GROUPS.all });
+
+    if (canAccess(role, ACCESS_GROUPS.userAdmin)) {
+      items.push({ label: "User Management", icon: <Users size={20} />, path: "/user-management", roles: ACCESS_GROUPS.userAdmin });
+    }
+
+    if (canAccess(role, ACCESS_GROUPS.peopleOps)) {
+      items.push({ label: "Employee Profiles", icon: <Briefcase size={20} />, path: "/employee-profiles", roles: ACCESS_GROUPS.peopleOps });
+    }
+
+    if (canAccess(role, ACCESS_GROUPS.tickets)) {
+      items.push({ label: "Support Tickets", icon: <Ticket size={20} />, path: "/tickets", roles: ACCESS_GROUPS.tickets });
+    }
+
+    if (canAccess(role, ACCESS_GROUPS.projects)) items.push({
+      label: "Projects",
+      path: "/projects",
+      icon: <Layout size={20} />,
+      roles: ACCESS_GROUPS.projects,
+      submenu: [
+        { label: "Projects", path: "/projects", icon: <Layers size={18} />, roles: ACCESS_GROUPS.projects },
+        { label: "Showcase", path: "/showcase", icon: <Monitor size={18} />, roles: ACCESS_GROUPS.security },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.financeBusiness)) items.push({
+      label: "Finance",
+      path: "/invoices",
+      icon: <CircleDollarSign size={20} />,
+      roles: ACCESS_GROUPS.financeBusiness,
+      submenu: [
+        { label: "Invoices", path: "/invoices", icon: <FileText size={18} />, roles: ACCESS_GROUPS.financeAdmin },
+        { label: "Expenses", path: "/expenses", icon: <Receipt size={18} />, roles: ACCESS_GROUPS.financeAdmin },
+        { label: "Quotes", path: "/quotes", icon: <FileEdit size={18} />, roles: ACCESS_GROUPS.quotes },
+        { label: "Sales Orders", path: "/sales-orders", icon: <ShoppingCart size={18} />, roles: ACCESS_GROUPS.financeBusiness },
+        { label: "Purchase Orders", path: "/purchase-orders", icon: <Package size={18} />, roles: ACCESS_GROUPS.purchaseOrders },
+        { label: "Price Books", path: "/price-books", icon: <Book size={18} />, roles: ACCESS_GROUPS.priceBooks },
+      ]
+    });
+
+    if (canAccess(role, [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals])) items.push({
+      label: "CRM",
+      path: "/leads",
+      icon: <Database size={20} />,
+      roles: [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals],
+      submenu: [
+        { label: "Leads", path: "/leads", icon: <Target size={18} />, roles: ACCESS_GROUPS.crmLeads },
+        { label: "Contacts", path: "/contacts", icon: <Contact size={18} />, roles: ACCESS_GROUPS.crmContacts },
+        { label: "Accounts", path: "/accounts", icon: <Building size={18} />, roles: ACCESS_GROUPS.crmAccounts },
+        { label: "Deals", path: "/deals", icon: <Coins size={18} />, roles: ACCESS_GROUPS.crmDeals },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.marketing)) items.push({
+      label: "Sales & Marketing",
+      path: "/campaigns",
+      icon: <TrendingUp size={20} />,
+      roles: ACCESS_GROUPS.marketing,
+      submenu: [
+        { label: "Campaigns", path: "/campaigns", icon: <Megaphone size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Social", path: "/social", icon: <Globe size={18} />, roles: ACCESS_GROUPS.marketing },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.management)) items.push({
+      label: "Management",
+      path: "/management/business/overview",
+      icon: <LayoutGrid size={20} />,
+      roles: ACCESS_GROUPS.management,
+      submenu: [
+        { label: "Overview", path: "/management/business/overview", icon: <BarChart3 size={18} />, roles: ACCESS_GROUPS.management },
+        { label: "Meetings", path: "/meetings", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.meetings },
+        { label: "Tasks", path: "/tasks", icon: <ListChecks size={18} />, roles: ACCESS_GROUPS.tasks },
+        { label: "Visits", path: "/visits", icon: <MapPin size={18} />, roles: ACCESS_GROUPS.visits },
+        { label: "Calls", path: "/calls", icon: <Phone size={18} />, roles: ACCESS_GROUPS.calls },
+        { label: "Solutions", path: "/solutions", icon: <Lightbulb size={18} />, roles: ACCESS_GROUPS.solutions },
+        { label: "Cases", path: "/cases", icon: <FolderOpen size={18} />, roles: ACCESS_GROUPS.cases },
+        { label: "Vendors", path: "/vendors", icon: <Truck size={18} />, roles: ACCESS_GROUPS.vendors },
+        { label: "Products", path: "/products", icon: <Box size={18} />, roles: ACCESS_GROUPS.products },
+        { label: "Forecasts", path: "/forecasts", icon: <BarChart size={18} />, roles: ACCESS_GROUPS.forecasts },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.personal)) items.push({
+      label: "HR & Attendance",
+      path: "/attendance",
+      icon: <UserCheck size={20} />,
+      roles: ACCESS_GROUPS.personal,
+      submenu: [
+        { label: "Attendance", path: "/attendance", icon: <Clock size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "Holidays", path: "/holidays", icon: <Umbrella size={18} />, roles: ACCESS_GROUPS.attendance },
+        { label: "Leaves", path: "/leave", icon: <Plane size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "Interviews", path: "/interviews", icon: <Users2 size={18} />, roles: ACCESS_GROUPS.peopleOps },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.personal)) items.push({
+      label: "Personal",
+      path: "/messages",
+      icon: <User size={20} />,
+      roles: ACCESS_GROUPS.personal,
+      submenu: [
+        { label: "Messages", path: "/messages", icon: <MessageSquare size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "My Drive", path: "/documents", icon: <HardDrive size={18} />, roles: ACCESS_GROUPS.personal },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.security)) items.push({
+      label: "Security",
+      path: "/admin/devices",
+      icon: <ShieldCheck size={20} />,
+      roles: ACCESS_GROUPS.security,
+      submenu: [
+        { label: "Device Security", path: "/admin/devices", icon: <Smartphone size={18} />, roles: ACCESS_GROUPS.security },
+        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={18} />, roles: ACCESS_GROUPS.security },
+      ]
+    });
+
+    if (canAccess(role, ACCESS_GROUPS.security)) {
+      items.push({ label: "Password Manager", icon: <Key size={20} />, path: "/password-manager", roles: ACCESS_GROUPS.security });
+    }
+
+    return items;
+  }, [role]);
 
   useEffect(() => {
-    document.body.style.overflow = isMobileOpen ? "hidden" : "auto";
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [isMobileOpen]);
+    const activeParent = menuItems.find((item) =>
+      item.submenu?.some((sub) => location.pathname.startsWith(sub.path))
+    );
+    if (activeParent) {
+      setOpenSubmenu(activeParent.label);
+    }
+  }, [location.pathname, menuItems]);
 
   return (
-    <>
-      <button
-        className={`mobile-hamburger ${isMobileOpen ? "active" : ""}`}
-        onClick={() => setIsMobileOpen((current) => !current)}
-        aria-label="Toggle menu"
-      >
-        {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
-      </button>
-
-      {isMobileOpen && <div className="mobile-overlay" onClick={() => setIsMobileOpen(false)} />}
-
-      <div
-        className={`sidebar ${isHovered ? "expanded" : "collapsed"} ${isMobileOpen ? "mobile-open" : ""}`}
-        onMouseEnter={() => window.innerWidth > 768 && setIsHovered(true)}
-        onMouseLeave={() => window.innerWidth > 768 && setIsHovered(false)}
-      >
+    <nav 
+      className={`sidebar ${isExpanded ? "is-expanded" : "is-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
+      onMouseEnter={onHoverExpanded}
+      onMouseLeave={() => {
+        if (window.innerWidth > 768) {
+          setOpenSubmenu(null);
+          onHoverCollapsed?.();
+        }
+      }}
+    >
+      <div className="sidebar-brand">
         <div className="sidebar-logo">
-          <img src="/sidebar-logo.jpeg" alt="Company Logo" className="logo-img" />
-          {(isHovered || isMobileOpen) && (
-            <span className="company-name">
-              <img src="/netcradus.png" alt="Company Logo" />
-            </span>
-          )}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         </div>
-
-        {(isHovered || isMobileOpen) && (
-          <div className="sidebar-search">
-            <div className="search-input-wrapper">
-              <Search size={14} />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        <nav className="sidebar-nav">
-          <ul>
-            {filteredMenu
-              ? filteredMenu.map((item, index) => (
-                  <li key={`${item.label}-${index}`}>
-                    <Link to={item.path} className={`nav-link ${location.pathname === item.path ? "active" : ""}`}>
-                      <span className="nav-icon">{item.icon}</span>
-                      {(isHovered || isMobileOpen) && <span>{item.label}</span>}
-                      {(isHovered || isMobileOpen) && getBadgeValue(item) > 0 && (
-                        <span className="sidebar-badge">{getBadgeValue(item)}</span>
-                      )}
-                    </Link>
-                  </li>
-                ))
-              : menuItems.map((item, index) =>
-                  item.children ? (
-                    <NavGroup
-                      key={`${item.label}-${index}`}
-                      item={item}
-                      isHovered={isHovered}
-                      isMobileOpen={isMobileOpen}
-                      location={location}
-                      onLinkClick={() => setIsMobileOpen(false)}
-                      getBadgeValue={getBadgeValue}
-                    />
-                  ) : (
-                    <li key={`${item.label}-${index}`}>
-                      <Link
-                        to={item.path}
-                        className={`nav-link ${location.pathname === item.path ? "active" : ""}`}
-                        title={!isHovered && !isMobileOpen ? item.label : undefined}
-                        onClick={() => setIsMobileOpen(false)}
-                      >
-                        <span className="nav-icon">{item.icon}</span>
-                        {(isHovered || isMobileOpen) && <span>{item.label}</span>}
-                      </Link>
-                    </li>
-                  )
-                )}
-          </ul>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
-            <span className="logout-icon">
-              <LogOut size={18} />
-            </span>
-            {(isHovered || isMobileOpen) && <span>Logout</span>}
-          </button>
-        </div>
+        <span className="sidebar-brand-text">Netcradus</span>
       </div>
-    </>
+
+      <div className="sidebar-menu">
+        {menuItems.map((item) => {
+          const visibleSubmenu = item.submenu?.filter((sub) => !sub.roles || canAccess(role, sub.roles)) || [];
+          const hasSubmenu = visibleSubmenu.length > 0;
+          const isSubmenuOpen = openSubmenu === item.label;
+          const isParentActive = hasSubmenu && visibleSubmenu.some((sub) => location.pathname.startsWith(sub.path));
+
+          if (hasSubmenu) {
+            return (
+              <div key={item.label} className={`sidebar-item-group ${isSubmenuOpen ? "is-open" : ""}`}>
+                <button 
+                  className={`sidebar-item ${isParentActive ? "is-parent-active" : ""}`}
+                  onClick={(e) => handleSubmenuToggle(e, item)}
+                >
+                  <div className="sidebar-item-icon">{item.icon}</div>
+                  <span className="sidebar-item-text">{item.label}</span>
+                  <div className="sidebar-item-caret">
+                    {isSubmenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </div>
+                </button>
+                {isSubmenuOpen && (isExpanded || isMobileOpen) && (
+                  <div className="sidebar-submenu">
+                    {visibleSubmenu.map((sub) => (
+                      <NavLink 
+                        key={sub.path} 
+                        to={sub.path} 
+                        className={({ isActive }) => `sidebar-submenu-item ${isActive ? "is-active" : ""}`}
+                        onClick={handleLeafNavigation}
+                      >
+                        <div className="sidebar-submenu-icon">{sub.icon}</div>
+                        <span className="sidebar-submenu-text">{sub.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink 
+              key={item.path} 
+              to={item.path} 
+              className={({ isActive }) => `sidebar-item ${isActive ? "is-active" : ""}`}
+              onClick={handleLeafNavigation}
+            >
+              <div className="sidebar-item-icon">{item.icon}</div>
+              <span className="sidebar-item-text">{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </div>
+
+      <div className="sidebar-footer">
+        <button className="sidebar-item sidebar-logout" onClick={onLogout}>
+          <div className="sidebar-item-icon"><LogOut size={20} /></div>
+          <span className="sidebar-item-text">Logout</span>
+        </button>
+      </div>
+    </nav>
   );
-}
+};
 
 export default Sidebar;

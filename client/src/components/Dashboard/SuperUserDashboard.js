@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FaUserShield } from "react-icons/fa";
 import {
   BarChart,
   Bar,
@@ -15,7 +14,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import axios from "axios";
-import "./AdminDashboard.css"; // Reuse existing styles
+// No longer needed: import "./AdminDashboard.css"; // Reuse existing styles
+
 import AdminDashboard from "./AdminDashboard";
 import SalesDashboard from "./SalesDashboard";
 import SupportDashboard from "./SupportDashboard";
@@ -24,6 +24,7 @@ import TechDashboard from "./TechDashboard";
 import DigitalMediaDashboard from "./DigitalMediaDashboard";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import ManagementDashboard from "./ManagementDashboard";
 
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
 
@@ -41,6 +42,7 @@ const SuperUserDashboard = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
+  const [error, setError] = useState("");
   const userName = localStorage.getItem("userName") || "Super User";
   const token = localStorage.getItem("token");
 
@@ -108,19 +110,6 @@ const SuperUserDashboard = () => {
       .sort((a, b) => b.count - a.count);
   }, [users]);
 
-  const departmentStrengthData = useMemo(() => {
-    const employees = attendanceSnapshot?.employees || [];
-    const grouped = employees.reduce((acc, employee) => {
-      const department = employee.department || "General";
-      acc[department] = (acc[department] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(grouped)
-      .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total);
-  }, [attendanceSnapshot]);
-
   const systemHealthTrendData = useMemo(() => [
     { point: "Users", total: users.length },
     { point: "Tracked", total: attendanceSnapshot?.employees?.length || 0 },
@@ -158,8 +147,10 @@ const SuperUserDashboard = () => {
     if (foundUser) {
       setSelectedUser(foundUser);
       setSelectedRole(foundUser.role);
+      setError("");
     } else {
-      alert("User not found");
+      setError("User not found");
+      setTimeout(() => setError(""), 3000);
     }
   };
 
@@ -172,75 +163,88 @@ const SuperUserDashboard = () => {
       case "hr": return <HRDashboard preview={!selectedUser} />;
       case "it": return <TechDashboard preview={!selectedUser} />;
       case "digital_media": return <DigitalMediaDashboard preview={!selectedUser} />;
-      default: return <p>Select a role to preview</p>;
+      case "management": return <ManagementDashboard preview={!selectedUser} />;
+      default: return null;
     }
   };
 
   return (
-    <div className="admin-dashboard">
-      <div className="admin-hero">
-        <div className="admin-hero-left">
-          <div className="admin-badge netcradus-badge">
-            <FaUserShield />
-            <span>NETCRADUS Super User Control</span>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">System Overview</h1>
+          <p className="subtitle">Welcome back, {userName}. Monitoring {users.length} registered users.</p>
+        </div>
+        <div className="page-header-right" style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <div className="form-field">
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search user..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ width: '200px' }}
+              />
+              <button onClick={handleSearch} className="btn btn-primary">
+                Search
+              </button>
+            </div>
           </div>
-          <h1>
-            Welcome, <span>{userName}</span>
-          </h1>
-          <p>
-            You have full system access. Monitoring performance and security status.
-          </p>
-        </div>
-        <div className="admin-hero-right">
-           <AttendanceWidget />
+          <select className="form-select" value={selectedRole} onChange={handleRoleChange} style={{ width: '180px' }}>
+            <option value="">Filter by Role</option>
+            <option value="admin">Administrator</option>
+            <option value="sales">Sales</option>
+            <option value="support">Support</option>
+            <option value="hr">HR</option>
+            <option value="it">IT</option>
+            <option value="digital_media">Digital Media</option>
+            <option value="management">Management</option>
+            <option value="all">All Roles</option>
+          </select>
         </div>
       </div>
 
-      <div className="admin-controls glass">
-        <input
-          type="text"
-          className="admin-search"
-          placeholder="Search user..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <button onClick={handleSearch} className="btn-primary">
-          Search
-        </button>
-
-        <select className="admin-select" value={selectedRole} onChange={handleRoleChange}>
-          <option value="">Select Role</option>
-          <option value="admin">Administrator</option>
-          <option value="sales">Sales</option>
-          <option value="support">Support</option>
-          <option value="hr">HR</option>
-          <option value="it">IT</option>
-          <option value="digital_media">Digital Media</option>
-        </select>
-      </div>
-
-      {selectedRole && (
-        <div ref={previewRef} className="role-dashboard-preview">
-          {renderSelectedDashboard()}
+      {error && (
+        <div className="badge badge-error" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-4)', width: '100%' }}>
+          {error}
         </div>
       )}
 
-      <div className="admin-grid">
-         <div className="admin-charts glass netcradus-panel">
-            <h3>Live System Attendance</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card">
+          <span className="metric-label">Total Users</span>
+          <span className="metric-value">{users.length}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Present Today</span>
+          <span className="metric-value">{attendanceSnapshot?.presentCount || 0}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">On Leave</span>
+          <span className="metric-value">{attendanceSnapshot?.onLeaveCount || 0}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">System Health</span>
+          <span className="metric-value" style={{ color: 'var(--color-success)' }}>100%</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+         <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Live System Attendance</h3>
             <ResponsiveContainer width="100%" height={300}>
                <BarChart data={liveAttendanceChartData}>
-                  <XAxis dataKey="label" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#ff5f3d" radius={[5, 5, 0, 0]} />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
+                  <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                  <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
+                  <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
                </BarChart>
             </ResponsiveContainer>
          </div>
-         <div className="admin-side glass netcradus-panel">
-            <h3>Role Distribution</h3>
-            <ResponsiveContainer width="100%" height={250}>
+         <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Role Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
                <PieChart>
                   <Pie
                     data={roleDistributionData}
@@ -249,7 +253,6 @@ const SuperUserDashboard = () => {
                     innerRadius={60}
                     outerRadius={80}
                     paddingAngle={4}
-                    fill="#8884d8"
                   >
                     {roleDistributionData.map((entry, index) => (
                       <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -258,102 +261,57 @@ const SuperUserDashboard = () => {
                   <Tooltip />
                </PieChart>
             </ResponsiveContainer>
-            {!roleDistributionData.length && (
-              <p style={{ color: "#9ca3af", fontSize: "0.9rem", marginTop: "12px" }}>
-                No live employee attendance data available yet.
-              </p>
-            )}
          </div>
       </div>
 
-      <div className="admin-grid" style={{ marginTop: "20px" }}>
-        <div className="admin-charts glass netcradus-panel">
-          <div className="card-header">
-            <h3>Registered Users by Role</h3>
-            <span className="chip">Live users</span>
+      {selectedRole && (
+        <div ref={previewRef} className="nc-card" style={{ marginTop: 'var(--space-6)', minHeight: '400px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-4)' }}>
+            <h3 style={{ fontSize: 'var(--text-lg)' }}>Role Preview: {formatRoleLabel(selectedUser ? selectedUser.role : selectedRole)}</h3>
+            <button className="btn btn-ghost" onClick={() => {setSelectedRole(""); setSelectedUser(null);}}>Close Preview</button>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={registeredRoleData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#ff8a00" radius={[10, 10, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {renderSelectedDashboard()}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
+        <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Registered Users by Role</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={registeredRoleData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
         </div>
 
-        <div className="admin-side glass netcradus-panel">
-          <div className="card-header">
-            <h3>Department Snapshot</h3>
-            <span className="chip">Attendance</span>
-          </div>
-          <ul className="insight-list">
-            {departmentStrengthData.length ? (
-              departmentStrengthData.slice(0, 4).map((entry) => (
-                <li key={entry.name}>
-                  <span>{entry.name}</span>
-                  <strong>{entry.total}</strong>
-                </li>
-              ))
-            ) : (
-              <li>
-                <span>No department data</span>
-                <strong>--</strong>
-              </li>
-            )}
-          </ul>
+        <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>System Coverage Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={systemHealthTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="var(--color-accent)"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
         </div>
       </div>
-
-      <div className="admin-grid" style={{ marginTop: "20px" }}>
-        <div className="admin-charts glass netcradus-panel">
-          <div className="card-header">
-            <h3>System Coverage Trend</h3>
-            <span className="chip">Realtime</span>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={systemHealthTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-              <XAxis dataKey="point" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#ff5f3d"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#ff2d8f" }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="admin-side glass netcradus-panel">
-          <div className="card-header">
-            <h3>Role Search Snapshot</h3>
-            <span className="chip">Overview</span>
-          </div>
-          <ul className="insight-list">
-            <li>
-              <span>Total Registered Users</span>
-              <strong>{users.length}</strong>
-            </li>
-            <li>
-              <span>Tracked in Attendance</span>
-              <strong>{attendanceSnapshot?.employees?.length || 0}</strong>
-            </li>
-            <li>
-              <span>Selected Role Preview</span>
-              <strong>{selectedRole ? formatRoleLabel(selectedRole) : "--"}</strong>
-            </li>
-            <li>
-              <span>Selected User</span>
-              <strong>{selectedUser?.name || "--"}</strong>
-            </li>
-          </ul>
-        </div>
+      
+      <div className="nc-card" style={{ marginTop: 'var(--space-6)' }}>
+        <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Team Attendance Live</h3>
+        <AttendanceWidget />
       </div>
     </div>
   );

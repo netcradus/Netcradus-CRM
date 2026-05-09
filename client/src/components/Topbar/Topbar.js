@@ -1,19 +1,30 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { PanelLeft, Search } from "lucide-react";
 import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
-import "./Topbar.css";
+// import "./Topbar.css";
 
-const Topbar = () => {
+
+const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
   const userName = localStorage.getItem("userName") || "User";
   const initials = userName.slice(0, 2).toUpperCase();
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   return (
     <header className="topbar">
       <div className="topbar-left">
+        {isMobile && (
+          <button
+            type="button"
+            className={`topbar-menu-btn ${isSidebarExpanded ? "is-active" : ""}`}
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft size={18} />
+          </button>
+        )}
         <div className="topbar-logo-mark">
-          <span className="topbar-orbit" />
-          <span className="topbar-orbit-inner" />
+          {initials}
         </div>
         <div className="topbar-title">
           <div className="topbar-product-logo-wrap">
@@ -24,16 +35,15 @@ const Topbar = () => {
       </div>
 
       <div className="topbar-right">
-        <ThemeToggle className="topbar-theme-toggle" compact />
-
         <div className="topbar-search">
-          <Search size={16} />
+          <Search size={14} />
           <input
             placeholder="Search leads, accounts, deals..."
             aria-label="Global search"
           />
         </div>
 
+        <ThemeToggle className="topbar-theme-toggle" compact />
         <NotificationButton />
 
         <div className="topbar-avatar" title={userName}>

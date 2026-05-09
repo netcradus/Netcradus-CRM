@@ -3,7 +3,8 @@ import axios from "axios";
 import { apiUrl } from "../../../config/api";
 import { AlertTriangle, RefreshCw, Settings, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import "../Documents.css";
+// import "../Documents.css";
+
 import QuotaModal from "./QuotaModal";
 
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
@@ -74,114 +75,118 @@ const StorageAdminPage = () => {
   };
 
   return (
-    <div className="admin-storage-page">
-      <h1>🗄️ Storage Administration</h1>
+    <div className="dashboard-container">
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Storage Administration</h1>
+          <p className="subtitle">Monitor disk usage, manage quotas, and provision user storage.</p>
+        </div>
+        <div className="page-header-right">
+          <button className="btn btn-secondary" onClick={fetch} disabled={loading}>
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
+      </div>
 
       {/* Summary cards */}
       {data?.summary && (
-        <div className="admin-summary-cards">
-          <div className="admin-card">
-            <div className="admin-card-label">Total Users</div>
-            <div className="admin-card-value">{data.summary.totalUsers}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+          <div className="nc-stat-card">
+            <span className="metric-label">Total Users</span>
+            <span className="metric-value">{data.summary.totalUsers}</span>
           </div>
-          <div className="admin-card">
-            <div className="admin-card-label">Total Used</div>
-            <div className="admin-card-value">{data.summary.totalUsedMB?.toFixed(1)} MB</div>
+          <div className="nc-stat-card">
+            <span className="metric-label">Total Used</span>
+            <span className="metric-value">{data.summary.totalUsedMB?.toFixed(1)} MB</span>
           </div>
-          <div className="admin-card">
-            <div className="admin-card-label">Avg Usage</div>
-            <div className="admin-card-value">{data.summary.avgUsedPercent}%</div>
+          <div className="nc-stat-card">
+            <span className="metric-label">Avg Usage</span>
+            <span className="metric-value">{data.summary.avgUsedPercent}%</span>
           </div>
-          <div className="admin-card">
-            <div className="admin-card-label">Over 80% Quota</div>
-            <div className={`admin-card-value ${data.summary.usersOverEightyPercent > 0 ? "warning" : ""}`}>
+          <div className="nc-stat-card">
+            <span className="metric-label">Critical Usage (80%+)</span>
+            <span className="metric-value" style={{ color: data.summary.usersOverEightyPercent > 0 ? 'var(--color-error)' : 'inherit' }}>
               {data.summary.usersOverEightyPercent}
-            </div>
+            </span>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <select className="drive-sort-select" value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}>
-          <option value="">All Roles</option>
-          {["super_user","admin","hr","management","sales","support","it","digital_media"].map(r => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <select className="drive-sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <option value="usedMB">Sort: Most Used</option>
-          <option value="usedPercent">Sort: Usage %</option>
-          <option value="fileCount">Sort: File Count</option>
-          <option value="name">Sort: Name</option>
-        </select>
-        <button className="drive-btn drive-btn-ghost" onClick={fetch} style={{ padding: "6px 12px" }}>
-          <RefreshCw size={13} style={{ verticalAlign: "middle" }} /> Refresh
-        </button>
+      <div className="nc-card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <div className="form-field" style={{ width: '200px', marginBottom: 0 }}>
+             <label className="form-label">Filter by Role</label>
+             <select className="form-select" value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}>
+                <option value="">All Roles</option>
+                {["super_user","admin","hr","management","sales","support","it","digital_media"].map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+             </select>
+          </div>
+          <div className="form-field" style={{ width: '200px', marginBottom: 0 }}>
+             <label className="form-label">Sort By</label>
+             <select className="form-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="usedMB">Most Used</option>
+                <option value="usedPercent">Usage %</option>
+                <option value="fileCount">File Count</option>
+                <option value="name">Name</option>
+             </select>
+          </div>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="admin-table-wrap">
-        {loading ? (
-          <div className="drive-loading"><div className="drive-spinner" /><span>Loading…</span></div>
-        ) : (
-          <table className="admin-table">
+      <div className="nc-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="nc-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th>User Information</th>
                 <th>Role</th>
-                <th>Used / Quota</th>
-                <th>Usage</th>
-                <th>Files</th>
-                <th>Actions</th>
+                <th>Capacity</th>
+                <th>Usage Bar</th>
+                <th style={{ textAlign: 'center' }}>Files</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {(data?.data || []).map(u => (
+              {loading ? (
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: 'var(--space-12)' }}>Loading storage data...</td></tr>
+              ) : (data?.data || []).map(u => (
                 <tr key={u.userId}>
                   <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontWeight: 600 }}>{u.name || "—"}</span>
-                      {!u.storageProvisioned && (
-                        <div className="unprovisioned-warn" title="Drive storage not provisioned">
-                          <AlertTriangle size={13} />
-                          <span>Not Provisioned</span>
-                          <button
-                            className="drive-btn drive-btn-ghost"
-                            style={{ padding: "3px 10px", fontSize: "0.72rem" }}
-                            disabled={retryingUserId === u.userId}
-                            onClick={() => handleRetryProvision(u.userId, u.name)}
-                          >
-                            {retryingUserId === u.userId ? "Retrying…" : "Retry"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--nc-text-muted)" }}>{u.email}</div>
+                    <div style={{ fontWeight: 'var(--font-semibold)' }}>{u.name || "Unknown User"}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{u.email}</div>
+                    {!u.storageProvisioned && (
+                      <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-error)', fontSize: '10px' }}>
+                        <AlertTriangle size={10} /> Not Provisioned
+                        <button className="btn btn-ghost btn--sm" disabled={retryingUserId === u.userId} onClick={() => handleRetryProvision(u.userId, u.name)}>
+                          {retryingUserId === u.userId ? "..." : "Retry"}
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td>
-                    <span className="file-type-badge" style={{ color: getRoleColor(u.role), borderColor: getRoleColor(u.role) }}>
+                    <span className="badge" style={{ background: `${getRoleColor(u.role)}20`, color: getRoleColor(u.role), borderColor: getRoleColor(u.role), border: '1px solid' }}>
                       {u.role}
                     </span>
                   </td>
-                  <td style={{ fontSize: "0.8rem", color: "var(--nc-text-muted)" }}>
-                    {u.usedMB?.toFixed(1)} / {u.quotaMB} MB
+                  <td>
+                    <div style={{ fontSize: 'var(--text-sm)' }}>{u.usedMB?.toFixed(1)} MB</div>
+                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>of {u.quotaMB} MB</div>
                   </td>
-                  <td style={{ minWidth: 160 }}>
+                  <td style={{ minWidth: '180px' }}>
                     <UsageBar pct={u.usedPercent} />
                   </td>
-                  <td style={{ textAlign: "center" }}>{u.fileCount}</td>
+                  <td style={{ textAlign: 'center' }}>{u.fileCount}</td>
                   <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button 
-                        className="file-action-btn" 
-                        onClick={() => navigate(`/documents?userId=${u.userId}&userName=${encodeURIComponent(u.name || u.email)}`)} 
-                        title="Open User's Drive"
-                      >
-                        <ExternalLink size={13} /> Open Drive
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost" onClick={() => navigate(`/documents?userId=${u.userId}&userName=${encodeURIComponent(u.name || u.email)}`)} title="Open Drive">
+                        <ExternalLink size={14} />
                       </button>
-                      <button className="file-action-btn" onClick={() => setQuotaUser(u)} title="Manage quota">
-                        <Settings size={13} /> Quota
+                      <button className="btn btn-ghost" onClick={() => setQuotaUser(u)} title="Manage Quota">
+                        <Settings size={14} />
                       </button>
                     </div>
                   </td>
@@ -189,17 +194,16 @@ const StorageAdminPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {data?.pagination && data.pagination.pages > 1 && (
+          <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--space-4)' }}>
+            <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</button>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Page {page} of {data.pagination.pages}</span>
+            <button className="btn btn-ghost" disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)}>Next</button>
+          </div>
         )}
       </div>
-
-      {/* Pagination */}
-      {data?.pagination && data.pagination.pages > 1 && (
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
-          <button className="file-action-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
-          <span style={{ fontSize: "0.8rem", color: "var(--nc-text-muted)" }}>Page {page} of {data.pagination.pages}</span>
-          <button className="file-action-btn" disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)}>Next</button>
-        </div>
-      )}
 
       {quotaUser && <QuotaModal user={quotaUser} onClose={handleQuotaUpdated} />}
     </div>

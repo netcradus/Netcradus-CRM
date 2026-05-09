@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit3, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { projectApi, projectAssetUrl } from "./projectApi";
-import "./Projects.css";
+// import "./Projects.css";
+
 
 export default function ShowcasePage() {
   const [projects, setProjects] = useState([]);
@@ -45,20 +46,35 @@ export default function ShowcasePage() {
   );
 
   return (
-    <div className="showcase-page">
-      <header className="showcase-header">
-        <div>
-          <span>Netcradus</span>
-          <h1>Our Work</h1>
+    <div className="dashboard-container">
+      <header className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Project Showcase</h1>
+          <p className="subtitle">Exploring our portfolio of high-impact engineering and design projects.</p>
         </div>
-        <nav className="showcase-tabs">
-          {industries.map((item) => <button key={item} className={industry === item ? "active" : ""} onClick={() => setIndustry(item)}>{item}</button>)}
-        </nav>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          {industries.map((item) => (
+            <button 
+              key={item} 
+              className={`btn ${industry === item ? "btn-primary" : "btn-ghost"}`} 
+              onClick={() => setIndustry(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
       </header>
 
-      {featured.length > 0 && <section className="showcase-featured">{featured.map((project) => renderCard(project, true))}</section>}
-      <section className="showcase-grid">{rest.map((project) => renderCard(project))}</section>
-      {!visible.length && <div className="portfolio-empty">No showcase projects available.</div>}
+      {visible.length > 0 ? (
+        <div className="showcase-grid">
+          {visible.map((project) => renderCard(project, project.isFeatured))}
+        </div>
+      ) : (
+        <div className="nc-card" style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
+          <div style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>No projects found for this category.</div>
+          <button className="btn btn-secondary" onClick={() => setIndustry("All")}>Clear Filters</button>
+        </div>
+      )}
     </div>
   );
 }

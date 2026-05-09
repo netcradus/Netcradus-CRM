@@ -1,225 +1,144 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Handshake, Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { apiUrl } from "../../config/api";
-
-import "./Deals.css";
-import { Handshake, Plus, Search } from "lucide-react";
 
 const API = apiUrl("/api/deals");
 
 function Deals() {
   const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editModal, setEditModal] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ name: "", status: "New", value: "", assignedTo: "" });
 
-const [form, setForm] = useState({
-  name: "",
-  status: "In Progress",
-  value: "",
-  assignedTo: "",
-  date: "",
-});
-
-  // 🔥 FETCH
   const fetchDeals = async () => {
-    const res = await axios.get(API);
-    setDeals(res.data);
+    try {
+      setLoading(true);
+      const res = await axios.get(API);
+      setDeals(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchDeals();
-  }, []);
+  useEffect(() => { fetchDeals(); }, []);
 
-  // 🔥 INPUT
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // 🔥 CREATE
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await axios.post(API, form);
+    if (editingId) {
+      await axios.put(`${API}/${editingId}`, form);
+    } else {
+      await axios.post(API, form);
+    }
     fetchDeals();
     setShowModal(false);
     setForm({ name: "", status: "New", value: "", assignedTo: "" });
-  };
-
-  // 🔥 DELETE
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this deal?")) return;
-    await axios.delete(`${API}/${id}`);
-    fetchDeals();
-  };
-
-  // 🔥 UPDATE
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    await axios.put(`${API}/${editModal._id}`, editModal);
-    setEditModal(null);
-    fetchDeals();
+    setEditingId(null);
   };
 
   return (
-    <div className="nc-page deals-page">
-      {/* HERO */}
-      <div className="nc-hero">
-        <div>
-          <div className="nc-badge">
-            <Handshake size={14} />
-            <span>Netcradus Deal Room</span>
-          </div>
-          <h1 className="nc-hero-title">
-            Deals <span className="nc-gradient-text">Pipeline</span>
-          </h1>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1 className="title">Deals Room</h1>
+          <p className="subtitle">Manage sales pipeline, deal values and status.</p>
         </div>
-      </div>
-
-      {/* CONTROLS */}
-      <div className="nc-panel nc-section">
-        <div className="nc-controls">
-          <div className="deals-search">
-            <Search size={16} />
-            <input placeholder="Search deals..." />
-          </div>
-
-          <button className="nc-btn nc-btn--primary" onClick={() => setShowModal(true)}>
-            <Plus size={16} /> Add Deal
+        <div className="page-header-right">
+          <button className="btn btn-primary" onClick={() => { setEditingId(null); setForm({ name: "", status: "New", value: "", assignedTo: "" }); setShowModal(true); }}>
+            <Plus size={16} /> New Deal
           </button>
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="nc-panel nc-section">
-        <div className="nc-table-wrap">
-          <table className="nc-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Value</th>
-                <th>Assigned</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {deals.length === 0 ? (
-                <tr>
-                  <td colSpan="6">No deals found</td>
-                </tr>
-              ) : (
-                deals.map((d, i) => (
-                  <tr key={d._id}>
-                    <td>{i + 1}</td>
-                    <td>{d.name}</td>
-
-                    <td>
-                    <span className={`status ${d.status.toLowerCase().replace(" ", "-")}`}>
-                        {d.status}
-                      </span>
-                    </td>
-
-
-
-                    <td>₹ {d.value}</td>
-
-                    <td>{d.assignedTo}</td>
-                    
-
-                    <td>
-                      <button
-                        className="btn-edit"
-                        onClick={() => setEditModal(d)}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleDelete(d._id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+        <div className="nc-stat-card">
+          <span className="metric-label">Pipeline Value</span>
+          <span className="metric-value">₹ {deals.reduce((sum, d) => sum + (Number(d.value) || 0), 0).toLocaleString('en-IN')}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Active Deals</span>
+          <span className="metric-value">{deals.filter(d => d.status !== 'Lost').length}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Won Deals</span>
+          <span className="metric-value" style={{ color: 'var(--color-success)' }}>{deals.filter(d => d.status === 'Won').length}</span>
         </div>
       </div>
 
-      {/* ===== ADD MODAL ===== */}
+      <div className="nc-card">
+        <table className="nc-table">
+          <thead>
+            <tr>
+              <th>Deal Name</th>
+              <th>Status</th>
+              <th>Value</th>
+              <th>Assigned To</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>Loading deals...</td></tr>
+            ) : deals.map(d => (
+              <tr key={d._id}>
+                <td><div style={{ fontWeight: 'var(--font-semibold)' }}>{d.name}</div></td>
+                <td>
+                   <span className={`badge badge-${d.status === 'Won' ? 'success' : d.status === 'Lost' ? 'error' : 'warning'}`}>
+                    {d.status}
+                   </span>
+                </td>
+                <td style={{ fontWeight: 'var(--font-bold)' }}>₹ {Number(d.value).toLocaleString('en-IN')}</td>
+                <td>{d.assignedTo || "Unassigned"}</td>
+                <td>
+                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <button className="btn btn-ghost" onClick={() => {
+                        setEditingId(d._id);
+                        setForm({ name: d.name, status: d.status, value: d.value, assignedTo: d.assignedTo || "" });
+                        setShowModal(true);
+                      }}><Pencil size={14} /></button>
+                      <button className="btn btn-ghost" style={{ color: 'var(--color-error)' }} onClick={async () => {
+                        if(window.confirm("Delete deal?")) {
+                          await axios.delete(`${API}/${d._id}`);
+                          fetchDeals();
+                        }
+                      }}><Trash2 size={14} /></button>
+                   </div>
+                </td>
+              </tr>
+            ))}
+            {deals.length === 0 && !loading && (
+              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 'var(--space-8)' }}>No deals found</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Add Deal</h3>
-
-            <form onSubmit={handleSubmit}>
-              <input name="name" placeholder="Deal Name" onChange={handleChange} required />
-              <input name="value" placeholder="Value" onChange={handleChange} required />
-              <input name="assignedTo" placeholder="Assigned To" onChange={handleChange} required />
-
-              <select name="status" onChange={handleChange}>
-                <option>New</option>
-                <option>In Progress</option>
-                <option>Won</option>
-                <option>Lost</option>
-              </select>
-
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save</button>
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+            <div className="nc-modal-header"><h3>{editingId ? "Edit Deal" : "Add Deal"}</h3></div>
+            <form onSubmit={handleSubmit} className="form">
+              <div className="form-field">
+                <label className="form-label">Deal Name</label>
+                <input className="form-input" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ===== EDIT MODAL ===== */}
-      {editModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Edit Deal</h3>
-
-            <form onSubmit={handleUpdate}>
-              <input
-                value={editModal.name}
-                onChange={(e) =>
-                  setEditModal({ ...editModal, name: e.target.value })
-                }
-              />
-
-              <input
-                value={editModal.value}
-                onChange={(e) =>
-                  setEditModal({ ...editModal, value: e.target.value })
-                }
-              />
-
-              <input
-                value={editModal.assignedTo}
-                onChange={(e) =>
-                  setEditModal({ ...editModal, assignedTo: e.target.value })
-                }
-              />
-
-              <select
-                value={editModal.status}
-                onChange={(e) =>
-                  setEditModal({ ...editModal, status: e.target.value })
-                }
-              >
-                <option>New</option>
-                <option>In Progress</option>
-                <option>Won</option>
-                <option>Lost</option>
-              </select>
-
-              <div className="modal-actions">
-                <button onClick={() => setEditModal(null)}>Cancel</button>
-                <button className="btn-primary">Update</button>
+              <div className="form-field">
+                <label className="form-label">Deal Value (₹)</label>
+                <input className="form-input" type="number" required value={form.value} onChange={e => setForm({...form, value: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Assigned To</label>
+                <input className="form-input" value={form.assignedTo} onChange={e => setForm({...form, assignedTo: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Status</label>
+                <select className="form-select" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                  <option>New</option><option>In Progress</option><option>Won</option><option>Lost</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Deal</button>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
           </div>

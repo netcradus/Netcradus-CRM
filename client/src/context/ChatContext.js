@@ -208,6 +208,7 @@ export function ChatProvider({ children }) {
 
   const markConversationRead = useCallback(async (conversationId) => {
     if (!conversationId) return;
+    if (!socketReady) return;
 
     try {
       await emitWithAck("mark_read", { conversation_id: conversationId });
@@ -225,7 +226,7 @@ export function ChatProvider({ children }) {
     } catch (error) {
       console.error("Failed to mark messages as read", error);
     }
-  }, [currentUserId, emitWithAck]);
+  }, [currentUserId, emitWithAck, socketReady]);
 
   const createConversation = useCallback(async (participantId, options = {}) => {
     const { data } = await axios.post(
@@ -322,10 +323,10 @@ export function ChatProvider({ children }) {
   }, [onlineUsers]);
 
   useEffect(() => {
-    if (!selectedConversationId && conversations.length) {
+    if (!selectedConversationId && conversations.length && !launcherOpen) {
       setSelectedConversationId(conversations[0]._id);
     }
-  }, [conversations, selectedConversationId]);
+  }, [conversations, selectedConversationId, launcherOpen]);
 
   useEffect(() => {
     if (selectedConversationId && !messagesByConversation[selectedConversationId]) {
@@ -335,11 +336,12 @@ export function ChatProvider({ children }) {
 
   useEffect(() => {
     if (!selectedConversationId) return;
+    if (!socketReady) return;
     const conversation = conversations.find((item) => item._id === selectedConversationId);
     if (conversation?.unreadCount) {
       markConversationRead(selectedConversationId);
     }
-  }, [conversations, markConversationRead, selectedConversationId]);
+  }, [conversations, markConversationRead, selectedConversationId, socketReady]);
 
   useEffect(() => {
     if (!token) return undefined;
@@ -468,6 +470,7 @@ export function ChatProvider({ children }) {
 
     return () => {
       socket.off("socket:ready", handleReady);
+
       socket.off("connect", handleReady);
       socket.off("disconnect", handleDisconnect);
       socket.off("new_message", handleNewMessage);
@@ -480,6 +483,7 @@ export function ChatProvider({ children }) {
       socketRef.current = null;
     };
   }, [currentUserId, fetchConversations, markConversationRead, selectedConversationId, token]);
+
 
   const value = useMemo(() => ({
     conversations,

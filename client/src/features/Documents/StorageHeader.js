@@ -2,9 +2,9 @@ import React from "react";
 import { HardDrive, Files, FolderOpen, AlertTriangle } from "lucide-react";
 
 const getUsageColor = (pct) => {
-  if (pct >= 90) return "red";
-  if (pct >= 70) return "yellow";
-  return "green";
+  if (pct >= 90) return "var(--color-error)";
+  if (pct >= 70) return "var(--color-warning)";
+  return "var(--color-success)";
 };
 
 const StorageHeader = ({ storage, onUpgradeClick }) => {
@@ -16,54 +16,40 @@ const StorageHeader = ({ storage, onUpgradeClick }) => {
   const folderCount = (subFolders || []).length;
 
   return (
-    <>
-      <div className="drive-header">
-        <div className="drive-header-top">
-          <div className="drive-header-title">
-            <div className="drive-header-icon">
-              <HardDrive size={18} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)' }}>
+         <div className="nc-stat-card">
+            <span className="metric-label">Files Hosted</span>
+            <span className="metric-value">{fileCount ?? 0}</span>
+         </div>
+         <div className="nc-stat-card">
+            <span className="metric-label">Folders</span>
+            <span className="metric-value">{folderCount}</span>
+         </div>
+         <div className="nc-stat-card" style={{ flex: 2 }}>
+            <span className="metric-label">Storage Usage</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: 'var(--space-1)' }}>
+               <div style={{ flex: 1, height: '8px', background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 'var(--radius-full)', transition: 'width 0.5s ease' }} />
+               </div>
+               <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-bold)', color }}>{pct.toFixed(1)}%</span>
             </div>
-            <h1>My Drive</h1>
-          </div>
-
-          <div className="drive-header-stats">
-            <div className="drive-stat-chip">
-              <Files size={13} />
-              <strong>{fileCount ?? 0}</strong> Files
-            </div>
-            <div className="drive-stat-chip">
-              <FolderOpen size={13} />
-              <strong>{folderCount}</strong> Folders
-            </div>
-          </div>
-        </div>
-
-        <div className="drive-quota-bar-wrap">
-          <span className="drive-quota-label">
-            {usedMB?.toFixed(1) ?? "0"} MB used of {quotaMB} MB
-          </span>
-          <div className="drive-quota-track">
-            <div
-              className={`drive-quota-fill ${color}`}
-              style={{ width: `${Math.min(pct, 100)}%` }}
-            />
-          </div>
-          <span className={`drive-quota-pct ${color}`}>{pct.toFixed(1)}%</span>
-        </div>
+            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+               {usedMB?.toFixed(1) ?? "0"} MB of {quotaMB} MB used
+            </span>
+         </div>
       </div>
 
       {pct >= 90 && (
-        <div className="drive-low-banner">
-          <AlertTriangle size={16} />
-          <span>
-            Running low on storage ({pct.toFixed(1)}% used). Upgrade your quota to continue uploading.
-          </span>
-          <button className="drive-low-banner-btn" onClick={onUpgradeClick}>
-            Raise a Ticket ↗
-          </button>
+        <div className="badge badge-error" style={{ padding: 'var(--space-3) var(--space-4)', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+             <AlertTriangle size={16} />
+             <span>Running low on storage space.</span>
+          </div>
+          <button className="btn btn--sm btn-ghost" style={{ color: 'var(--color-error)' }} onClick={onUpgradeClick}>Upgrade Quota</button>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

@@ -1,109 +1,218 @@
-import React, { useState } from "react";
-import { FaBoxes } from "react-icons/fa";
-import "./PurchaseOrders.css";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { Plus, ChevronRight, Trash2, Edit } from "lucide-react";
+import { apiUrl } from "../../config/api";
+
+const emptyOrder = {
+  poNumber: "",
+  contact: "",
+  productId: "",
+  quantity: 1,
+  price: "",
+  status: "Pending",
+  orderDate: "",
+  deliveryDate: "",
+};
+
+const authHeaders = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
 const PurchaseOrders = () => {
-  const [orders, setOrders] = useState([
-    
-  ]);
-
+  const [orders, setOrders] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newOrder, setNewOrder] = useState({ id: "", vendor: "", amount: "", status: "pending", date: "" });
+  const [form, setForm] = useState(emptyOrder);
+  const [editingId, setEditingId] = useState(null);
 
-  const handleView = (id) => alert(`Viewing details of ${id}`);
-  const handleDelete = (id) => {
-    if (window.confirm(`Are you sure you want to delete ${id}?`)) {
-      setOrders(orders.filter(order => order.id !== id));
+  const fetchData = useCallback(async () => {
+    try {
+      const [ordersRes, contactsRes, productsRes] = await Promise.all([
+        axios.get(apiUrl("/api/purchase-orders")),
+        axios.get(apiUrl("/api/contacts"), authHeaders()),
+        axios.get(apiUrl("/api/products")),
+      ]);
+      setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+      setContacts(Array.isArray(contactsRes.data) ? contactsRes.data : []);
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const contactsById = useMemo(
+    () => Object.fromEntries(contacts.map((contact) => [contact._id, contact])),
+    [contacts]
+  );
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      poNumber: form.poNumber,
+      contact: form.contact,
+      products: [
+        {
+          productId: form.productId,
+          quantity: Number(form.quantity) || 1,
+          price: Number(form.price) || 0,
+        },
+      ],
+      totalAmount: (Number(form.quantity) || 1) * (Number(form.price) || 0),
+      status: form.status,
+      orderDate: form.orderDate,
+      deliveryDate: form.deliveryDate || undefined,
+    };
+
+    try {
+      if (editingId) {
+        await axios.put(apiUrl(`/api/purchase-orders/${editingId}`), payload);
+      } else {
+        await axios.post(apiUrl("/api/purchase-orders"), payload);
+      }
+      setForm(emptyOrder);
+      setEditingId(null);
+      setShowModal(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleInputChange = (e) => {
-    setNewOrder({ ...newOrder, [e.target.name]: e.target.value });
-  };
-
-  const handleAddOrder = (e) => {
-    e.preventDefault();
-    setOrders([...orders, newOrder]);
-    setNewOrder({ id: "", vendor: "", amount: "", status: "pending", date: "" });
-    setShowModal(false);
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this purchase order?")) return;
+    try {
+      await axios.delete(apiUrl(`/api/purchase-orders/${id}`));
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
-    <div className="po-container">
-      <h2 className="po-heading"><FaBoxes /> Purchase Orders</h2>
-
-      <div className="po-actions">
-        <button className="po-add-btn" onClick={() => setShowModal(true)}>
-          + Add New Purchase Order
-        </button>
+    <div className="dashboard-container" style={{ padding: "var(--space-6)" }}>
+      <div className="page-header">
+        <div className="page-header-left">
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "10px", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+            <span>Inventory</span><ChevronRight size={10} /><span>Purchase Orders</span>
+          </div>
+          <h1 className="title">Purchase Orders</h1>
+          <p className="subtitle">Track procurement records using the actual purchase order schema.</p>
+        </div>
+        <div className="page-header-right">
+          <button className="btn btn-primary" onClick={() => { setEditingId(null); setForm(emptyOrder); setShowModal(true); }}><Plus size={16} /> New PO</button>
+        </div>
       </div>
 
-      <table className="po-table">
-        <thead>
-          <tr>
-            <th>Order ID</th>
-            <th>Vendor</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-  {orders.map((order, index) => (
-    <tr key={index}>
-      <td data-label="Order ID">{order.id}</td>
-      <td data-label="Vendor">{order.vendor}</td>
-      <td data-label="Amount">{order.amount}</td>
-      <td data-label="Status">
-        <span className={`po-status ${order.status}`}>
-          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-        </span>
-      </td>
-      <td data-label="Date">{order.date}</td>
-     <td data-label="Actions" className="po-actions-cell">
-  <div className="po-button-group"> {/* Added this wrapper */}
-    <button
-      className="po-action-btn view"
-      onClick={() => handleView(order.id)}
-    >
-      View
-    </button>
-    <button
-      className="po-action-btn delete"
-      onClick={() => handleDelete(order.id)}
-    >
-      Delete
-    </button>
-  </div>
-</td>
-    </tr>
-  ))}
-</tbody>
-      </table>
+      <div className="nc-card">
+        <table className="nc-table">
+          <thead>
+            <tr><th>PO Number</th><th>Vendor Contact</th><th>Product</th><th>Quantity</th><th>Total Amount</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => {
+              const firstLine = order.products?.[0];
+              const linkedContact = contactsById[order.contact] || null;
+              return (
+                <tr key={order._id}>
+                  <td><span style={{ fontWeight: "var(--font-bold)", fontFamily: "var(--font-mono)", fontSize: "11px" }}>{order.poNumber}</span></td>
+                  <td>{linkedContact?.name || linkedContact?.email || order.contact || "—"}</td>
+                  <td>{firstLine?.productId?.name || "—"}</td>
+                  <td>{firstLine?.quantity || 0}</td>
+                  <td>{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(order.totalAmount) || 0)}</td>
+                  <td><span className={`badge badge-${order.status === "Approved" ? "success" : order.status === "Rejected" ? "error" : "warning"}`}>{order.status}</span></td>
+                  <td>
+                    <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                      <button className="btn btn-ghost" style={{ padding: "var(--space-1)" }} onClick={() => {
+                        setEditingId(order._id);
+                        setForm({
+                          poNumber: order.poNumber || "",
+                          contact: order.contact || "",
+                          productId: firstLine?.productId?._id || firstLine?.productId || "",
+                          quantity: firstLine?.quantity || 1,
+                          price: firstLine?.price || "",
+                          status: order.status || "Pending",
+                          orderDate: order.orderDate?.substring(0, 10) || "",
+                          deliveryDate: order.deliveryDate?.substring(0, 10) || "",
+                        });
+                        setShowModal(true);
+                      }}><Edit size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: "var(--space-1)", color: "var(--color-error)" }} onClick={() => handleDelete(order._id)}><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {orders.length === 0 && (
+              <tr><td colSpan="7" style={{ textAlign: "center", padding: "var(--space-10)", color: "var(--color-text-muted)" }}>No purchase orders found.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="po-modal-overlay">
-          <div className="po-modal-content">
-            <h3>Add New Purchase Order</h3>
-            <form onSubmit={handleAddOrder}>
-              <input type="text" name="id" placeholder="Order ID" value={newOrder.id} onChange={handleInputChange} required />
-              <input type="text" name="vendor" placeholder="Vendor Name" value={newOrder.vendor} onChange={handleInputChange} required />
-              <input type="text" name="amount" placeholder="Amount" value={newOrder.amount} onChange={handleInputChange} required />
-              <select name="status" value={newOrder.status} onChange={handleInputChange}>
-                {/* <p><strong>Date:</strong> {selectedOrder.date}</p>
-            <div className="po-modal-buttons">
-              <button className="po-cancel-btn" onClick={() => setShowViewModal(false)}>Close</button>
-            </div> */}
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <input type="date" name="date" value={newOrder.date} onChange={handleInputChange} required />
-              <div className="po-modal-buttons">
-                <button type="submit" className="po-add-btn">Save</button>
-                <button type="button" className="po-cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="nc-modal-content" onClick={(event) => event.stopPropagation()} style={{ width: "520px" }}>
+            <div className="nc-modal-header"><h3>{editingId ? "Edit Purchase Order" : "New Purchase Order"}</h3></div>
+            <form className="form" onSubmit={handleSubmit}>
+              <div className="form-field">
+                <label className="form-label">PO Number</label>
+                <input className="form-input" required value={form.poNumber} onChange={(event) => setForm({ ...form, poNumber: event.target.value })} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Vendor Contact</label>
+                  <select className="form-select" required value={form.contact} onChange={(event) => setForm({ ...form, contact: event.target.value })}>
+                    <option value="">Select contact</option>
+                    {contacts.map((contact) => (
+                      <option key={contact._id} value={contact._id}>{contact.name} ({contact.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Product</label>
+                  <select className="form-select" required value={form.productId} onChange={(event) => setForm({ ...form, productId: event.target.value })}>
+                    <option value="">Select product</option>
+                    {products.map((product) => (
+                      <option key={product._id} value={product._id}>{product.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Quantity</label>
+                  <input className="form-input" type="number" min="1" required value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Unit Price</label>
+                  <input className="form-input" type="number" min="0" required value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Order Date</label>
+                  <input className="form-input" type="date" required value={form.orderDate} onChange={(event) => setForm({ ...form, orderDate: event.target.value })} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Delivery Date</label>
+                  <input className="form-input" type="date" value={form.deliveryDate} onChange={(event) => setForm({ ...form, deliveryDate: event.target.value })} />
+                </div>
+              </div>
+              <div className="form-field">
+                <label className="form-label">Status</label>
+                <select className="form-select" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-6)" }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save PO</button>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
           </div>

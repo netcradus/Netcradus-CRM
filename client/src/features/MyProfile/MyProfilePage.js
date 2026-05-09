@@ -1,22 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import { User, Mail, Phone, MapPin, ShieldAlert, Download, ChevronRight, CheckCircle2 } from "lucide-react";
 import { apiUrl } from "../../config/api";
-import "./MyProfilePage.css";
 
-const emptyForm = {
-  contactNumber: "",
-  address: "",
-  emergencyContactName: "",
-  emergencyContactNumber: "",
-  personalEmail: "",
-};
+const emptyForm = { contactNumber: "", address: "", emergencyContactName: "", emergencyContactNumber: "", personalEmail: "" };
 
 const formatRole = (role = "") =>
-  role === "admin"
-    ? "Administrator"
-    : String(role || "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+  role === "admin" ? "Administrator" : String(role || "").replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 function MyProfilePage() {
   const token = localStorage.getItem("token");
@@ -30,9 +20,7 @@ function MyProfilePage() {
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(apiUrl("/api/contacts/profiles/me"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.get(apiUrl("/api/contacts/profiles/me"), { headers: { Authorization: `Bearer ${token}` } });
       setProfile(data);
       setForm({
         contactNumber: data.contactNumber || "",
@@ -41,230 +29,126 @@ function MyProfilePage() {
         emergencyContactNumber: data.emergencyContactNumber || "",
         personalEmail: data.personalEmail || "",
       });
-      setError("");
-    } catch (err) {
-      setError(err.response?.data?.message || "Unable to load your profile");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError("Unable to load profile"); }
+    finally { setLoading(false); }
   }, [token]);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  const onChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onSubmit = async (event) => {
-    event.preventDefault();
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
     try {
-      // Validate emergency contact name - no numbers allowed
-      if (form.emergencyContactName && /\d/.test(form.emergencyContactName)) {
-        setError("Emergency Contact Name should not contain numbers");
-        setMessage("");
-        return;
-      }
-      setSaving(true);
-      const { data } = await axios.put(apiUrl("/api/contacts/profiles/me"), form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMessage(data.message || "Profile updated");
-      setError("");
+      const { data } = await axios.put(apiUrl("/api/contacts/profiles/me"), form, { headers: { Authorization: `Bearer ${token}` } });
+      setMessage("Profile updated successfully");
       setProfile(data.profile);
-    } catch (err) {
-      setError(err.response?.data?.message || "Unable to save your profile");
-      setMessage("");
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError("Failed to update profile"); }
+    finally { setSaving(false); }
   };
 
   const onDownloadSalarySlip = async (slipId, filename) => {
     try {
-      const response = await axios.get(
-        apiUrl(`/api/contacts/salary-slips/${slipId}/download`),
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob",
-        }
-      );
-
-      const blobUrl = window.URL.createObjectURL(response.data);
+      const response = await axios.get(apiUrl(`/api/contacts/salary-slips/${slipId}/download`), { headers: { Authorization: `Bearer ${token}` }, responseType: "blob" });
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
-      link.href = blobUrl;
+      link.href = url;
       link.download = filename || `salary-slip.pdf`;
-      document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      setError(err.response?.data?.message || "Unable to download your salary slip");
-    }
+    } catch (err) { alert("Download failed"); }
   };
 
+  if (loading) return <div style={{ padding: 'var(--space-10)', textAlign: 'center' }}>Loading profile...</div>;
+
+  const readiness = [form.contactNumber, form.personalEmail, form.address, form.emergencyContactName, form.emergencyContactNumber].filter(Boolean).length;
+
   return (
-    <div className="my-profile-page">
-      <div className="my-profile-shell">
-        <div className="my-profile-header">
-          <div>
-            <p className="my-profile-kicker">Personal Workspace</p>
-            <h1>My Profile</h1>
-            <p className="my-profile-copy">
-              Keep your personal contact details up to date for HR and internal records.
-            </p>
-          </div>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>User</span><ChevronRight size={10} /><span>My Profile</span>
+           </div>
+           <h1 className="title">My Profile</h1>
+           <p className="subtitle">Manage your personal information and view payroll history.</p>
         </div>
+      </div>
 
-        {error && <div className="my-profile-alert error">{error}</div>}
-        {message && <div className="my-profile-alert success">{message}</div>}
-
-        {loading ? (
-          <div className="my-profile-card">Loading your profile...</div>
-        ) : (
-          <div className="my-profile-grid">
-            <section className="my-profile-card profile-summary">
-              <h2>Account Summary</h2>
-              <div className="summary-row">
-                <span>Name</span>
-                <strong>{profile?.name || "-"}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Work Email</span>
-                <strong>{profile?.email || "-"}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Role</span>
-                <strong>{formatRole(profile?.linkedUser?.role)}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Department</span>
-                <strong>{profile?.department || "General"}</strong>
-              </div>
-              <div className="summary-progress">
-                <div className="summary-progress-head">
-                  <span>Profile readiness</span>
-                  <strong>
-                    {
-                      [
-                        form.contactNumber,
-                        form.personalEmail,
-                        form.address,
-                        form.emergencyContactName,
-                        form.emergencyContactNumber,
-                      ].filter(Boolean).length
-                    }
-                    /5
-                  </strong>
-                </div>
-                <div className="summary-progress-bar">
-                  <span
-                    style={{
-                      width: `${
-                        ([
-                          form.contactNumber,
-                          form.personalEmail,
-                          form.address,
-                          form.emergencyContactName,
-                          form.emergencyContactNumber,
-                        ].filter(Boolean).length /
-                          5) *
-                        100
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <form className="my-profile-card my-profile-form" onSubmit={onSubmit}>
-              <p className="my-profile-intro">
-                Complete your profile so HR can always reach you with the right personal and
-                emergency contact details.
-              </p>
-              <h2>Personal Details</h2>
-              <label>
-                Contact Number
-                <input name="contactNumber" value={form.contactNumber} onChange={onChange} />
-              </label>
-              <label>
-                Personal Email
-                <input
-                  name="personalEmail"
-                  type="email"
-                  value={form.personalEmail}
-                  onChange={onChange}
-                />
-              </label>
-              <label>
-                Emergency Contact Name
-                <input
-                  name="emergencyContactName"
-                  value={form.emergencyContactName}
-                  onChange={onChange}
-                />
-              </label>
-              <label>
-                Emergency Contact Number
-                <input
-                  name="emergencyContactNumber"
-                  value={form.emergencyContactNumber}
-                  onChange={onChange}
-                />
-              </label>
-              <label className="full-width">
-                Address
-                <textarea name="address" value={form.address} onChange={onChange} rows="5" />
-              </label>
-              <button type="submit" className="my-profile-save" disabled={saving}>
-                {saving ? "Saving..." : "Save My Details"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {!loading && (
-          <section className="my-profile-card my-salary-slips">
-            <div className="my-salary-slips-head">
-              <div>
-                <h2>My Salary Slips</h2>
-                <p className="my-profile-copy">
-                  Download the salary slips generated for your account.
-                </p>
-              </div>
-            </div>
-            <div className="my-salary-slips-list">
-              {profile?.salarySlips?.length ? (
-                profile.salarySlips.map((slip, index) => (
-                  <div key={`${slip.filename}-${index}`} className="my-salary-slip-item">
-                    <div>
-                      <strong>
-                        {slip.month || "Month"} {slip.year || ""}
-                      </strong>
-                      <span>
-                        Gross Pay: Rs. {Number(slip.grossPay || 0).toLocaleString("en-IN")}
-                      </span>
-                      <span>
-                        Net Pay: Rs. {Number(slip.netPay || 0).toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="my-salary-slip-download"
-                      onClick={() => onDownloadSalarySlip(slip._id, slip.filename)}
-                    >
-                      Download Slip
-                    </button>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 'var(--space-6)' }}>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="nc-card" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
+               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-bg-elevated)', margin: '0 auto var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-3xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-accent)' }}>
+                  {profile?.name?.[0]}
+               </div>
+               <h3 style={{ marginBottom: 'var(--space-1)' }}>{profile?.name}</h3>
+               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>{formatRole(profile?.linkedUser?.role)}</p>
+               <div className="badge badge-info">{profile?.department || "General"}</div>
+               
+               <div style={{ marginTop: 'var(--space-6)', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: '11px' }}>
+                     <span color="var(--color-text-muted)">Profile Readiness</span>
+                     <span style={{ fontWeight: 'var(--font-bold)' }}>{readiness * 20}%</span>
                   </div>
-                ))
-              ) : (
-                <p className="my-profile-copy">No salary slips are available yet.</p>
-              )}
+                  <div style={{ height: '4px', background: 'var(--color-bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
+                     <div style={{ width: `${readiness * 20}%`, height: '100%', background: 'var(--color-accent)', transition: 'width 0.3s ease' }} />
+                  </div>
+               </div>
             </div>
-          </section>
-        )}
+
+            <div className="nc-card" style={{ padding: 'var(--space-6)' }}>
+               <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Salary Slips</h3>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  {profile?.salarySlips?.map((slip, i) => (
+                    <div key={i} className="nc-card nc-card--interactive" style={{ padding: 'var(--space-3)', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                             <span style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-sm)' }}>{slip.month} {slip.year}</span>
+                             <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Net: ₹{Number(slip.netPay || 0).toLocaleString()}</span>
+                          </div>
+                          <button className="btn btn-ghost" style={{ padding: 'var(--space-1)' }} onClick={() => onDownloadSalarySlip(slip._id, slip.filename)}><Download size={14} /></button>
+                       </div>
+                    </div>
+                  ))}
+                  {(!profile?.salarySlips || profile.salarySlips.length === 0) && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textAlign: 'center' }}>No slips available.</p>}
+               </div>
+            </div>
+         </div>
+
+         <div className="nc-card" style={{ padding: 'var(--space-8)' }}>
+            <h3 style={{ marginBottom: 'var(--space-6)' }}>Personal Details</h3>
+            <form className="form" onSubmit={onSubmit}>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
+                  <div className="form-field">
+                     <label className="form-label">Work Email</label>
+                     <input className="form-input" disabled value={profile?.email || ""} />
+                  </div>
+                  <div className="form-field">
+                     <label className="form-label">Personal Email</label>
+                     <input className="form-input" type="email" value={form.personalEmail} onChange={e => setForm({...form, personalEmail: e.target.value})} />
+                  </div>
+                  <div className="form-field">
+                     <label className="form-label">Contact Number</label>
+                     <input className="form-input" value={form.contactNumber} onChange={e => setForm({...form, contactNumber: e.target.value})} />
+                  </div>
+                  <div className="form-field" />
+                  <div className="form-field">
+                     <label className="form-label">Emergency Contact Name</label>
+                     <input className="form-input" value={form.emergencyContactName} onChange={e => setForm({...form, emergencyContactName: e.target.value})} />
+                  </div>
+                  <div className="form-field">
+                     <label className="form-label">Emergency Contact Number</label>
+                     <input className="form-input" value={form.emergencyContactNumber} onChange={e => setForm({...form, emergencyContactNumber: e.target.value})} />
+                  </div>
+               </div>
+               <div className="form-field" style={{ marginTop: 'var(--space-4)' }}>
+                  <label className="form-label">Permanent Address</label>
+                  <textarea className="form-input" rows={4} value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+               </div>
+               
+               <div style={{ marginTop: 'var(--space-8)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Update Profile"}</button>
+               </div>
+            </form>
+         </div>
       </div>
     </div>
   );

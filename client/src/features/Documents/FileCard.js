@@ -19,37 +19,44 @@ const FileCard = ({ doc, storage, onView, onDelete, onRename, onMove }) => {
 
   return (
     <>
-      <div className="file-card" onClick={onView}>
+      <div className="nc-card nc-card--interactive" onClick={onView} style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', position: 'relative' }}>
         {/* Thumbnail */}
-        <div className="file-card-thumb">
+        <div style={{ width: '100%', aspectRatio: '16/10', background: 'var(--color-bg-base)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           {isImage(doc.mimeType) ? (
-            <img src={getViewUrl(doc._id)} alt={doc.originalName} loading="lazy" />
+            <img src={getViewUrl(doc._id)} alt={doc.originalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
           ) : (
-            <span className="file-type-icon">{type.icon}</span>
+            <span style={{ fontSize: '32px' }}>{type.icon}</span>
           )}
         </div>
 
-        <div className="file-card-name" title={doc.originalName}>{doc.originalName}</div>
-        <div className="file-card-meta">{formatBytes(doc.fileSizeBytes)} · {formatDate(doc.uploadedAt)}</div>
+        <div style={{ minWidth: 0 }}>
+           <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.originalName}>{doc.originalName}</div>
+           <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{formatBytes(doc.fileSizeBytes)} · {formatDate(doc.uploadedAt)}</div>
+        </div>
 
-        {/* Hover action buttons */}
-        <div className="file-card-actions" onClick={e => e.stopPropagation()}>
-          <button className="file-action-btn" onClick={onView} title="View"><Eye size={13} /></button>
-          <a className="file-action-btn" href={getDownloadUrl(doc._id)} download={doc.originalName} title="Download" onClick={e => e.stopPropagation()}>
-            <Download size={13} />
-          </a>
-          <div style={{ position: "relative" }} ref={menuRef}>
-            <button className="file-action-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(m => !m); }} title="More">
-              <MoreVertical size={13} />
-            </button>
-            {showMenu && (
-              <div className="folder-context-menu" style={{ bottom: "100%", top: "auto" }}>
-                <button onClick={() => { setShowRename(true); setShowMenu(false); }}><Pencil size={12} /> Rename</button>
-                <button onClick={() => { setShowMove(true); setShowMenu(false); }}><FolderInput size={12} /> Move</button>
-                <button className="danger" onClick={() => { onDelete(); setShowMenu(false); }}><Trash2 size={12} /> Delete</button>
-              </div>
-            )}
-          </div>
+        <div style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', display: 'flex', gap: '2px' }} onClick={e => e.stopPropagation()}>
+           <button className="btn btn--sm btn-ghost" style={{ width: '28px', padding: 0, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }} onClick={(e) => { e.stopPropagation(); setShowMenu(m => !m); }}>
+              <MoreVertical size={12} />
+           </button>
+           {showMenu && (
+             <div style={{
+               position: 'absolute',
+               right: '0',
+               top: '100%',
+               background: 'var(--color-bg-elevated)',
+               border: '1px solid var(--color-border)',
+               borderRadius: 'var(--radius-md)',
+               boxShadow: 'var(--shadow-lg)',
+               zIndex: 100,
+               minWidth: '140px',
+               overflow: 'hidden',
+               marginTop: '4px'
+             }} ref={menuRef}>
+               <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px' }} onClick={() => { setShowRename(true); setShowMenu(false); }}><Pencil size={12} /> Rename</button>
+               <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px' }} onClick={() => { setShowMove(true); setShowMenu(false); }}><FolderInput size={12} /> Move</button>
+               <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px', color: 'var(--color-error)' }} onClick={() => { onDelete(); setShowMenu(false); }}><Trash2 size={12} /> Delete</button>
+             </div>
+           )}
         </div>
       </div>
 

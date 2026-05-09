@@ -1,25 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Lock, LockOpen, Pencil, Trash2 } from "lucide-react";
+import { Copy, Lock, LockOpen, Pencil, Trash2, ShieldCheck, Plus, Search, ChevronRight, FileText, Download, Printer, Eye } from "lucide-react";
+
 import { apiUrl } from "../../config/api";
-import "./PasswordManager.css";
 
-const EMPTY_FORM = {
-  accountName: "",
-  username: "",
-  userEmail: "",
-  password: "",
-  confirmPassword: "",
-  description: "",
-};
-
+const EMPTY_FORM = { accountName: "", username: "", userEmail: "", password: "", confirmPassword: "", description: "" };
 const MASKED = "••••••••••••";
-
-const formatDateTime = (value) => {
-  if (!value) return "N/A";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
-};
 
 function PasswordManager() {
   const [rows, setRows] = useState([]);
@@ -35,502 +21,215 @@ function PasswordManager() {
   const [showEditor, setShowEditor] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [verifyState, setVerifyState] = useState({
-    open: false,
-    password: "",
-    error: "",
-    attemptsRemaining: 3,
-  });
+  const [verifyState, setVerifyState] = useState({ open: false, password: "", error: "", attemptsRemaining: 3 });
   const [pendingAction, setPendingAction] = useState(null);
   const [reAuthToken, setReAuthToken] = useState("");
   const [unlockedRows, setUnlockedRows] = useState({});
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
-
   const fetchRows = useCallback(async () => {
-    setLoading(true);
-    setError("");
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        q: query,
-        sortBy,
-        order,
-      });
-      const response = await fetch(apiUrl(`/api/password-manager/list?${params.toString()}`), {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to load password credentials.");
+      setLoading(true);
+      const params = new URLSearchParams({ page: String(page), limit: String(limit), q: query, sortBy, order });
+      const response = await fetch(apiUrl(`/api/password-manager/list?${params}`), { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const payload = await response.json();
       setRows(payload.rows || []);
       setTotal(payload.total || 0);
-    } catch (fetchError) {
-      setError(fetchError.message || "Unable to load password credentials.");
-    } finally {
-      setLoading(false);
+    } catch (err) { setError("Failed to load credentials"); }
+    finally { setLoading(false); }
+  }, [page, limit, query, sortBy, order]);
+
+  useEffect(() => { fetchRows(); }, [fetchRows]);
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    const response = await fetch(apiUrl("/api/password-manager/verify-password"), {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: JSON.stringify({ password: verifyState.password })
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      setVerifyState(s => ({ ...s, error: payload.message, attemptsRemaining: payload.attemptsRemaining }));
+      return;
     }
-  }, [limit, order, page, query, sortBy]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchRows();
-    }, 250);
-    return () => clearTimeout(timeout);
-  }, [fetchRows]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setUnlockedRows((current) => {
-        const next = { ...current };
-        let changed = false;
-        Object.entries(next).forEach(([key, value]) => {
-          if (new Date(value.expiresAt).getTime() <= Date.now()) {
-            delete next[key];
-            changed = true;
-          }
-        });
-        return changed ? next : current;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const handleBeforePrint = () => setIsPrinting(true);
-    const handleAfterPrint = () => setIsPrinting(false);
-    window.addEventListener("beforeprint", handleBeforePrint);
-    window.addEventListener("afterprint", handleAfterPrint);
-    return () => {
-      window.removeEventListener("beforeprint", handleBeforePrint);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, []);
-
-  const visibleRows = useMemo(() => {
-    if (statusFilter === "all") return rows;
-    return rows.filter((row) => (statusFilter === "unlocked" ? Boolean(unlockedRows[row._id]) : !unlockedRows[row._id]));
-  }, [rows, statusFilter, unlockedRows]);
-
-  const openProtectedAction = (type, row) => {
-    setPendingAction({ type, row });
-    setVerifyState({ open: true, password: "", error: "", attemptsRemaining: 3 });
-  };
-
-  const closeVerify = () => {
+    const token = payload.reAuthToken;
+    const action = pendingAction;
     setVerifyState({ open: false, password: "", error: "", attemptsRemaining: 3 });
     setPendingAction(null);
-  };
-
-  const openEditor = (row = null, unlockedPassword = "") => {
-    setEditingRow(row);
-    setForm(
-      row
-        ? {
-            accountName: row.accountName || "",
-            username: row.username || "",
-            userEmail: row.userEmail || "",
-            password: unlockedPassword || "",
-            confirmPassword: unlockedPassword || "",
-            description: row.description || "",
-          }
-        : EMPTY_FORM
-    );
-    setShowEditor(true);
-  };
-
-  const verifyPassword = async () => {
-    const response = await fetch(apiUrl("/api/password-manager/verify-password"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ password: verifyState.password }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setVerifyState((current) => ({
-        ...current,
-        error: payload.message || "Verification failed.",
-        attemptsRemaining: payload.attemptsRemaining ?? current.attemptsRemaining,
-      }));
-      return null;
-    }
-    setReAuthToken(payload.reAuthToken);
-    return payload.reAuthToken;
-  };
-
-  const fetchUnlockedValue = async (id, token) => {
-    const response = await fetch(apiUrl(`/api/password-manager/view/${id}`), {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-        "X-ReAuth-Token": token,
-      },
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || "Unable to unlock credential.");
-    return payload;
-  };
-
-  const runProtectedAction = async (action, token) => {
-    if (!action) return;
+    
     if (action.type === "unlock") {
-      const payload = await fetchUnlockedValue(action.row._id, token);
-      setUnlockedRows((current) => ({ ...current, [action.row._id]: payload }));
-      return;
-    }
-    if (action.type === "edit") {
-      const payload = await fetchUnlockedValue(action.row._id, token);
-      openEditor(action.row, payload.password);
-      return;
-    }
-    if (action.type === "delete") {
-      const response = await fetch(apiUrl(`/api/password-manager/delete/${action.row._id}`), {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "X-ReAuth-Token": token,
-        },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to delete credential.");
-      fetchRows();
+      const res = await fetch(apiUrl(`/api/password-manager/view/${action.row._id}`), { headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "X-ReAuth-Token": token } });
+      const data = await res.json();
+      setUnlockedRows(c => ({ ...c, [action.row._id]: data }));
+    } else if (action.type === "edit") {
+       const res = await fetch(apiUrl(`/api/password-manager/view/${action.row._id}`), { headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "X-ReAuth-Token": token } });
+       const data = await res.json();
+       setReAuthToken(token);
+       setEditingRow(action.row);
+       setForm({ ...action.row, password: data.password, confirmPassword: data.password });
+       setShowEditor(true);
+    } else if (action.type === "delete") {
+       await fetch(apiUrl(`/api/password-manager/delete/${action.row._id}`), { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "X-ReAuth-Token": token } });
+       fetchRows();
     }
   };
 
-  const handleVerifySubmit = async (event) => {
-    event.preventDefault();
-    try {
-      const token = await verifyPassword();
-      if (!token) return;
-      const action = pendingAction;
-      closeVerify();
-      await runProtectedAction(action, token);
-    } catch (verifyError) {
-      setVerifyState((current) => ({ ...current, error: verifyError.message || "Verification failed." }));
-    }
+  const submitEditor = async (e) => {
+    e.preventDefault();
+    const endpoint = editingRow ? `/api/password-manager/update/${editingRow._id}` : "/api/password-manager/create";
+    await fetch(apiUrl(endpoint), {
+      method: editingRow ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}`, ...(reAuthToken ? { "X-ReAuth-Token": reAuthToken } : {}) },
+      body: JSON.stringify(form)
+    });
+    setShowEditor(false);
+    fetchRows();
   };
 
-  const submitEditor = async (event) => {
-    event.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      setError("Password and confirm password must match.");
-      return;
-    }
-    try {
-      const endpoint = editingRow
-        ? `/api/password-manager/update/${editingRow._id}`
-        : "/api/password-manager/create";
-      const response = await fetch(apiUrl(endpoint), {
-        method: editingRow ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          ...(editingRow ? { "X-ReAuth-Token": reAuthToken } : {}),
-        },
-        body: JSON.stringify({
-          accountName: form.accountName,
-          username: form.username,
-          userEmail: form.userEmail,
-          password: form.password,
-          description: form.description,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to save credential.");
-      setShowEditor(false);
-      setEditingRow(null);
-      setForm(EMPTY_FORM);
-      fetchRows();
-    } catch (submitError) {
-      setError(submitError.message || "Unable to save credential.");
-    }
-  };
-
-  const exportCsv = () => {
-    const content = ["Account Name,Username,User Email", ...visibleRows.map((row) => `"${row.accountName}","${row.username}","${row.userEmail}"`)].join("\n");
-    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "password-manager.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const copyPassword = async (value) => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      setError("Unable to copy password.");
-    }
-  };
-
-  const toggleSort = (field) => {
-    if (sortBy === field) {
-      setOrder((current) => (current === "asc" ? "desc" : "asc"));
-      return;
-    }
-    setSortBy(field);
-    setOrder("asc");
-  };
+  const visibleRows = statusFilter === 'all' ? rows : rows.filter(r => statusFilter === 'unlocked' ? !!unlockedRows[r._id] : !unlockedRows[r._id]);
 
   return (
-    <section className="password-manager">
-      <div className="password-manager-hero">
-        <div>
-          <p className="password-manager-breadcrumb">Security / Password Manager</p>
-          <h1>Password Manager</h1>
-          <p>Store account name, username, email, and password safely. Only passwords require re-verification to view.</p>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>Security</span><ChevronRight size={10} /><span>Vault</span>
+           </div>
+           <h1 className="title">Password Manager</h1>
+           <p className="subtitle">Securely store and manage shared team credentials with end-to-end encryption.</p>
         </div>
-        <button className="pm-primary-btn" onClick={() => openEditor()}>Add New Password</button>
+        <div className="page-header-right">
+           <button className="btn btn-primary" onClick={() => { setEditingRow(null); setForm(EMPTY_FORM); setShowEditor(true); }}><Plus size={16} /> New Credential</button>
+        </div>
       </div>
 
-      <div className="password-manager-toolbar">
-        <input
-          type="search"
-          placeholder="Search by account, username, or email"
-          value={query}
-          onChange={(event) => {
-            setPage(1);
-            setQuery(event.target.value);
-          }}
-        />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="all">All</option>
-          <option value="locked">Locked</option>
-          <option value="unlocked">Unlocked</option>
-        </select>
-        <select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-        </select>
-        <button className="pm-secondary-btn" onClick={exportCsv}>Export CSV</button>
-        <button className="pm-secondary-btn" onClick={() => window.print()}>Print</button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+         <div className="nc-stat-card"><span className="metric-label">Total Vault Items</span><span className="metric-value">{total}</span></div>
+         <div className="nc-stat-card"><span className="metric-label">Unlocked Items</span><span className="metric-value" style={{ color: 'var(--color-success)' }}>{Object.keys(unlockedRows).length}</span></div>
+         <div className="nc-stat-card"><span className="metric-label">Security Health</span><span className="metric-value" style={{ color: 'var(--color-info)' }}>Strong</span></div>
       </div>
 
-      {error && <div className="pm-alert">{error}</div>}
+      <div className="nc-card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)', display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+         <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <input className="form-input" style={{ paddingLeft: '36px' }} placeholder="Search accounts, usernames..." value={query} onChange={e => setQuery(e.target.value)} />
+         </div>
+         <select className="form-select" style={{ width: '160px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">All Items</option><option value="locked">Locked</option><option value="unlocked">Unlocked</option>
+         </select>
+         <button className="btn btn-ghost" onClick={() => window.print()}><Printer size={16} /></button>
+         <button className="btn btn-ghost"><Download size={16} /></button>
+      </div>
 
-      <div className="pm-data-shell">
-        {loading ? (
-          <div className="pm-state">Loading...</div>
-        ) : (
-          <>
-            <table className="pm-table">
-              <thead>
-                <tr>
-                  <th onClick={() => toggleSort("accountName")}>Account Name</th>
-                  <th onClick={() => toggleSort("username")}>Username</th>
-                  <th onClick={() => toggleSort("userEmail")}>User Email</th>
-                  <th>Notes</th>
-                  <th>Password</th>
-                  <th>Locked</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="pm-state">No credentials found.</td>
-                  </tr>
-                ) : (
-                  visibleRows.map((row) => {
-                    const unlocked = unlockedRows[row._id];
-                    const passwordText = unlocked && !isPrinting ? unlocked.password : MASKED;
-                    return (
-                      <tr key={row._id}>
-                        <td>{row.accountName}</td>
-                        <td>{row.username}</td>
-                        <td>{row.userEmail}</td>
-                        <td>{row.description || "N/A"}</td>
-                        <td>
-                          <div className="pm-password-cell">
-                            <span>{passwordText}</span>
-                            {unlocked && !isPrinting && (
-                              <>
-                                <button type="button" className="pm-icon-btn" onClick={() => copyPassword(unlocked.password)} aria-label="Copy password">
-                                  <Copy size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="pm-icon-btn"
-                                  onClick={() =>
-                                    setUnlockedRows((current) => {
-                                      const next = { ...current };
-                                      delete next[row._id];
-                                      return next;
-                                    })
-                                  }
-                                >
-                                  Lock Now
-                                </button>
-                              </>
-                            )}
-                          </div>
-                          {unlocked && !isPrinting && <small className="pm-unlock-meta">Unlocked at: {formatDateTime(unlocked.unlockedAt)}</small>}
-                        </td>
-                        <td>
-                          <div className="pm-actions">
-                            <button type="button" className="pm-icon-btn" onClick={() => openProtectedAction("unlock", row)}>
-                              {unlocked ? <LockOpen size={16} color="#10b981" /> : <Lock size={16} color="#3b82f6" />}
-                            </button>
-                            <button type="button" className="pm-icon-btn" onClick={() => openProtectedAction("edit", row)}>
-                              <Pencil size={16} color="#3b82f6" />
-                            </button>
-                            <button
-                              type="button"
-                              className="pm-icon-btn"
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this password entry?")) {
-                                  openProtectedAction("delete", row);
-                                }
-                              }}
-                            >
-                              <Trash2 size={16} color="#ef4444" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+      <div className="nc-card">
+         <table className="nc-table">
+            <thead>
+               <tr><th>Account</th><th>Username / Email</th><th>Password</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+               {visibleRows.map((row) => {
+                 const unlocked = unlockedRows[row._id];
+                 return (
+                   <tr key={row._id}>
+                      <td>
+                         <div style={{ fontWeight: 'var(--font-semibold)' }}>{row.accountName}</div>
+                         <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.description || "No notes"}</div>
+                      </td>
+                      <td>
+                         <div style={{ fontSize: 'var(--text-sm)' }}>{row.username}</div>
+                         <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.userEmail}</div>
+                      </td>
+                      <td>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', letterSpacing: '2px' }}>{unlocked ? unlocked.password : MASKED}</span>
+                            {unlocked && <button className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => navigator.clipboard.writeText(unlocked.password)}><Copy size={12} /></button>}
+                         </div>
+                      </td>
+                      <td>
+                         <span className={`badge badge-${unlocked ? 'success' : 'ghost'}`} onClick={() => setPendingAction({ type: 'unlock', row })} style={{ cursor: 'pointer' }}>
+                            {unlocked ? <LockOpen size={10} style={{ marginRight: '4px' }} /> : <Lock size={10} style={{ marginRight: '4px' }} />}
+                            {unlocked ? 'Unlocked' : 'Locked'}
+                         </span>
+                      </td>
+                      <td>
+                         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <button className="btn btn-ghost" onClick={() => { setPendingAction({ type: 'unlock', row }); setVerifyState(s => ({ ...s, open: true })); }}><Eye size={14} /></button>
+                            <button className="btn btn-ghost" onClick={() => { setPendingAction({ type: 'edit', row }); setVerifyState(s => ({ ...s, open: true })); }}><Pencil size={14} /></button>
+                            <button className="btn btn-ghost" style={{ color: 'var(--color-error)' }} onClick={() => { if(window.confirm("Delete?")) { setPendingAction({ type: 'delete', row }); setVerifyState(s => ({ ...s, open: true })); } }}><Trash2 size={14} /></button>
+                         </div>
+                      </td>
+                   </tr>
+                 );
+               })}
+               {visibleRows.length === 0 && !loading && (
+                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>No vault items found.</td></tr>
+               )}
+            </tbody>
+         </table>
+      </div>
 
-            <div className="pm-mobile-list">
-              {visibleRows.map((row) => {
-                const unlocked = unlockedRows[row._id];
-                const passwordText = unlocked && !isPrinting ? unlocked.password : MASKED;
-                return (
-                  <article key={row._id} className="pm-mobile-card">
-                    <div className="pm-mobile-line"><span>Account</span><strong>{row.accountName}</strong></div>
-                    <div className="pm-mobile-line"><span>Username</span><strong>{row.username}</strong></div>
-                    <div className="pm-mobile-line"><span>Email</span><strong>{row.userEmail}</strong></div>
-                    <div className="pm-mobile-line"><span>Notes</span><strong>{row.description || "N/A"}</strong></div>
-                    <div className="pm-mobile-line"><span>Password</span><strong>{passwordText}</strong></div>
-                    <div className="pm-actions">
-                      <button type="button" className="pm-icon-btn" onClick={() => openProtectedAction("unlock", row)}>
-                        {unlocked ? <LockOpen size={16} color="#10b981" /> : <Lock size={16} color="#3b82f6" />}
-                      </button>
-                      <button type="button" className="pm-icon-btn" onClick={() => openProtectedAction("edit", row)}>
-                        <Pencil size={16} color="#3b82f6" />
-                      </button>
-                      <button
-                        type="button"
-                        className="pm-icon-btn"
-                        onClick={() => {
-                          if (window.confirm("Are you sure you want to delete this password entry?")) {
-                            openProtectedAction("delete", row);
-                          }
-                        }}
-                      >
-                        <Trash2 size={16} color="#ef4444" />
-                      </button>
+      {verifyState.open && createPortal(
+        <div className="nc-modal-overlay" onClick={() => setVerifyState(s => ({ ...s, open: false }))}>
+           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
+              <div className="nc-modal-header"><h3>Confirm Identity</h3></div>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-6)' }}>Please enter your master password to proceed with this sensitive action.</p>
+              <form className="form" onSubmit={handleVerifySubmit}>
+                 <div className="form-field">
+                    <label className="form-label">Master Password</label>
+                    <input className="form-input" type="password" required value={verifyState.password} onChange={e => setVerifyState(s => ({ ...s, password: e.target.value }))} />
+                    {verifyState.error && <span className="form-error">{verifyState.error}</span>}
+                 </div>
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Unlock Vault</button>
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setVerifyState(s => ({ ...s, open: false }))}>Cancel</button>
+                 </div>
+              </form>
+           </div>
+        </div>, document.body
+      )}
+
+      {showEditor && createPortal(
+        <div className="nc-modal-overlay" onClick={() => setShowEditor(false)}>
+           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px' }}>
+              <div className="nc-modal-header"><h3>{editingRow ? 'Edit Credential' : 'New Credential'}</h3></div>
+              <form className="form" onSubmit={submitEditor}>
+                 <div className="form-field">
+                    <label className="form-label">Account Name</label>
+                    <input className="form-input" required value={form.accountName} onChange={e => setForm({...form, accountName: e.target.value})} />
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                    <div className="form-field">
+                       <label className="form-label">Username</label>
+                       <input className="form-input" required value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="pm-pagination">
-        <span>Showing {total === 0 ? 0 : (page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}</span>
-        <div className="pm-pagination-actions">
-          <button type="button" className="pm-secondary-btn" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Prev</button>
-          <span>{page} / {totalPages}</span>
-          <button type="button" className="pm-secondary-btn" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button>
-        </div>
-      </div>
-
-      {verifyState.open &&
-        createPortal(
-          <div className="pm-modal-backdrop">
-            <div className="pm-modal">
-              <h3>Verify Your Identity</h3>
-              <p>To view or manage this password, please enter your super user password.</p>
-              <form onSubmit={handleVerifySubmit}>
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="Enter password"
-                  value={verifyState.password}
-                  onChange={(event) => setVerifyState((current) => ({ ...current, password: event.target.value }))}
-                  required
-                />
-                <small>{verifyState.attemptsRemaining} attempts remaining</small>
-                {verifyState.error && <p className="pm-alert pm-alert-inline">{verifyState.error}</p>}
-                <div className="pm-modal-actions">
-                  <button type="button" className="pm-secondary-btn" onClick={closeVerify}>Cancel</button>
-                  <button type="submit" className="pm-primary-btn">Verify & Unlock</button>
-                </div>
+                    <div className="form-field">
+                       <label className="form-label">Email</label>
+                       <input className="form-input" type="email" value={form.userEmail} onChange={e => setForm({...form, userEmail: e.target.value})} />
+                    </div>
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                    <div className="form-field">
+                       <label className="form-label">Password</label>
+                       <input className="form-input" type="text" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+                    </div>
+                    <div className="form-field">
+                       <label className="form-label">Confirm Password</label>
+                       <input className="form-input" type="text" required value={form.confirmPassword} onChange={e => setForm({...form, confirmPassword: e.target.value})} />
+                    </div>
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Notes</label>
+                    <textarea className="form-input" rows={2} value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                 </div>
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Item</button>
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowEditor(false)}>Cancel</button>
+                 </div>
               </form>
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {showEditor &&
-        createPortal(
-          <div className="pm-modal-backdrop">
-            <div className="pm-modal pm-modal-wide">
-              <h3>{editingRow ? "Edit Password Entry" : "Add Password Entry"}</h3>
-              <form className="pm-form" onSubmit={submitEditor}>
-                <label>
-                  <span>Account Name</span>
-                  <input value={form.accountName} onChange={(event) => setForm((current) => ({ ...current, accountName: event.target.value }))} required />
-                </label>
-                <label>
-                  <span>Username</span>
-                  <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required />
-                </label>
-                <label>
-                  <span>User Email</span>
-                  <input type="email" value={form.userEmail} onChange={(event) => setForm((current) => ({ ...current, userEmail: event.target.value }))} required />
-                </label>
-                <label>
-                  <span>Password</span>
-                  <input
-                    type="text"
-                    autoComplete={editingRow ? "current-password" : "new-password"}
-                    value={form.password}
-                    onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label>
-                  <span>Confirm Password</span>
-                  <input
-                    type="text"
-                    autoComplete="new-password"
-                    value={form.confirmPassword}
-                    onChange={(event) => setForm((current) => ({ ...current, confirmPassword: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label className="pm-form-wide">
-                  <span>Description / Notes</span>
-                  <textarea
-                    placeholder="Add optional notes like client portal, hosting login, or internal remarks"
-                    value={form.description}
-                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  />
-                </label>
-                <div className="pm-modal-actions pm-form-wide">
-                  <button type="button" className="pm-secondary-btn" onClick={() => setShowEditor(false)}>Cancel</button>
-                  <button type="submit" className="pm-primary-btn">{editingRow ? "Save Changes" : "Create Entry"}</button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
-    </section>
+           </div>
+        </div>, document.body
+      )}
+    </div>
   );
 }
 

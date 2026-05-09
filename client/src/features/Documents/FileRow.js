@@ -21,35 +21,46 @@ const FileRow = ({ doc, storage, onView, onDelete, onRename, onMove }) => {
     <>
       <tr>
         <td>
-          <div className="file-row-name" onClick={onView} title="View file">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }} onClick={onView} title="View file">
             <span style={{ fontSize: "1.2rem" }}>{type.icon}</span>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
+            <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--color-text-primary)' }}>
               {doc.originalName}
             </span>
           </div>
         </td>
         <td>
-          <span className="file-type-badge" style={{ color: type.color, borderColor: type.color }}>
+          <span className="badge" style={{ color: type.color, background: 'var(--color-bg-base)', border: `1px solid ${type.color}40` }}>
             {type.label}
           </span>
         </td>
-        <td style={{ color: "var(--nc-text-muted)", fontSize: "0.8rem" }}>{formatBytes(doc.fileSizeBytes)}</td>
-        <td style={{ color: "var(--nc-text-muted)", fontSize: "0.8rem" }}>{formatDate(doc.uploadedAt)}</td>
+        <td style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)" }}>{formatBytes(doc.fileSizeBytes)}</td>
+        <td style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)" }}>{formatDate(doc.uploadedAt)}</td>
         <td>
-          <div className="file-row-actions" style={{ opacity: 1 }}>
-            <button className="file-action-btn" onClick={onView} title="View"><Eye size={13} /></button>
-            <a className="file-action-btn" href={getDownloadUrl(doc._id)} download={doc.originalName} title="Download">
-              <Download size={13} />
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <button className="btn btn--sm btn-ghost" onClick={onView} title="View"><Eye size={14} /></button>
+            <a className="btn btn--sm btn-ghost" href={getDownloadUrl(doc._id)} download={doc.originalName} title="Download">
+              <Download size={14} />
             </a>
             <div style={{ position: "relative" }} ref={menuRef}>
-              <button className="file-action-btn" onClick={() => setShowMenu(m => !m)} title="More">
-                <MoreVertical size={13} />
+              <button className="btn btn--sm btn-ghost" onClick={() => setShowMenu(m => !m)} title="More">
+                <MoreVertical size={14} />
               </button>
               {showMenu && (
-                <div className="folder-context-menu" style={{ right: 0, top: "calc(100% + 4px)" }}>
-                  <button onClick={() => { setShowRename(true); setShowMenu(false); }}><Pencil size={12} /> Rename</button>
-                  <button onClick={() => { setShowMove(true); setShowMenu(false); }}><FolderInput size={12} /> Move</button>
-                  <button className="danger" onClick={() => { onDelete(); setShowMenu(false); }}><Trash2 size={12} /> Delete</button>
+                <div style={{
+                  position: 'absolute',
+                  right: '0',
+                  top: 'calc(100% + 4px)',
+                  background: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'var(--shadow-lg)',
+                  zIndex: 100,
+                  minWidth: '140px',
+                  overflow: 'hidden'
+                }}>
+                  <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px' }} onClick={() => { setShowRename(true); setShowMenu(false); }}><Pencil size={12} /> Rename</button>
+                  <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px' }} onClick={() => { setShowMove(true); setShowMenu(false); }}><FolderInput size={12} /> Move</button>
+                  <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: '11px', height: '36px', color: 'var(--color-error)' }} onClick={() => { onDelete(); setShowMenu(false); }}><Trash2 size={12} /> Delete</button>
                 </div>
               )}
             </div>

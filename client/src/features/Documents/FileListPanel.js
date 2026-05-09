@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  Search, Grid, List, Upload, ChevronLeft, ChevronRight
+  Search, LayoutGrid, List, Upload, ChevronLeft, ChevronRight, FileQuestion
 } from "lucide-react";
 import FileCard from "./FileCard";
 import FileRow from "./FileRow";
@@ -15,9 +15,9 @@ const MIME_FILTERS = [
 ];
 
 const SORT_OPTIONS = [
-  { label: "Newest", value: "date" },
-  { label: "Name", value: "name" },
-  { label: "Size", value: "size" },
+  { label: "Newest First", value: "date" },
+  { label: "Name (A-Z)", value: "name" },
+  { label: "Size (Large First)", value: "size" },
 ];
 
 const FileListPanel = ({
@@ -31,36 +31,47 @@ const FileListPanel = ({
   const renderPagination = () => {
     if (pagination.pages <= 1) return null;
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center", padding: "12px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 'var(--space-4)', justifyContent: "center", padding: "var(--space-6) 0" }}>
         <button
-          className="file-action-btn"
+          className="btn btn-ghost"
+          style={{ width: '32px', height: '32px', padding: 0 }}
           disabled={pagination.page <= 1}
           onClick={() => onPageChange(pagination.page - 1)}
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={16} />
         </button>
-        <span style={{ fontSize: "0.78rem", color: "var(--nc-text-muted)" }}>
-          Page {pagination.page} of {pagination.pages} ({pagination.total} files)
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: 'var(--font-medium)' }}>
+          Page {pagination.page} of {pagination.pages}
         </span>
         <button
-          className="file-action-btn"
+          className="btn btn-ghost"
+          style={{ width: '32px', height: '32px', padding: 0 }}
           disabled={pagination.page >= pagination.pages}
           onClick={() => onPageChange(pagination.page + 1)}
         >
-          <ChevronRight size={14} />
+          <ChevronRight size={16} />
         </button>
       </div>
     );
   };
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
-      <div className="drive-toolbar">
-        <div className="drive-search-wrap">
-          <Search size={14} className="drive-search-icon" />
+      <div style={{ 
+        padding: 'var(--space-4)', 
+        borderBottom: '1px solid var(--color-border)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 'var(--space-4)',
+        flexWrap: 'wrap',
+        background: 'var(--color-bg-surface)'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input
-            className="drive-search"
+            className="form-input"
+            style={{ paddingLeft: '36px', height: '36px' }}
             type="text"
             placeholder={`Search in ${folderName}…`}
             value={search}
@@ -68,11 +79,12 @@ const FileListPanel = ({
           />
         </div>
 
-        <div className="drive-filter-row">
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {MIME_FILTERS.map(f => (
             <button
               key={f.value}
-              className={`drive-filter-chip ${mimeFilter === f.value ? "active" : ""}`}
+              className={`btn btn--sm ${mimeFilter === f.value ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ fontSize: '10px' }}
               onClick={() => onMimeFilterChange(f.value)}
             >
               {f.label}
@@ -81,7 +93,8 @@ const FileListPanel = ({
         </div>
 
         <select
-          className="drive-sort-select"
+          className="form-select"
+          style={{ width: '150px', height: '36px', fontSize: 'var(--text-xs)' }}
           value={sortBy}
           onChange={e => onSortChange(e.target.value)}
         >
@@ -90,35 +103,33 @@ const FileListPanel = ({
           ))}
         </select>
 
-        <div className="drive-view-toggle">
+        <div style={{ display: 'flex', gap: '2px', background: 'var(--color-bg-base)', padding: '2px', borderRadius: 'var(--radius-md)' }}>
           <button
-            className={`drive-view-btn ${viewMode === "grid" ? "active" : ""}`}
+            className={`btn btn--sm ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ width: '32px', padding: 0 }}
             onClick={() => onViewModeChange("grid")}
-            title="Grid view"
-          ><Grid size={15} /></button>
+          ><LayoutGrid size={14} /></button>
           <button
-            className={`drive-view-btn ${viewMode === "list" ? "active" : ""}`}
+            className={`btn btn--sm ${viewMode === 'list' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ width: '32px', padding: 0 }}
             onClick={() => onViewModeChange("list")}
-            title="List view"
-          ><List size={15} /></button>
+          ><List size={14} /></button>
         </div>
-
-        <button className="drive-upload-btn" onClick={onUploadClick}>
-          <Upload size={14} /> Upload
-        </button>
       </div>
 
       {/* File content area */}
-      <div className="drive-files-scroll">
+      <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-6)' }}>
         {loading ? (
-          <div className="drive-loading"><div className="drive-spinner" /><span>Loading…</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-20)' }}>
+             <div className="btn-spinner" style={{ width: '24px', height: '24px', borderTopColor: 'var(--color-accent)' }} />
+          </div>
         ) : files.length === 0 ? (
-          <div className="drive-empty">
-            <div className="drive-empty-icon">📂</div>
+          <div className="empty-state">
+            <FileQuestion size={48} className="icon" />
             <p>{search ? "No files match your search." : "No files here yet. Upload your first file."}</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="drive-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-6)' }}>
             {files.map(f => (
               <FileCard
                 key={f._id}
@@ -132,12 +143,12 @@ const FileListPanel = ({
             ))}
           </div>
         ) : (
-          <div className="drive-list-table-wrap">
-            <table className="drive-list-table">
+          <div className="nc-table-wrapper">
+            <table className="nc-table">
               <thead>
                 <tr>
-                  <th>File</th>
-                  <th>Type</th>
+                  <th>File Name</th>
+                  <th>Format</th>
                   <th>Size</th>
                   <th>Uploaded</th>
                   <th>Actions</th>
@@ -166,7 +177,7 @@ const FileListPanel = ({
       {viewerDoc && (
         <FileViewer doc={viewerDoc} onClose={() => setViewerDoc(null)} />
       )}
-    </>
+    </div>
   );
 };
 

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import DocumentPickerModal from "./DocumentPickerModal";
 import SensitiveRevealModal from "./SensitiveRevealModal";
 import { projectApi } from "./projectApi";
-import "./Projects.css";
+// import "./Projects.css";
+
 
 const emptyForm = {
   name: "",

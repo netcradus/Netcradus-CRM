@@ -1,16 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Plus, Search, Pencil, Trash2, X, ChevronRight } from "lucide-react";
 import { apiUrl } from "../../config/api";
-import "./ManagementHub.css";
 
 const SECTION_CONFIG = {
   "/management/business/clients": {
     title: "Client Information",
     breadcrumb: "Management / Business / Client Information",
     endpoint: "/api/management/business/clients",
-    createEndpoint: "/api/management/business/clients",
-    updateEndpoint: (id) => `/api/management/business/clients/${id}`,
-    deleteEndpoint: (id) => `/api/management/business/clients/${id}`,
     fields: [
       { key: "companyName", label: "Company Name", type: "text", required: true },
       { key: "contactPerson", label: "Contact Person", type: "text" },
@@ -32,9 +29,6 @@ const SECTION_CONFIG = {
     title: "Tender",
     breadcrumb: "Management / Business / Tender Related",
     endpoint: "/api/management/business/tenders",
-    createEndpoint: "/api/management/business/tenders",
-    updateEndpoint: (id) => `/api/management/business/tenders/${id}`,
-    deleteEndpoint: (id) => `/api/management/business/tenders/${id}`,
     fields: [
       { key: "tenderName", label: "Tender Name", type: "text", required: true },
       { key: "clientName", label: "Client Name", type: "text" },
@@ -55,9 +49,6 @@ const SECTION_CONFIG = {
     title: "Other Business",
     breadcrumb: "Management / Business / Other Business Related",
     endpoint: "/api/management/business/overview",
-    createEndpoint: "/api/management/business/overview",
-    updateEndpoint: (id) => `/api/management/business/overview/${id}`,
-    deleteEndpoint: (id) => `/api/management/business/overview/${id}`,
     fields: [
       { key: "reportTitle", label: "Report Title", type: "text", required: true },
       { key: "category", label: "Category", type: "select", options: ["Overview", "Analytics", "Performance", "Report"] },
@@ -77,9 +68,6 @@ const SECTION_CONFIG = {
     title: "Purchases Done",
     breadcrumb: "Management / Day to Day / Purchases Done",
     endpoint: "/api/management/day-to-day/purchases",
-    createEndpoint: "/api/management/day-to-day/purchases",
-    updateEndpoint: (id) => `/api/management/day-to-day/purchases/${id}`,
-    deleteEndpoint: (id) => `/api/management/day-to-day/purchases/${id}`,
     fields: [
       { key: "itemName", label: "Item Name", type: "text", required: true },
       { key: "vendorName", label: "Vendor", type: "text" },
@@ -100,9 +88,6 @@ const SECTION_CONFIG = {
     title: "Items to Purchase",
     breadcrumb: "Management / Day to Day / Items to Purchase",
     endpoint: "/api/management/day-to-day/purchase-items",
-    createEndpoint: "/api/management/day-to-day/purchase-items",
-    updateEndpoint: (id) => `/api/management/day-to-day/purchase-items/${id}`,
-    deleteEndpoint: (id) => `/api/management/day-to-day/purchase-items/${id}`,
     fields: [
       { key: "itemName", label: "Item Name", type: "text", required: true },
       { key: "vendorName", label: "Preferred Vendor", type: "text" },
@@ -123,9 +108,6 @@ const SECTION_CONFIG = {
     title: "Invoices",
     breadcrumb: "Management / Day to Day / Invoice Related",
     endpoint: "/api/management/day-to-day/invoices",
-    createEndpoint: "/api/management/day-to-day/invoices",
-    updateEndpoint: (id) => `/api/management/day-to-day/invoices/${id}`,
-    deleteEndpoint: (id) => `/api/management/day-to-day/invoices/${id}`,
     fields: [
       { key: "invoiceNumber", label: "Invoice Number", type: "text", required: true },
       { key: "clientName", label: "Client Name", type: "text" },
@@ -147,22 +129,12 @@ const SECTION_CONFIG = {
 const formatValue = (value, format) => {
   if (!value) return "N/A";
   if (format === "currency") {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(Number(value || 0));
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value || 0));
   }
   const asDate = new Date(value);
-  if (!Number.isNaN(asDate.getTime()) && String(value).length >= 8) return asDate.toLocaleDateString();
+  if (!Number.isNaN(asDate.getTime()) && String(value).length >= 8) return asDate.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
   return value;
 };
-
-const emptyFormFromFields = (fields) =>
-  fields.reduce((acc, field) => {
-    acc[field.key] = field.type === "select" ? field.options[0] : "";
-    return acc;
-  }, {});
 
 function ManagementHub() {
   const location = useLocation();
@@ -171,243 +143,152 @@ function ManagementHub() {
   const [cards, setCards] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(() => emptyFormFromFields(config?.fields || []));
+  const [form, setForm] = useState({});
 
   const loadData = useCallback(async (query = "") => {
     if (!config) return;
     setLoading(true);
-    setError("");
     try {
       const params = query ? `?q=${encodeURIComponent(query)}` : "";
       const response = await fetch(apiUrl(`${config.endpoint}${params}`), {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to load data.");
-      setRows(payload.rows || []);
-      setCards(payload.cards || []);
-    } catch (fetchError) {
-      setError(fetchError.message || "Unable to load data.");
-    } finally {
-      setLoading(false);
-    }
+      const data = await response.json();
+      setRows(data.rows || []);
+      setCards(data.cards || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, [config]);
 
   useEffect(() => {
     if (!config) return;
-    setForm(emptyFormFromFields(config.fields));
-    setEditing(null);
+    setForm(config.fields.reduce((acc, f) => ({ ...acc, [f.key]: f.type === 'select' ? f.options[0] : '' }), {}));
     loadData();
   }, [config, loadData]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
+    if (!config) return;
+    const timer = window.setTimeout(() => {
       loadData(search);
     }, 250);
-    return () => clearTimeout(timeout);
-  }, [search, loadData]);
 
-  const formTitle = useMemo(() => (editing ? `Edit ${config.title}` : `Add ${config.title}`), [config, editing]);
+    return () => window.clearTimeout(timer);
+  }, [config, loadData, search]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm(emptyFormFromFields(config.fields));
-    setShowModal(true);
-  };
-
-  const openEdit = (row) => {
-    setEditing(row);
-    setForm(
-      config.fields.reduce((acc, field) => {
-        const value = row[field.key];
-        if (field.type === "date" && value) {
-          acc[field.key] = new Date(value).toISOString().split("T")[0];
-        } else {
-          acc[field.key] = value ?? (field.type === "select" ? field.options[0] : "");
-        }
-        return acc;
-      }, {})
-    );
-    setShowModal(true);
-  };
-
-  const submitForm = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const endpoint = editing ? `${config.endpoint}/${editing._id}` : config.endpoint;
+    const method = editing ? "PUT" : "POST";
     try {
-      const endpoint = editing ? config.updateEndpoint(editing._id) : config.createEndpoint;
-      const method = editing ? "PUT" : "POST";
-      const response = await fetch(apiUrl(endpoint), {
+      await fetch(apiUrl(endpoint), {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
         body: JSON.stringify(form),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to save record.");
       setShowModal(false);
-      setEditing(null);
-      setForm(emptyFormFromFields(config.fields));
-      loadData(search);
-    } catch (submitError) {
-      setError(submitError.message || "Unable to save record.");
-    }
+      loadData();
+    } catch (err) { console.error(err); }
   };
 
-  const removeRow = async (row) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-    try {
-      const response = await fetch(apiUrl(config.deleteEndpoint(row._id)), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Unable to delete record.");
-      loadData(search);
-    } catch (removeError) {
-      setError(removeError.message || "Unable to delete record.");
-    }
-  };
-
-  if (!config) return <div className="management-hub">Management page not found.</div>;
+  if (!config) return <div style={{ padding: 'var(--space-10)', textAlign: 'center' }}>Module configuration not found.</div>;
 
   return (
-    <section className="management-hub">
-      <div className="management-hero">
-        <div>
-          <p className="management-breadcrumb">{config.breadcrumb}</p>
-          <h1>{config.title}</h1>
-          <p>Dedicated management workspace with separate data, role checks, and clean responsive UI.</p>
+    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
+      <div className="page-header">
+        <div className="page-header-left">
+           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+              <span>Management</span><ChevronRight size={10} /><span>{config.title}</span>
+           </div>
+           <h1 className="title">{config.title}</h1>
+           <p className="subtitle">Track and manage business operations for {config.title.toLowerCase()}.</p>
         </div>
-        <button className="management-primary-btn" onClick={openCreate}>Add New</button>
+        <div className="page-header-right">
+           <button className="btn btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}><Plus size={16} /> Add Record</button>
+        </div>
       </div>
 
-      <div className="management-toolbar">
-        <input
-          type="search"
-          placeholder="Search records..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+         {cards.map((c, i) => (
+           <div key={i} className="nc-stat-card">
+              <span className="metric-label">{c.label}</span>
+              <span className="metric-value">{c.currency ? formatValue(c.value, 'currency') : c.value}</span>
+           </div>
+         ))}
       </div>
 
-      {error && <div className="management-alert">{error}</div>}
-
-      <div className="management-cards">
-        {cards.map((card, index) => (
-          <article key={`${card.label}-${index}`} className="management-card">
-            <span>{card.label}</span>
-            <strong>{card.currency ? formatValue(card.value, "currency") : Number(card.value || 0).toLocaleString()}</strong>
-          </article>
-        ))}
+      <div className="nc-card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)' }}>
+         <div style={{ position: 'relative' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <input className="form-input" style={{ paddingLeft: '36px', maxWidth: '400px' }} placeholder="Filter records..." value={search} onChange={e => setSearch(e.target.value)} />
+         </div>
       </div>
 
-      <div className="management-data-shell">
-        {loading ? (
-          <div className="management-state">Loading...</div>
-        ) : (
-          <>
-            <table className="management-table">
-              <thead>
-                <tr>
-                  {config.columns.map((column) => (
-                    <th key={column.key}>{column.label}</th>
-                  ))}
+      <div className="nc-card" style={{ padding: 0, overflow: 'hidden' }}>
+         <div style={{ overflowX: 'auto' }}>
+         <table className="nc-table">
+            <thead>
+               <tr>
+                  {config.columns.map(c => <th key={c.key}>{c.label}</th>)}
                   <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={config.columns.length + 1} className="management-state">No records found.</td>
-                  </tr>
-                ) : (
-                  rows.map((row) => (
-                    <tr key={row._id}>
-                      {config.columns.map((column) => (
-                        <td key={`${row._id}-${column.key}`}>
-                          <span className={`management-pill ${String(row[column.key] || "").toLowerCase()}`}>
-                            {formatValue(row[column.key], column.format)}
-                          </span>
-                        </td>
-                      ))}
-                      <td>
-                        <div className="management-row-actions">
-                          <button type="button" className="management-ghost-btn" onClick={() => openEdit(row)}>Edit</button>
-                          <button type="button" className="management-danger-btn" onClick={() => removeRow(row)}>Delete</button>
-                        </div>
+               </tr>
+            </thead>
+            <tbody>
+               {loading ? (
+                 <tr><td colSpan={config.columns.length + 1} style={{ textAlign: 'center', padding: 'var(--space-10)' }}>Loading...</td></tr>
+               ) : rows.length === 0 ? (
+                 <tr><td colSpan={config.columns.length + 1} style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--color-text-muted)' }}>No records found.</td></tr>
+               ) : rows.map(r => (
+                 <tr key={r._id}>
+                    {config.columns.map(c => (
+                      <td key={c.key}>
+                         <span className={`badge ${String(r[c.key]).toLowerCase() === 'active' || String(r[c.key]).toLowerCase() === 'won' ? 'badge-success' : ''}`}>
+                            {formatValue(r[c.key], c.format)}
+                         </span>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-
-            <div className="management-mobile-list">
-              {rows.map((row) => (
-                <article key={row._id} className="management-mobile-card">
-                  {config.columns.map((column) => (
-                    <div key={`${row._id}-${column.key}`} className="management-mobile-line">
-                      <span>{column.label}</span>
-                      <strong>{formatValue(row[column.key], column.format)}</strong>
-                    </div>
-                  ))}
-                  <div className="management-row-actions">
-                    <button type="button" className="management-ghost-btn" onClick={() => openEdit(row)}>Edit</button>
-                    <button type="button" className="management-danger-btn" onClick={() => removeRow(row)}>Delete</button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
-        )}
+                    ))}
+                    <td>
+                       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                          <button className="btn btn-ghost" onClick={() => { setEditing(r); setForm(r); setShowModal(true); }}><Pencil size={14} /></button>
+                          <button className="btn btn-ghost btn-danger" onClick={async () => { if(window.confirm('Delete?')) { await fetch(apiUrl(`${config.endpoint}/${r._id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }); loadData(); } }}><Trash2 size={14} /></button>
+                       </div>
+                    </td>
+                 </tr>
+               ))}
+            </tbody>
+         </table>
+         </div>
       </div>
 
       {showModal && (
-        <div className="management-modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="management-modal" onClick={(event) => event.stopPropagation()}>
-            <h3>{formTitle}</h3>
-            <form className="management-form" onSubmit={submitForm}>
-              {config.fields.map((field) => (
-                <label key={field.key} className={field.type === "textarea" ? "management-field management-field-wide" : "management-field"}>
-                  <span>{field.label}</span>
-                  {field.type === "select" ? (
-                    <select
-                      value={form[field.key] || ""}
-                      onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))}
-                    >
-                      {field.options.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  ) : field.type === "textarea" ? (
-                    <textarea
-                      value={form[field.key] || ""}
-                      onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))}
-                    />
-                  ) : (
-                    <input
-                      type={field.type}
-                      value={form[field.key] || ""}
-                      required={field.required}
-                      onChange={(event) => setForm((current) => ({ ...current, [field.key]: event.target.value }))}
-                    />
-                  )}
-                </label>
-              ))}
-              <div className="management-modal-actions">
-                <button type="button" className="management-ghost-btn" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="management-primary-btn">{editing ? "Save Changes" : "Create Record"}</button>
-              </div>
-            </form>
-          </div>
+        <div className="nc-modal-overlay" onClick={() => setShowModal(false)}>
+           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '500px' }}>
+              <div className="nc-modal-header"><h3>{editing ? "Edit Record" : "Add New Record"}</h3></div>
+              <form className="form" onSubmit={handleSubmit}>
+                 {config.fields.map(f => (
+                   <div key={f.key} className="form-field">
+                      <label className="form-label">{f.label}</label>
+                      {f.type === 'select' ? (
+                        <select className="form-select" value={form[f.key] || ''} onChange={e => setForm({...form, [f.key]: e.target.value})}>
+                           {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : f.type === 'textarea' ? (
+                        <textarea className="form-input" rows={2} value={form[f.key] || ''} onChange={e => setForm({...form, [f.key]: e.target.value})} />
+                      ) : (
+                        <input className="form-input" type={f.type} value={form[f.key] || ''} onChange={e => setForm({...form, [f.key]: e.target.value})} />
+                      )}
+                   </div>
+                 ))}
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Record</button>
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                 </div>
+              </form>
+           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
