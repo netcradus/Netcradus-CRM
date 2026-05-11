@@ -509,6 +509,31 @@ ol {
 .dashboard-main.is-sidebar-expanded {
   margin-left: var(--sidebar-expanded);
 }
+/* ===== MOBILE SIDEBAR ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+
+  .sidebar.is-expanded {
+    transform: translateX(0);
+  }
+
+  .dashboard-main,
+  .sidebar.is-expanded + .dashboard-main,
+  .dashboard-main.is-sidebar-expanded {
+    margin-left: 0;
+  }
+
+  .sidebar-brand-text,
+  .sidebar-item-text,
+  .sidebar-submenu-text,
+  .sidebar-item-caret {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
 .topbar {
   position: fixed;
@@ -540,17 +565,17 @@ ol {
 }
 
 .topbar-menu-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-text-secondary);
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: white;
   cursor: pointer;
-  transition: transform var(--transition-base), background var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+  transition: all 0.3s ease;
 }
 
 .topbar-menu-btn:hover,
@@ -644,6 +669,29 @@ ol {
   color: var(--color-text-faint);
 }
 
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .topbar-menu-btn {
+    display: flex;
+  }
+
+  .topbar-search {
+    display: none;
+  }
+
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .topbar-left {
+    gap: 10px;
+  }
+
+  .topbar-product-logo {
+    height: 26px;
+  }
+}
 .theme-toggle,
 .bell-pill,
 .popup-action {
