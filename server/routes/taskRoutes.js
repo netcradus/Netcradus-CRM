@@ -10,6 +10,7 @@ router.get("/my-tasks", tasksController.getMyTasks);
 router.patch("/:id/timing", tasksController.setTaskTiming);
 router.patch("/:id/complete", tasksController.completeTask);
 router.patch("/:id/review", tasksController.reviewTask);
+router.patch("/:id", tasksController.updateTaskStatus);
 router.get("/:id/comments", tasksController.getTaskComments);
 router.post("/:id/comments", tasksController.addTaskComment);
 
