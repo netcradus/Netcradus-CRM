@@ -8,6 +8,14 @@ const {
   getReviewerUserIds,
 } = require("../services/taskNotificationService");
 const { canAssignTask, getAssignableUserIds } = require("../utils/hierarchyUtils");
+const {
+  assignToQueue,
+  progressTaskQueue,
+  fetchUserQueue,
+  getUserNextAvailableDate,
+} = require("../services/taskQueueService");
+
+const ALL_VALID_STATUSES = ["pending", "in_progress", "completed", "reviewed", "queued", "active"];
 
 const TASK_POPULATE = [
   { path: "assignedBy", select: "name email role" },
@@ -139,7 +147,7 @@ async function createTask(req, res) {
       return res.status(403).json({ success: false, message: "Only Super Users and Administrators can create tasks" });
     }
 
-    const { title, description, assignedTo, priority, dueDate, status } = req.body;
+    const { title, description, assignedTo, priority, dueDate, estimatedHours } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Title is required" });
@@ -164,7 +172,9 @@ async function createTask(req, res) {
       return res.status(403).json({ success: false, message: assignmentCheck.reason });
     }
 
-    const normalizedStatus = ["pending", "in_progress"].includes(status) ? status : "pending";
+    // ── Smart Queue Logic (Rule 1) ──
+    const hours = estimatedHours != null ? Number(estimatedHours) : 8;
+    const queueData = await assignToQueue(assignee._id, hours, dueDate);
 
     const task = await Task.create({
       title: title.trim(),
@@ -173,13 +183,20 @@ async function createTask(req, res) {
       assignedTo: assignee._id,
       role: assignee.role,
       priority: ["low", "medium", "high", "urgent"].includes(priority) ? priority : "medium",
-      status: normalizedStatus,
+      status: queueData.status,
       dueDate: new Date(dueDate),
+      estimatedHours: hours,
+      queuePosition: queueData.queuePosition,
+      scheduledDate: queueData.scheduledDate,
+      actualStartDate: queueData.actualStartDate,
+      queuedAt: queueData.queuedAt,
       statusHistory: [
         {
-          status: normalizedStatus,
+          status: queueData.status,
           changedBy: req.user._id,
-          note: `Task assigned to ${assignee.name || "user"}`,
+          note: queueData.status === "queued"
+            ? `Task queued (position ${queueData.queuePosition}) for ${assignee.name || "user"}`
+            : `Task assigned to ${assignee.name || "user"}`,
         },
       ],
     });
@@ -187,7 +204,9 @@ async function createTask(req, res) {
     await createNotifications({
       taskId: task._id,
       userIds: [assignee._id],
-      message: `New task assigned: ${task.title}`,
+      message: queueData.status === "queued"
+        ? `New task queued (position ${queueData.queuePosition}): ${task.title}`
+        : `New task assigned: ${task.title}`,
     });
 
     const populatedTask = await Task.findById(task._id).populate(TASK_POPULATE).lean();
@@ -334,10 +353,14 @@ async function updateTask(req, res) {
     }
 
     if (status !== undefined) {
-      if (!["pending", "in_progress", "completed", "reviewed"].includes(status)) {
+      if (!ALL_VALID_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Invalid status value" });
       }
       task.status = status;
+    }
+
+    if (req.body.estimatedHours !== undefined) {
+      task.estimatedHours = Number(req.body.estimatedHours) || null;
     }
 
     task.statusHistory.push({
@@ -366,7 +389,7 @@ async function updateTaskStatus(req, res) {
     }
 
     const { status } = req.body;
-    if (!["pending", "in_progress", "completed", "reviewed"].includes(status)) {
+    if (!ALL_VALID_STATUSES.includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid status value" });
     }
 
@@ -379,6 +402,15 @@ async function updateTaskStatus(req, res) {
     });
 
     await task.save();
+
+    // ── Queue Progression (Rule 1, Step 3) ──
+    if (status === "completed") {
+      try {
+        await progressTaskQueue(task.assignedTo);
+      } catch (queueErr) {
+        console.error("Queue Progression Error (updateTaskStatus):", queueErr);
+      }
+    }
 
     const updatedTask = await Task.findById(task._id).populate(TASK_POPULATE).lean();
     return res.json({ success: true, data: updatedTask });
@@ -461,6 +493,13 @@ async function completeTask(req, res) {
     });
 
     await task.save();
+
+    // ── Queue Progression (Rule 1, Step 1-3) ──
+    try {
+      await progressTaskQueue(task.assignedTo);
+    } catch (queueErr) {
+      console.error("Queue Progression Error (completeTask):", queueErr);
+    }
 
     const reviewerUserIds = await getReviewerUserIds();
     await createNotifications({
@@ -589,6 +628,30 @@ async function getTaskComments(req, res) {
   }
 }
 
+async function getUserQueue(req, res) {
+  try {
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: "Invalid user ID" });
+    }
+
+    const queue = await fetchUserQueue(userId);
+    const populatedQueue = await Task.populate(queue, TASK_POPULATE);
+    const nextAvailable = await getUserNextAvailableDate(userId);
+
+    return res.json({
+      success: true,
+      data: populatedQueue,
+      nextAvailableDate: nextAvailable,
+    });
+  } catch (error) {
+    console.error("Get User Queue Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch user queue", error: error.message });
+  }
+}
+
+
+
 module.exports = {
   createTask,
   getTasks,
@@ -603,4 +666,5 @@ module.exports = {
   reviewTask,
   addTaskComment,
   getTaskComments,
+  getUserQueue,
 };

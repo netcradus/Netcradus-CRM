@@ -4,7 +4,7 @@ const taskHistorySchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ["pending", "in_progress", "completed", "reviewed"],
+      enum: ["pending", "in_progress", "completed", "reviewed", "queued", "active"],
       required: true,
     },
     changedBy: {
@@ -60,7 +60,7 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "in_progress", "completed", "reviewed"],
+      enum: ["pending", "in_progress", "completed", "reviewed", "queued", "active"],
       default: "pending",
     },
     dueDate: {
@@ -71,6 +71,27 @@ const taskSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+    },
+    // Smart Queue Scheduling Fields
+    estimatedHours: {
+      type: Number,
+      default: null,
+    },
+    queuePosition: {
+      type: Number,
+      default: null,
+    },
+    scheduledDate: {
+      type: Date,
+      default: null,
+    },
+    actualStartDate: {
+      type: Date,
+      default: null,
+    },
+    queuedAt: {
+      type: Date,
+      default: null,
     },
     completionTime: {
       type: Date,
@@ -95,5 +116,6 @@ const taskSchema = new mongoose.Schema(
 taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ role: 1, priority: 1, dueDate: 1 });
 taskSchema.index({ createdAt: -1 });
+taskSchema.index({ assignedTo: 1, queuePosition: 1 }); // queue ordering
 
 module.exports = mongoose.model("Task", taskSchema);
