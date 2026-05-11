@@ -7,6 +7,7 @@ const {
   createNotifications,
   getReviewerUserIds,
 } = require("../services/taskNotificationService");
+const { canAssignTask, getAssignableUserIds } = require("../utils/hierarchyUtils");
 
 const TASK_POPULATE = [
   { path: "assignedBy", select: "name email role" },
@@ -19,25 +20,22 @@ function isReviewer(user) {
 }
 
 function canAssignTasks(user) {
-  return ["super_user", "admin"].includes(user?.role);
+  return Boolean(user?._id);
 }
 
 function canLoadAssignableUsers(user) {
-  return ["super_user", "admin", "hr"].includes(user?.role);
+  return Boolean(user?._id);
 }
 
 function canViewAllTasks(user) {
-  return user?.role === "super_user" || isReviewer(user);
-}
-
-function isAdminScopedManager(user) {
-  return user?.role === "admin";
+  return user?.role === "super_user";
 }
 
 function canManageTask(user, task) {
   if (user?.role === "super_user") return true;
-  if (!isAdminScopedManager(user)) return false;
-  return String(task.assignedBy) === String(user._id);
+  if (user?.role === "admin") return true;
+  const assignedById = task?.assignedBy?._id || task?.assignedBy;
+  return String(assignedById) === String(user._id);
 }
 
 function canAccessTask(user, task) {
@@ -50,27 +48,35 @@ function canAccessTask(user, task) {
     .some((id) => String(id) === String(user._id));
 }
 
-function buildTaskQuery(query = {}, currentUser, options = {}) {
+async function getVisibleTaskUserIds(currentUser) {
+  const assignableIds = await getAssignableUserIds(currentUser._id);
+  if (assignableIds === "ALL") return "ALL";
+  if (!Array.isArray(assignableIds)) return [];
+  return assignableIds;
+}
+
+async function buildTaskQuery(query = {}, currentUser, options = {}) {
   const filter = {};
   const andFilters = [];
-  const { status, role, priority, search, startDate, endDate } = query;
+  const { status, role, priority, assignedTo, search, startDate, endDate } = query;
 
   if (options.onlyMine) {
     andFilters.push({ assignedTo: currentUser._id });
-  } else if (isAdminScopedManager(currentUser)) {
+  } else if (!canViewAllTasks(currentUser)) {
+    const descendantUserIds = await getVisibleTaskUserIds(currentUser);
     andFilters.push({
       $or: [
         { assignedTo: currentUser._id },
         { assignedBy: currentUser._id },
+        ...(descendantUserIds.length ? [{ assignedTo: { $in: descendantUserIds } }] : []),
       ],
     });
-  } else if (!canViewAllTasks(currentUser)) {
-    andFilters.push({ assignedTo: currentUser._id });
   }
 
   if (status) andFilters.push({ status: { $in: status.split(",").filter(Boolean) } });
   if (role) andFilters.push({ role: { $in: role.split(",").filter(Boolean) } });
   if (priority) andFilters.push({ priority: { $in: priority.split(",").filter(Boolean) } });
+  if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) andFilters.push({ assignedTo });
 
   if (startDate || endDate) {
     const dueDateFilter = {};
@@ -153,6 +159,11 @@ async function createTask(req, res) {
       return res.status(404).json({ success: false, message: "Assigned user not found" });
     }
 
+    const assignmentCheck = await canAssignTask(req.user._id, assignee._id, req.user.role);
+    if (!assignmentCheck.allowed) {
+      return res.status(403).json({ success: false, message: assignmentCheck.reason });
+    }
+
     const normalizedStatus = ["pending", "in_progress"].includes(status) ? status : "pending";
 
     const task = await Task.create({
@@ -192,7 +203,7 @@ async function getTasks(req, res) {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
     const skip = (page - 1) * limit;
-    const filter = buildTaskQuery(req.query, req.user);
+    const filter = await buildTaskQuery(req.query, req.user);
 
     const [tasks, totalTasks] = await Promise.all([
       Task.find(filter)
@@ -222,7 +233,7 @@ async function getTasks(req, res) {
 
 async function getMyTasks(req, res) {
   try {
-    const filter = buildTaskQuery(req.query, req.user, { onlyMine: true });
+    const filter = await buildTaskQuery(req.query, req.user, { onlyMine: true });
     const tasks = await Task.find(filter)
       .populate(TASK_POPULATE)
       .sort({ status: 1, dueDate: 1, createdAt: -1 })
@@ -241,7 +252,21 @@ async function getAssignableUsers(req, res) {
       return res.status(403).json({ success: false, message: "You are not allowed to load assignable users" });
     }
 
-    const users = await User.find({ role: { $ne: "super_user" } })
+    const assignableIds = await getAssignableUserIds(req.user._id);
+    const userQuery = {
+      _id: { $ne: req.user._id },
+      isDisabled: false,
+    };
+
+    if (req.user.role === "super_user" || assignableIds === "ALL") {
+      userQuery.role = { $ne: "super_user" };
+    } else if (Array.isArray(assignableIds)) {
+      userQuery._id = { $in: assignableIds };
+    } else {
+      userQuery._id = { $in: [] };
+    }
+
+    const users = await User.find(userQuery)
       .select("_id name email role")
       .sort({ name: 1, email: 1 })
       .lean();
@@ -328,6 +353,38 @@ async function updateTask(req, res) {
   } catch (error) {
     console.error("Update Task Error:", error);
     return res.status(500).json({ success: false, message: "Failed to update task", error: error.message });
+  }
+}
+
+async function updateTaskStatus(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.id, res);
+    if (!task) return;
+
+    if (!canAccessTask(req.user, task)) {
+      return res.status(403).json({ success: false, message: "You are not allowed to update this task" });
+    }
+
+    const { status } = req.body;
+    if (!["pending", "in_progress", "completed", "reviewed"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+
+    task.status = status;
+    if (status === "completed") task.completionTime = new Date();
+    task.statusHistory.push({
+      status,
+      changedBy: req.user._id,
+      note: "Task status updated",
+    });
+
+    await task.save();
+
+    const updatedTask = await Task.findById(task._id).populate(TASK_POPULATE).lean();
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Update Task Status Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update task status", error: error.message });
   }
 }
 
@@ -539,6 +596,7 @@ module.exports = {
   getAssignableUsers,
   getTaskById,
   updateTask,
+  updateTaskStatus,
   deleteTask,
   setTaskTiming,
   completeTask,

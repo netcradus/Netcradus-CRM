@@ -31,6 +31,16 @@ const userSchema = new mongoose.Schema({
     trim: true,
     default: "General"
   },
+  designation: {
+    type: String,
+    trim: true,
+    default: ""
+  },
+  reportsTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
+  },
 
   lastPasswordChange: {
     type: Date,

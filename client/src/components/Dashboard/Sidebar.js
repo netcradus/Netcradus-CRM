@@ -5,7 +5,7 @@ import {
   Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3, 
   Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box, 
   BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare, 
-  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
@@ -62,6 +62,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
     if (canAccess(role, ACCESS_GROUPS.userAdmin)) {
       items.push({ label: "User Management", icon: <Users size={20} />, path: "/user-management", roles: ACCESS_GROUPS.userAdmin });
+      items.push({ label: "Employee Hierarchy", icon: <Network size={20} />, path: "/organization-chart", roles: ACCESS_GROUPS.userAdmin });
     }
 
     if (canAccess(role, ACCESS_GROUPS.peopleOps)) {
@@ -71,6 +72,8 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
     if (canAccess(role, ACCESS_GROUPS.tickets)) {
       items.push({ label: "Support Tickets", icon: <Ticket size={20} />, path: "/tickets", roles: ACCESS_GROUPS.tickets });
     }
+
+    items.push({ label: "Tasks", icon: <ListChecks size={20} />, path: "/tasks", roles: ACCESS_GROUPS.tasks });
 
     if (canAccess(role, ACCESS_GROUPS.projects)) items.push({
       label: "Projects",
@@ -130,7 +133,6 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       submenu: [
         { label: "Overview", path: "/management/business/overview", icon: <BarChart3 size={18} />, roles: ACCESS_GROUPS.management },
         { label: "Meetings", path: "/meetings", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.meetings },
-        { label: "Tasks", path: "/tasks", icon: <ListChecks size={18} />, roles: ACCESS_GROUPS.tasks },
         { label: "Visits", path: "/visits", icon: <MapPin size={18} />, roles: ACCESS_GROUPS.visits },
         { label: "Calls", path: "/calls", icon: <Phone size={18} />, roles: ACCESS_GROUPS.calls },
         { label: "Solutions", path: "/solutions", icon: <Lightbulb size={18} />, roles: ACCESS_GROUPS.solutions },
