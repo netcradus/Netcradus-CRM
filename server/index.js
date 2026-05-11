@@ -40,6 +40,8 @@ const messageRoutes = require("./routes/messageRoutes");
 app.use("/api/messages", messageRoutes);
 const userPresenceRoutes = require("./routes/userPresenceRoutes");
 app.use("/api/users", userPresenceRoutes);
+const orgHierarchyRoutes = require("./routes/orgHierarchy");
+app.use("/api/org-hierarchy", orgHierarchyRoutes);
 
 const leadsRoutes = require("./routes/leadsRoutes");
 app.use("/api/leads", leadsRoutes);

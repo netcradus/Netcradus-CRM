@@ -49,7 +49,7 @@ const getAttemptState = (userId) => {
 // Create user (super user only)
 const createUserByAdmin = async (req, res) => {
   try {
-    const { email, password, role, department: manualDept, name } = req.body;
+    const { email, password, role, department: manualDept, designation: manualDesignation, name } = req.body;
     const normalizedRole = String(role || "").trim().toLowerCase();
     const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media"];
 
@@ -97,6 +97,7 @@ const createUserByAdmin = async (req, res) => {
       password: hashedPassword,
       role: normalizedRole,
       department: manualDept || department,
+      designation: String(manualDesignation || formatRoleLabel(normalizedRole)).trim(),
     });
 
     await user.save();
@@ -110,7 +111,7 @@ const createUserByAdmin = async (req, res) => {
           email: user.email,
           status: "Employee",
           department: user.department || "General",
-          designation: formatRoleLabel(user.role || "employee"),
+          designation: user.designation || formatRoleLabel(user.role || "employee"),
           joiningDate: user.createdAt,
           isActive: true,
         },
@@ -136,6 +137,7 @@ const createUserByAdmin = async (req, res) => {
         userId: user.userId,
         email: user.email,
         role: user.role,
+        designation: user.designation,
       },
     });
 
@@ -493,7 +495,7 @@ const resetPasswordWithOTP = async (req, res) => {
 const getUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("_id userId name email role createdAt isDisabled disabledAt disabledReason");
+      .select("_id userId name email role department designation reportsTo createdAt isDisabled disabledAt disabledReason");
 
     res.json(users);
   } catch (err) {
@@ -563,7 +565,7 @@ const adminChangeUserPassword = async (req, res) => {
 const updateUserByAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, department } = req.body;
+    const { name, email, role, department, designation } = req.body;
 
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -576,6 +578,7 @@ const updateUserByAdmin = async (req, res) => {
     if (email) user.email = email.toLowerCase().trim();
     if (role && role !== "super_user") user.role = role.toLowerCase();
     if (department) user.department = department;
+    if (designation !== undefined) user.designation = String(designation || "").trim();
 
     await user.save();
 
@@ -587,7 +590,7 @@ const updateUserByAdmin = async (req, res) => {
           name: user.name,
           email: user.email,
           department: user.department,
-          designation: formatRoleLabel(user.role || "employee"),
+          designation: user.designation || formatRoleLabel(user.role || "employee"),
         },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -600,7 +603,8 @@ const updateUserByAdmin = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department
+        department: user.department,
+        designation: user.designation
       }
     });
 

@@ -113,6 +113,33 @@ function calcWorkingHours(punchIn, punchOut) {
   return +(mins / 60).toFixed(2);
 }
 
+/**
+ * Returns the next working day (Mon–Fri) after the given date.
+ * If the given date is already a weekday it still returns the NEXT day.
+ */
+function nextWorkingDay(date, weekends = [0, 6], tz = DEFAULT_TZ) {
+  let next = addDays(new Date(date), 1);
+  while (isWeekend(next, weekends, tz)) {
+    next = addDays(next, 1);
+  }
+  return next;
+}
+
+/**
+ * Adds N working days (Mon–Fri) to the given date, skipping weekends.
+ */
+function addWorkingDays(date, n, weekends = [0, 6], tz = DEFAULT_TZ) {
+  let result = new Date(date);
+  let daysAdded = 0;
+  while (daysAdded < n) {
+    result = addDays(result, 1);
+    if (!isWeekend(result, weekends, tz)) {
+      daysAdded++;
+    }
+  }
+  return result;
+}
+
 module.exports = {
   toCompanyTimezone,
   fromCompanyTimezone,
@@ -124,4 +151,6 @@ module.exports = {
   getWorkingDaysBetween,
   buildOfficeDateTime,
   calcWorkingHours,
+  nextWorkingDay,
+  addWorkingDays,
 };

@@ -17,6 +17,7 @@ import { ACCESS_GROUPS, canAccess, normalizeRole } from "./config/access";
 /* ========== Lazy Modules ========== */
 const WelcomeAnimation         = lazy(() => import("./Pages/WelcomeAnimation"));
 const AdminDevices             = lazy(() => import("./Pages/AdminDevices"));
+const OrgHierarchyPage         = lazy(() => import("./Pages/OrgHierarchyPage"));
 const Dashboard                = lazy(() => import("./components/Dashboard/Dashboard"));
 const UserManagement           = lazy(() => import("./components/Dashboard/UserManagement"));
 const ChatPanel                = lazy(() => import("./components/Chat/ChatPanel"));
@@ -141,6 +142,12 @@ const App = () => {
               <Route path="/admin/devices" element={
                 <RoleRoute roles="super_user">
                   <AdminDevices />
+                </RoleRoute>
+              } />
+
+              <Route path="/organization-chart" element={
+                <RoleRoute roles="super_user">
+                  <OrgHierarchyPage />
                 </RoleRoute>
               } />
 
