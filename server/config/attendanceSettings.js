@@ -9,8 +9,8 @@ async function getSettings() {
   if (!settings) {
     // Bootstrap defaults from ENV
     settings = await AttendanceSettings.create({
-      officeStartTime: process.env.OFFICE_START_TIME || '09:30',
-      officeEndTime: process.env.OFFICE_END_TIME || '18:00',
+      officeStartTime: process.env.OFFICE_START_TIME || '10:00',
+      officeEndTime: process.env.OFFICE_END_TIME || '19:00',
       standardHours: Number(process.env.STANDARD_HOURS) || 8,
       minHoursForPresent: Number(process.env.MIN_HOURS_FOR_PRESENT) || 4,
       maxShiftHours: Number(process.env.MAX_SHIFT_HOURS) || 12,

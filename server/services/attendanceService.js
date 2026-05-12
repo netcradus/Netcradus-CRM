@@ -16,9 +16,11 @@ const {
  * Pure function — calculate derived attendance fields from punchIn/punchOut
  */
 function calculateStatus(workingHours, settings) {
+  const SUB_MINIMUM_STATUS = 'half_day';
   if (workingHours >= settings.standardHours) return 'present';
   if (workingHours >= settings.minHoursForPresent) return 'half_day';
-  return 'half_day'; // punched in but below min hours = half_day
+  if (workingHours > 0) return SUB_MINIMUM_STATUS;
+  return 'absent';
 }
 
 function buildBreakSummary(record, breaks = [], now = new Date()) {

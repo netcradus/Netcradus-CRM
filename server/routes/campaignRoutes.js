@@ -1,22 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const campaignsController = require('../controllers/campaignController');
+const authMiddleware = require("../middleware/authMiddleware");
+const rbac = require("../middleware/rbac");
+const { DIGITAL_MEDIA_ROLES } = require("../utils/digitalMediaAccess");
 
-// Routes
+router.use(authMiddleware, rbac(DIGITAL_MEDIA_ROLES));
 
-// Get all campaigns
 router.get('/', campaignsController.getCampaigns);
-
-// Get a single campaign by ID
 router.get('/:id', campaignsController.getCampaign);
-
-// Create a new campaign
 router.post('/', campaignsController.addCampaign);
-
-// Update an existing campaign by ID
 router.put('/:id', campaignsController.updateCampaign);
-
-// Delete a campaign by ID
+router.patch('/:id/budget', campaignsController.updateCampaignBudget);
+router.post('/:id/submit-for-review', campaignsController.submitCampaignForReview);
+router.post('/:id/approve', rbac(["admin", "hr", "super_user"]), campaignsController.approveCampaign);
+router.post('/:id/reject', rbac(["admin", "hr", "super_user"]), campaignsController.rejectCampaign);
 router.delete('/:id', campaignsController.deleteCampaign);
 
 module.exports = router;
