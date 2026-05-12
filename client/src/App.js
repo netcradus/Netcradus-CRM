@@ -40,6 +40,12 @@ const ProjectFormPage          = lazy(() => import("./features/Projects/ProjectF
 const ShowcasePage             = lazy(() => import("./features/Projects/ShowcasePage"));
 const Quotes                   = lazy(() => import("./features/Quotes/Quotes"));
 const Social                   = lazy(() => import("./features/Social/Social"));
+const ContentCalendarPage      = lazy(() => import("./features/DigitalMedia/ContentCalendarPage"));
+const MediaLibraryPage         = lazy(() => import("./features/DigitalMedia/MediaLibraryPage"));
+const AudiencePage             = lazy(() => import("./features/DigitalMedia/AudiencePage"));
+const BudgetOverviewPage       = lazy(() => import("./features/DigitalMedia/BudgetOverviewPage"));
+const ApprovalsPage            = lazy(() => import("./features/DigitalMedia/ApprovalsPage"));
+const UnifiedInboxPage         = lazy(() => import("./features/DigitalMedia/UnifiedInboxPage"));
 const Services                 = lazy(() => import("./features/Services/Services"));
 const Vendors                  = lazy(() => import("./features/Vendors/Vendors"));
 const Sales                    = lazy(() => import("./features/Sales/Sales"));
@@ -248,6 +254,12 @@ const App = () => {
 
               <Route path="/quotes" element={<RoleRoute roles={ACCESS_GROUPS.quotes}><Quotes /></RoleRoute>} />
               <Route path="/social" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Social /></RoleRoute>} />
+              <Route path="/content-calendar" element={<RoleRoute roles={["super_user", "digital_media"]}><ContentCalendarPage /></RoleRoute>} />
+              <Route path="/media-library" element={<RoleRoute roles={["super_user", "digital_media"]}><MediaLibraryPage /></RoleRoute>} />
+              <Route path="/audience" element={<RoleRoute roles={["super_user", "digital_media"]}><AudiencePage /></RoleRoute>} />
+              <Route path="/budget-overview" element={<RoleRoute roles={["super_user", "digital_media"]}><BudgetOverviewPage /></RoleRoute>} />
+              <Route path="/approvals" element={<RoleRoute roles={["super_user", "digital_media", "admin", "hr"]}><ApprovalsPage /></RoleRoute>} />
+              <Route path="/social-inbox" element={<RoleRoute roles={["super_user", "digital_media"]}><UnifiedInboxPage /></RoleRoute>} />
               <Route path="/services" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Services /></RoleRoute>} />
               <Route path="/vendors" element={<RoleRoute roles={ACCESS_GROUPS.vendors}><Vendors /></RoleRoute>} />
               <Route path="/crm-teamspaces" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><CRMTeamspaces /></RoleRoute>} />
@@ -267,7 +279,11 @@ const App = () => {
               <Route path="/ct" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><CT /></RoleRoute>} />
 
               {/* Attendance */}
-              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/attendance" element={
+                <RoleRoute roles={ACCESS_GROUPS.attendance}>
+                  {normalizeRole(localStorage.getItem("userRole")) === 'super_user' ? <AdminAttendanceDashboard /> : <AttendancePage />}
+                </RoleRoute>
+              } />
               <Route path="/admin/attendance" element={
                 <RoleRoute roles={["super_user", "admin", "hr"]}>
                   <AdminAttendanceDashboard />

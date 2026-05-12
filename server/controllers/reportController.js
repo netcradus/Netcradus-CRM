@@ -7,7 +7,7 @@ exports.monthlyReport = async (req, res) => {
     const year = parseInt(req.query.year) || new Date().getFullYear();
     const userId = req.query.userId || req.user._id;
     // Security: non-admin can only see own
-    if (!['admin', 'hr'].includes(req.user.role) && String(req.user._id) !== String(userId)) {
+    if (!['admin', 'hr', 'super_user'].includes(req.user.role) && String(req.user._id) !== String(userId)) {
       return res.status(403).json({ success: false, message: 'Forbidden.' });
     }
     const data = await getMonthlyReport(userId, month, year);

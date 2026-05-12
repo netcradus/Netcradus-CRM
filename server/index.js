@@ -95,6 +95,16 @@ app.use("/api/sales-inbox", salesInboxRoutes);
 
 const campaignRoutes = require("./routes/campaignRoutes");
 app.use("/api/campaigns", campaignRoutes);
+const socialRoutes = require("./routes/socialRoutes");
+app.use("/api/social", socialRoutes);
+const mediaRoutes = require("./routes/mediaRoutes");
+app.use("/api/media", mediaRoutes);
+const audienceRoutes = require("./routes/audienceRoutes");
+app.use("/api/audience", audienceRoutes);
+const utmRoutes = require("./routes/utmRoutes");
+app.use("/api/utm", utmRoutes);
+const approvalRoutes = require("./routes/approvalRoutes");
+app.use("/api/approval", approvalRoutes);
 
 const priceBookRoutes = require("./routes/priceBooks");
 app.use("/api/pricebooks", priceBookRoutes);

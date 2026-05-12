@@ -18,6 +18,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 
 const DEPARTMENT_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
 const LEAVE_STATUS_COLORS = {
@@ -258,6 +259,10 @@ const HRDashboard = ({ preview }) => {
       <div className="nc-card">
         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Real-time Team Status</h3>
         <AttendanceWidget />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        <ApprovalQueueWidget compact title="Digital Media Approval Queue" />
       </div>
     </div>
   );
