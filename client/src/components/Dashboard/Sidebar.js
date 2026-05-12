@@ -119,9 +119,15 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       path: "/campaigns",
       icon: <TrendingUp size={20} />,
       roles: ACCESS_GROUPS.marketing,
-      submenu: [
+        submenu: [
         { label: "Campaigns", path: "/campaigns", icon: <Megaphone size={18} />, roles: ACCESS_GROUPS.marketing },
-        { label: "Social", path: "/social", icon: <Globe size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Content Calendar", path: "/content-calendar", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Media Library", path: "/media-library", icon: <HardDrive size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Audience", path: "/audience", icon: <Users2 size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Budget Overview", path: "/budget-overview", icon: <BarChart size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Approvals", path: "/approvals", icon: <FileText size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Social Media Manager", path: "/social", icon: <Globe size={18} />, roles: ACCESS_GROUPS.marketing },
+        { label: "Unified Inbox", path: "/social-inbox", icon: <MessageSquare size={18} />, roles: ACCESS_GROUPS.marketing },
       ]
     });
 
