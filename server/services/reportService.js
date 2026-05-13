@@ -46,7 +46,7 @@ async function exportMonthlyCsv(month, year) {
     cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
   }
 
-  const users = await User.find({ role: { $ne: 'admin' } }).lean();
+  const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } }).lean();
 
   const records = await AttendanceRecord.find({
     shiftDate: { $gte: start, $lte: end }

@@ -17,7 +17,7 @@ async function monthlySummary() {
     const start = new Date(Date.UTC(year, month - 1, 1));
     const end = new Date(Date.UTC(year, month, 0));
 
-    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'admin' } }).select('_id').lean();
+    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } }).select('_id').lean();
     let count = 0;
 
     for (const user of users) {

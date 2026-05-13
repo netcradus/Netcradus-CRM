@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Home, Users, Briefcase, Ticket, Layout, Layers, Monitor, CircleDollarSign, 
   FileText, Receipt, FileEdit, ShoppingCart, Package, Book, Database, Target, 
@@ -24,8 +24,13 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
     navigate("/login");
   };
 
+  const canShowNavItem = useCallback((item) => {
+    const hiddenForRoles = item.hiddenForRoles || [];
+    return !hiddenForRoles.includes(role) && (!item.roles || canAccess(role, item.roles));
+  }, [role]);
+
   const getItemTargetPath = (item) => {
-    const visibleSubmenu = item.submenu?.filter((sub) => !sub.roles || canAccess(role, sub.roles)) || [];
+    const visibleSubmenu = item.submenu?.filter(canShowNavItem) || [];
     if (visibleSubmenu.length) {
       return visibleSubmenu[0].path;
     }
@@ -155,8 +160,10 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       icon: <UserCheck size={20} />,
       roles: ACCESS_GROUPS.personal,
       submenu: [
-        { label: "Attendance", path: "/attendance", icon: <Clock size={18} />, roles: ACCESS_GROUPS.personal },
-        { label: "Holidays", path: "/holidays", icon: <Umbrella size={18} />, roles: ACCESS_GROUPS.attendance },
+        { label: "Attendance", path: "/attendance", icon: <Clock size={18} />, roles: ACCESS_GROUPS.personal, hiddenForRoles: ["super_user"] },
+        { label: "Team Attendance", path: "/admin/attendance", icon: <UserCheck size={18} />, roles: ACCESS_GROUPS.attendanceAdmin },
+        { label: "Attendance Reports", path: "/attendance-reports", icon: <BarChart3 size={18} />, roles: ACCESS_GROUPS.attendanceAdmin },
+        { label: "Holidays", path: "/holidays", icon: <Umbrella size={18} />, roles: ACCESS_GROUPS.peopleOps },
         { label: "Leaves", path: "/leave", icon: <Plane size={18} />, roles: ACCESS_GROUPS.personal },
         { label: "Interviews", path: "/interviews", icon: <Users2 size={18} />, roles: ACCESS_GROUPS.peopleOps },
       ]
@@ -193,12 +200,12 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
   useEffect(() => {
     const activeParent = menuItems.find((item) =>
-      item.submenu?.some((sub) => location.pathname.startsWith(sub.path))
+      item.submenu?.filter(canShowNavItem).some((sub) => location.pathname.startsWith(sub.path))
     );
     if (activeParent) {
       setOpenSubmenu(activeParent.label);
     }
-  }, [location.pathname, menuItems]);
+  }, [location.pathname, menuItems, canShowNavItem]);
 
   return (
     <nav 
@@ -220,7 +227,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
       <div className="sidebar-menu">
         {menuItems.map((item) => {
-          const visibleSubmenu = item.submenu?.filter((sub) => !sub.roles || canAccess(role, sub.roles)) || [];
+          const visibleSubmenu = item.submenu?.filter(canShowNavItem) || [];
           const hasSubmenu = visibleSubmenu.length > 0;
           const isSubmenuOpen = openSubmenu === item.label;
           const isParentActive = hasSubmenu && visibleSubmenu.some((sub) => location.pathname.startsWith(sub.path));
