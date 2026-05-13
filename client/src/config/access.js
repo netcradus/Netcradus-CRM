@@ -37,7 +37,8 @@ export const ACCESS_GROUPS = {
   forecasts: ["super_user", "management", "sales"],
   marketing: ["super_user", "digital_media"],
   reports: ["super_user", "digital_media"],
-  attendance: ["super_user", "admin", "hr"],
+  attendance: ALL_ROLES,
+  attendanceAdmin: ["super_user", "admin", "hr"],
   personal: ALL_ROLES,
 };
 

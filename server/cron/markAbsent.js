@@ -25,7 +25,7 @@ async function markAbsent() {
       return;
     }
 
-    const users = await User.find({ isActive: { $ne: false }, role: { $nin: ['admin', 'hr', 'super_user'] } }).select('_id').lean();
+    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } }).select('_id').lean();
     let count = 0;
 
     for (const user of users) {
