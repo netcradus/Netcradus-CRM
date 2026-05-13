@@ -93,9 +93,7 @@ body,
 }
 
 .lp-bg-rings {
-  background:
-    radial-gradient(circle at 30% 55%, transparent 0 118px, rgba(255, 138, 0, 0.1) 120px 122px, transparent 124px),
-    radial-gradient(circle at 68% 44%, transparent 0 170px, rgba(255, 45, 143, 0.08) 172px 174px, transparent 176px);
+  display: none;
 }
 
 .lp-bg-dots {
@@ -332,15 +330,21 @@ body,
 .lp-brand-orbit {
   position: relative;
   width: 100%;
-  max-width: 420px;
-  margin: 40px auto 0;
+  max-width: 430px;
+  margin: 34px auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  isolation: isolate;
 }
+
 .lp-orbit-grid {
   position: absolute;
-  inset: 14px 10% 14px 10%;
+  left: 50%;
+  top: 0;
+  width: min(100%, 390px);
+  height: 340px;
+  transform: translateX(-50%);
   border-radius: 26px;
   background:
     linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
@@ -351,26 +355,53 @@ body,
 
 .lp-orbit-core {
   position: relative;
+  --orbit-size: 320px;
+  --orbit-ring-inner: 220px;
+  --orbit-ring-outer: 300px;
+  --orbit-accent: 306px;
   width: 320px;
   height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
+}
+
+.lp-orbit-core::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--orbit-accent);
+  height: var(--orbit-accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 4px solid rgba(255, 138, 0, 0.13);
+  border-top-color: rgba(255, 138, 0, 0.34);
+  border-right-color: rgba(255, 45, 143, 0.12);
+  filter: drop-shadow(0 0 18px rgba(255, 138, 0, 0.12));
+  animation: lpOrbitAccent 18s linear infinite;
+  z-index: 0;
 }
 
 .lp-orbit-ring {
   position: absolute;
+  left: 50%;
+  top: 50%;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }
+
 .lp-orbit-ring-a {
-  width: 220px;
-  height: 220px;
+  width: var(--orbit-ring-inner);
+  height: var(--orbit-ring-inner);
 }
 
 .lp-orbit-ring-b {
-  width: 300px;
-  height: 300px;
+  width: var(--orbit-ring-outer);
+  height: var(--orbit-ring-outer);
 }
 
 .lp-orbit-badge {
@@ -382,7 +413,8 @@ body,
   justify-content: center;
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(10px);
-  z-index: 2;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+  z-index: 3;
 }
 
 .lp-orbit-node {
@@ -395,34 +427,39 @@ body,
   font-weight: 600;
   color: white;
   backdrop-filter: blur(10px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  z-index: 4;
+  animation: lpOrbitFloat 7s ease-in-out infinite;
 }
 
 .lp-orbit-node-a {
-  top: 20px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .lp-orbit-node-b {
-  right: -10px;
+  right: -18px;
   top: 50%;
   transform: translateY(-50%);
+  animation-delay: -2.2s;
 }
 
 .lp-orbit-node-c {
-  left: -10px;
-  bottom: 40px;
+  left: -18px;
+  bottom: 42px;
+  animation-delay: -4.4s;
 }
 
 
-@keyframes lpOrbitA {
+@keyframes lpOrbitAccent {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-@keyframes lpOrbitB {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
+@keyframes lpOrbitFloat {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -6px; }
 }
 
 .lp-feature-icon {
@@ -729,16 +766,20 @@ body,
   }
 
   .lp-brand-orbit {
-  min-height: 320px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    min-height: 320px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .lp-orbit-core {
+    --orbit-size: 260px;
+    --orbit-ring-inner: 170px;
+    --orbit-ring-outer: 236px;
+    --orbit-accent: 244px;
     width: 260px;
-  height: 260px;
-  position: relative;
+    height: 260px;
+    position: relative;
   }
 }
 
@@ -761,13 +802,26 @@ body,
     font-size: 11px;
     padding: 8px 12px;
   }
-}
-.lp-orbit-ring-a {
-  width: 180px;
-  height: 180px;
-}
 
-.lp-orbit-ring-b {
-  width: 250px;
-  height: 250px;
+  .lp-orbit-core {
+    --orbit-size: 240px;
+    --orbit-ring-inner: 160px;
+    --orbit-ring-outer: 220px;
+    --orbit-accent: 228px;
+    width: 240px;
+    height: 240px;
+  }
+
+  .lp-orbit-node-a {
+    top: 14px;
+  }
+
+  .lp-orbit-node-b {
+    right: -12px;
+  }
+
+  .lp-orbit-node-c {
+    left: -12px;
+    bottom: 34px;
+  }
 }
