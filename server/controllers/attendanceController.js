@@ -340,7 +340,7 @@ exports.getTodaySnapshot = async (req, res) => {
     const isWknd = isWeekend(shiftDate, settings.weekends, settings.timezone);
     const isHldy = isHoliday(shiftDate, holidays);
 
-    // Fetch all active non-super_user users
+    // Fetch tracked users. Super users can manage attendance but do not punch in.
     const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } })
       .select('name email role department')
       .lean();

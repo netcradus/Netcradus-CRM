@@ -285,13 +285,13 @@ const App = () => {
                 </RoleRoute>
               } />
               <Route path="/admin/attendance" element={
-                <RoleRoute roles={["super_user", "admin", "hr"]}>
+                <RoleRoute roles={ACCESS_GROUPS.attendanceAdmin}>
                   <AdminAttendanceDashboard />
                 </RoleRoute>
               } />
               <Route path="/leave" element={<LeavePage />} />
-              <Route path="/holidays" element={<RoleRoute roles={["super_user", "hr"]}><HolidaysPage /></RoleRoute>} />
-              <Route path="/attendance-reports" element={<RoleRoute roles={["super_user", "admin", "hr"]}><AttendanceReportsPage /></RoleRoute>} />
+              <Route path="/holidays" element={<RoleRoute roles={ACCESS_GROUPS.peopleOps}><HolidaysPage /></RoleRoute>} />
+              <Route path="/attendance-reports" element={<RoleRoute roles={ACCESS_GROUPS.attendanceAdmin}><AttendanceReportsPage /></RoleRoute>} />
 
               <Route path="/admin/storage" element={
                 <RoleRoute roles="super_user">
