@@ -9,10 +9,12 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
+import useOnboarding from "../../features/Onboarding/useOnboarding";
 
 const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, onHoverExpanded, onHoverCollapsed, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { gracePeriodExpired } = useOnboarding();
   const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
   const [openSubmenu, setOpenSubmenu] = useState(null);
 
@@ -23,6 +25,20 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
     localStorage.clear();
     navigate("/login");
   };
+
+  const guardNavigation = useCallback((event) => {
+    if (!gracePeriodExpired) {
+      return false;
+    }
+
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    navigate("/onboarding");
+    if (window.innerWidth <= 768) {
+      onCloseMobile?.();
+    }
+    return true;
+  }, [gracePeriodExpired, navigate, onCloseMobile]);
 
   const canShowNavItem = useCallback((item) => {
     const hiddenForRoles = item.hiddenForRoles || [];
@@ -38,6 +54,10 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
   };
 
   const handleSubmenuToggle = (e, item) => {
+    if (guardNavigation(e)) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     const targetPath = getItemTargetPath(item);
@@ -56,6 +76,14 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
   };
 
   const handleLeafNavigation = () => {
+    if (gracePeriodExpired) {
+      navigate("/onboarding");
+      if (window.innerWidth <= 768) {
+        onCloseMobile?.();
+      }
+      return;
+    }
+
     if (window.innerWidth <= 768) {
       onCloseMobile?.();
     }
@@ -252,7 +280,12 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
                         key={sub.path} 
                         to={sub.path} 
                         className={({ isActive }) => `sidebar-submenu-item ${isActive ? "is-active" : ""}`}
-                        onClick={handleLeafNavigation}
+                        onClick={(event) => {
+                          if (guardNavigation(event)) {
+                            return;
+                          }
+                          handleLeafNavigation();
+                        }}
                       >
                         <div className="sidebar-submenu-icon">{sub.icon}</div>
                         <span className="sidebar-submenu-text">{sub.label}</span>
@@ -269,7 +302,12 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
               key={item.path} 
               to={item.path} 
               className={({ isActive }) => `sidebar-item ${isActive ? "is-active" : ""}`}
-              onClick={handleLeafNavigation}
+              onClick={(event) => {
+                if (guardNavigation(event)) {
+                  return;
+                }
+                handleLeafNavigation();
+              }}
             >
               <div className="sidebar-item-icon">{item.icon}</div>
               <span className="sidebar-item-text">{item.label}</span>

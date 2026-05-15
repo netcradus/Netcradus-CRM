@@ -13,6 +13,8 @@ import ResetPassword from "./Pages/ResetPassword";
 /* ========== Layout ========== */
 import MainLayout from "./components/Layout/MainLayout";
 import { ACCESS_GROUPS, canAccess, normalizeRole } from "./config/access";
+import { OnboardingProvider } from "./features/Onboarding/OnboardingProvider";
+import useOnboarding from "./features/Onboarding/useOnboarding";
 
 /* ========== Lazy Modules ========== */
 const WelcomeAnimation         = lazy(() => import("./Pages/WelcomeAnimation"));
@@ -74,9 +76,10 @@ const InterviewsPage           = lazy(() => import("./features/Interviews/Interv
 const StorageAdminPage         = lazy(() => import("./features/Documents/admin/StorageAdminPage"));
 const ManagementHub            = lazy(() => import("./features/Management/ManagementHub"));
 const PasswordManager          = lazy(() => import("./features/PasswordManager/PasswordManager"));
+const OnboardingPage           = lazy(() => import("./features/Onboarding/OnboardingPage"));
 
 /* ========== Protected Wrapper ========== */
-function ProtectedLayout() {
+function ProtectedApp() {
   const rawToken = localStorage.getItem("token");
   const rawRole = localStorage.getItem("userRole");
   
@@ -90,10 +93,26 @@ function ProtectedLayout() {
   }
 
   return (
+    <OnboardingProvider>
+      <Outlet />
+    </OnboardingProvider>
+  );
+}
+
+function ProtectedLayout() {
+  const { loading, gracePeriodExpired, status, isExempt } = useOnboarding();
+
+  if (!isExempt && loading) {
+    return <div className="loading-fallback">Loading...</div>;
+  }
+
+  if (!isExempt && gracePeriodExpired && status !== "complete") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return (
     <ChatProvider>
-      <MainLayout>
-        <Outlet />
-      </MainLayout>
+      <MainLayout />
     </ChatProvider>
   );
 }
@@ -135,9 +154,11 @@ const App = () => {
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             {/* ================= PROTECTED ================= */}
-            <Route element={<ProtectedLayout />}>
-              <Route path="/welcome" element={<WelcomeAnimation />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+            <Route element={<ProtectedApp />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/welcome" element={<WelcomeAnimation />} />
+                <Route path="/dashboard" element={<Dashboard />} />
               
               <Route path="/user-management" element={
                 <RoleRoute roles="super_user">
@@ -299,11 +320,12 @@ const App = () => {
                 </RoleRoute>
               } />
 
-              <Route path="/password-manager" element={
-                <RoleRoute roles="super_user">
-                  <PasswordManager />
-                </RoleRoute>
-              } />
+                <Route path="/password-manager" element={
+                  <RoleRoute roles="super_user">
+                    <PasswordManager />
+                  </RoleRoute>
+                } />
+              </Route>
             </Route>
 
             {/* ================= FALLBACK ================= */}

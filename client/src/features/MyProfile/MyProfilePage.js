@@ -16,11 +16,21 @@ function MyProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [onboardingRecord, setOnboardingRecord] = useState(null);
 
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(apiUrl("/api/contacts/profiles/me"), { headers: { Authorization: `Bearer ${token}` } });
+      const [profileResponse, onboardingResponse] = await Promise.allSettled([
+        axios.get(apiUrl("/api/contacts/profiles/me"), { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(apiUrl("/api/onboarding/my-record"), { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      if (profileResponse.status !== "fulfilled") {
+        throw profileResponse.reason;
+      }
+
+      const data = profileResponse.value.data;
       setProfile(data);
       setForm({
         contactNumber: data.contactNumber || "",
@@ -29,6 +39,7 @@ function MyProfilePage() {
         emergencyContactNumber: data.emergencyContactNumber || "",
         personalEmail: data.personalEmail || "",
       });
+      setOnboardingRecord(onboardingResponse.status === "fulfilled" ? onboardingResponse.value.data?.data || null : null);
     } catch (err) { setError("Unable to load profile"); }
     finally { setLoading(false); }
   }, [token]);
@@ -91,6 +102,15 @@ function MyProfilePage() {
                   <div style={{ height: '4px', background: 'var(--color-bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
                      <div style={{ width: `${readiness * 20}%`, height: '100%', background: 'var(--color-accent)', transition: 'width 0.3s ease' }} />
                   </div>
+               </div>
+            </div>
+
+            <div className="nc-card" style={{ padding: 'var(--space-6)' }}>
+               <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Onboarding Status</h3>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
+                  <span>Status: {onboardingRecord?.onboardingStatus === "complete" ? "Complete" : onboardingRecord?.onboardingStatus === "step1_complete" ? "Agreement Pending" : "Pending"}</span>
+                  {onboardingRecord?.completedAt && <span>Completed on: {new Date(onboardingRecord.completedAt).toLocaleDateString()}</span>}
+                  {onboardingRecord?.aadhaarNumber && <span>Aadhaar: {onboardingRecord.aadhaarNumber}</span>}
                </div>
             </div>
 

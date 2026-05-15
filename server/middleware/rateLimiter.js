@@ -81,6 +81,20 @@ const passwordVerificationLimiter = rateLimit({
     },
 });
 
+const onboardingSubmissionLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => req.user?._id?.toString() || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "Too many onboarding submissions. Please try again later.",
+        code: "RATE_LIMIT_REACHED",
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
     loginLimiter,
     otpRequestLimiter,
@@ -89,4 +103,5 @@ module.exports = {
     verifyPasswordLimiter,
     projectRouteLimiter,
     passwordVerificationLimiter,
+    onboardingSubmissionLimiter,
 };

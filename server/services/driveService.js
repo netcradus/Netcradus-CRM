@@ -170,6 +170,25 @@ const streamFile = async (driveFileId, res) => {
   }
 };
 
+const getFileBuffer = async (driveFileId) => {
+  if (!drive) throw new Error('Google Drive client is not initialized.');
+
+  try {
+    const response = await drive.files.get(
+      {
+        fileId: driveFileId,
+        alt: 'media',
+        supportsAllDrives: true,
+      },
+      { responseType: 'arraybuffer' }
+    );
+
+    return Buffer.from(response.data);
+  } catch (err) {
+    handleDriveError(err, 'getFileBuffer');
+  }
+};
+
 /**
  * Fetches metadata for a Drive file.
  * @param {string} driveFileId
@@ -258,6 +277,7 @@ module.exports = {
   deleteFile,
   streamFile,
   getFileMetadata,
+  getFileBuffer,
   listFilesInFolder,
   moveFile,
   sanitizeDriveName,

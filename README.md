@@ -52,3 +52,27 @@ If you have `Document` records created before moving to Shared Drives, they may 
   node scripts/migrateExistingUserStorage.js
   ```
   Ensure `DRIVE_FOLDER_ID` and `DRIVE_SHARED_ID` are correctly set before running.
+
+## Employee Onboarding
+
+The CRM now enforces a first-login onboarding flow for every role except `super_user`.
+
+### Grace period
+1. A newly created employee has a 3-day grace period by default.
+2. During the grace period, the employee can use the CRM but sees a persistent banner linking to `/onboarding`.
+3. After the grace period expires, client navigation redirects the employee to `/onboarding` and protected backend routes return `403` with `code: ONBOARDING_REQUIRED` until onboarding is completed.
+4. The grace window can be changed with `ONBOARDING_GRACE_PERIOD_DAYS` in `server/.env`.
+
+### Document storage
+1. Identity verification uploads are saved to the HR user's Drive storage, inside the `onboarding-documents` folder.
+2. If no HR user exists, uploads fall back to the `super_user` Drive folder and the server logs a warning.
+3. MongoDB `Document` records are still created so HR has traceable ownership and entity linkage for each uploaded file.
+
+### Email delivery
+1. On completion, the system sends a separate HR notification email and an employee confirmation email through Brevo using the onboarding-specific sender configuration.
+2. The onboarding mailer is isolated in `server/services/onboardingEmailService.js` and still uses the existing `BREVO_API_KEY`.
+3. TODO: add an admin endpoint to manually re-send onboarding emails for an existing onboarding record when needed.
+
+### Agreement version management
+1. The onboarding record stores `agreementVersion`, currently set to `v1.0`.
+2. When the agreement or NDA text changes, update the shared onboarding content, bump the default `agreementVersion`, and keep the previous version available if historical records must be reproduced later.
