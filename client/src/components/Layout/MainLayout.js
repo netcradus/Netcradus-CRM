@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../Dashboard/Sidebar";
 import Topbar from "../Topbar/Topbar";
 import ChatLauncher from "../Chat/ChatLauncher";
+import OnboardingBanner from "../../features/Onboarding/OnboardingBanner";
 
 const MainLayout = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
@@ -52,6 +53,7 @@ const MainLayout = () => {
           onToggleSidebar={handleToggleSidebar}
           isSidebarExpanded={isSidebarExpanded}
         />
+        <OnboardingBanner />
         <main className="dashboard-content">
           <Outlet />
         </main>

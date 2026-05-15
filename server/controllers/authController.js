@@ -323,7 +323,7 @@ const login = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
     res.status(200).json({
       token, passwordExpiryWarning,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt }
     });
   } catch (err) {
     console.error("Login Error:", err);
@@ -708,6 +708,7 @@ const verifySecurityOTP = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        createdAt: user.createdAt,
       },
     });
   } catch (err) {
@@ -782,6 +783,7 @@ const verifyPasswordChange = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        createdAt: user.createdAt,
       }
     });
   } catch (err) {
@@ -823,6 +825,7 @@ const verifyAdminDevice = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        createdAt: user.createdAt,
       }
     });
   } catch (err) {

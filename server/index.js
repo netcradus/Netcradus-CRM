@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const helmet = require("helmet");
 const connectDB = require("./config/db");
 const { initializeSocket } = require("./socket");
+const { registerCronJobs, getCronLastRun } = require("./cron");
 
 dotenv.config();
 connectDB();
@@ -34,6 +35,20 @@ app.get("/healthz", (req, res) => {
 
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
+const onboardingRoutes = require("./routes/onboardingRoutes");
+app.use("/api/onboarding", onboardingRoutes);
+
+app.get("/api/health/cron", (req, res) => {
+  res.status(200).json({ success: true, data: getCronLastRun() });
+});
+
+const healthRoutes = require("./routes/healthRoutes");
+app.use("/api/health", healthRoutes);
+
+const authMiddleware = require("./middleware/authMiddleware");
+const onboardingExemptMiddleware = require("./middleware/onboardingExemptMiddleware");
+app.use("/api", authMiddleware, onboardingExemptMiddleware);
+
 const conversationRoutes = require("./routes/conversationRoutes");
 app.use("/api/conversations", conversationRoutes);
 const messageRoutes = require("./routes/messageRoutes");
@@ -145,15 +160,7 @@ app.use("/api/management", managementRoutes);
 const passwordManagerRoutes = require("./routes/passwordManagerRoutes");
 app.use("/api/password-manager", passwordManagerRoutes);
 
-const { registerCronJobs, getCronLastRun } = require("./cron");
 registerCronJobs();
-
-app.get("/api/health/cron", (req, res) => {
-  res.status(200).json({ success: true, data: getCronLastRun() });
-});
-
-const healthRoutes = require("./routes/healthRoutes");
-app.use("/api/health", healthRoutes);
 
 initializeSocket(server);
 
