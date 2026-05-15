@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    name: String,
+    content: String,
+    type: {
+      type: String,
+    },
+  },
+  { _id: false }
+);
+
 const onboardingRecordSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -59,31 +70,19 @@ const onboardingRecordSchema = new mongoose.Schema({
     default: null,
   },
   aadhaarCopyFileName: String,
-  aadhaarCopyAttachment: {
-    name: String,
-    content: String,
-    type: String,
-  },
+  aadhaarCopyAttachment: attachmentSchema,
   photoFileId: {
     type: String,
     default: null,
   },
   photoFileName: String,
-  photoAttachment: {
-    name: String,
-    content: String,
-    type: String,
-  },
+  photoAttachment: attachmentSchema,
   addressProofFileId: {
     type: String,
     default: null,
   },
   addressProofFileName: String,
-  addressProofAttachment: {
-    name: String,
-    content: String,
-    type: String,
-  },
+  addressProofAttachment: attachmentSchema,
   selfAttestationSignature: {
     type: String,
     trim: true,
