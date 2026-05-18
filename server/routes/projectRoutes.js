@@ -1,11 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/projectController");
-const authMiddleware = require("../middleware/authMiddleware");
 const rbac = require("../middleware/rbac");
 const { verifyPasswordLimiter, projectRouteLimiter } = require("../middleware/rateLimiter");
 
-router.use(authMiddleware);
 router.use(projectRouteLimiter);
 
 router.get("/users", projectController.getProjectUsers);

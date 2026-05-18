@@ -4,12 +4,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useChat } from "../../context/ChatContext";
 import ChatPanel from "./ChatPanel";
 
+const chatEnabled = String(process.env.REACT_APP_CHAT_ENABLED || "true").toLowerCase() === "true";
 
 export default function ChatLauncher() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { launcherOpen, setLauncherOpen, unreadCount } = useChat();
+  const { bootstrapChat, launcherOpen, setLauncherOpen, unreadCount } = useChat();
   const isChatPage = location.pathname === "/messages";
+
+  if (!chatEnabled) {
+    return null;
+  }
 
   if (isChatPage) {
     return null;
@@ -21,7 +26,9 @@ export default function ChatLauncher() {
         <button
           type="button"
           className="chat-launcher"
-          onClick={() => setLauncherOpen(true)}
+          onClick={() => {
+            bootstrapChat({ openLauncher: true });
+          }}
           aria-label="Open chat"
         >
           <MessageCircle size={22} />

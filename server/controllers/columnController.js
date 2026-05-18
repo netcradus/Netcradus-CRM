@@ -3,7 +3,7 @@ const Column = require("../models/Column");
 // GET all columns
 exports.getColumns = async (req, res) => {
   try {
-    const columns = await Column.find().sort({ createdAt: 1 });
+    const columns = await Column.find().sort({ createdAt: 1 }).maxTimeMS(2000).lean();
     res.json(columns);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -66,6 +66,8 @@ const projectSchema = new mongoose.Schema({
 
 projectSchema.index({ isDeleted: 1, isVisibleInShowcase: 1 });
 projectSchema.index({ isFeatured: -1, createdAt: -1 });
+projectSchema.index({ isDeleted: 1, createdBy: 1, createdAt: -1 });
+projectSchema.index({ isDeleted: 1, createdAt: -1 });
 
 projectSchema.pre("save", function setUpdatedAt(next) {
   this.updatedAt = Date.now();

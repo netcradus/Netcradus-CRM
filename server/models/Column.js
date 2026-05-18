@@ -8,4 +8,6 @@ const columnSchema = new mongoose.Schema({
   color: String,
 }, { timestamps: true });
 
+columnSchema.index({ createdAt: 1 });
+
 module.exports = mongoose.model("Column", columnSchema);

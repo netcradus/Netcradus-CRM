@@ -13,6 +13,7 @@ import {
 import { initializeNotificationSound, playNotificationSound } from "../utils/notificationSound";
 // import "./NotificationButton.css";
 
+const NOTIFICATION_REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_NOTIFICATION_REQUEST_TIMEOUT_MS || 5000);
 
 function formatTimeAgo(value) {
   const date = new Date(value);
@@ -47,6 +48,7 @@ export default function NotificationButton() {
   const authConfig = useMemo(
     () => ({
       headers: { Authorization: `Bearer ${token}` },
+      timeout: NOTIFICATION_REQUEST_TIMEOUT_MS,
     }),
     [token]
   );
@@ -144,13 +146,15 @@ export default function NotificationButton() {
   }, [triggerIncomingNotification, unreadCount]);
 
   useEffect(() => {
+    if (!isOpen) return undefined;
+
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
+    const interval = setInterval(fetchNotifications, 120000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, isOpen]);
 
   useEffect(() => {
-    if (!token || !notificationsAvailable) return undefined;
+    if (!token || !notificationsAvailable || !isOpen) return undefined;
 
     const socket = getNotificationSocket(token);
     if (!socket) return undefined;
@@ -165,7 +169,7 @@ export default function NotificationButton() {
     return () => {
       socket.off("notification:new", handleNewNotification);
     };
-  }, [fetchNotifications, notificationsAvailable, token, triggerIncomingNotification]);
+  }, [fetchNotifications, isOpen, notificationsAvailable, token, triggerIncomingNotification]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -202,7 +206,13 @@ export default function NotificationButton() {
       await requestBrowserNotificationPermission();
     }
 
-    setIsOpen((open) => !open);
+    setIsOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        fetchNotifications();
+      }
+      return nextOpen;
+    });
   };
 
   return (

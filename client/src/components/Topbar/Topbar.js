@@ -4,6 +4,7 @@ import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
 // import "./Topbar.css";
 
+const notificationsEnabled = String(process.env.REACT_APP_NOTIFICATIONS_ENABLED || "true").toLowerCase() === "true";
 
 const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
   const userName = localStorage.getItem("userName") || "User";
@@ -44,7 +45,7 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
         </div>
 
         <ThemeToggle className="topbar-theme-toggle" compact />
-        <NotificationButton />
+        {notificationsEnabled ? <NotificationButton /> : null}
 
         <div className="topbar-avatar" title={userName}>
           {initials}

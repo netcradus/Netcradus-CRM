@@ -102,11 +102,7 @@ function ProtectedApp() {
 function ProtectedLayout() {
   const { loading, gracePeriodExpired, status, isExempt } = useOnboarding();
 
-  if (!isExempt && loading) {
-    return <div className="loading-fallback">Loading...</div>;
-  }
-
-  if (!isExempt && gracePeriodExpired && status !== "complete") {
+  if (!isExempt && !loading && gracePeriodExpired && status !== "complete") {
     return <Navigate to="/onboarding" replace />;
   }
 
