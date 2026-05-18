@@ -4,15 +4,15 @@ async function getNotifications(req, res) {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
     const notifications = await TaskNotification.find({ userId: req.user._id })
-      .populate("taskId", "title status dueDate")
       .sort({ createdAt: -1 })
       .limit(limit)
+      .maxTimeMS(2000)
       .lean();
 
     const unreadCount = await TaskNotification.countDocuments({
       userId: req.user._id,
       isRead: false,
-    });
+    }).maxTimeMS(2000);
 
     return res.json({ success: true, data: notifications, unreadCount });
   } catch (error) {
