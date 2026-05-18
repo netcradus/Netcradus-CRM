@@ -5,6 +5,7 @@ import { apiUrl } from "../../config/api";
 
 const OnboardingContext = createContext(null);
 const DEFAULT_GRACE_DAYS = Number(process.env.REACT_APP_ONBOARDING_GRACE_PERIOD_DAYS || 3);
+const ONBOARDING_STATUS_TIMEOUT_MS = Number(process.env.REACT_APP_ONBOARDING_STATUS_TIMEOUT_MS || 5000);
 
 export function OnboardingProvider({ children }) {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export function OnboardingProvider({ children }) {
     try {
       setState((current) => ({ ...current, loading: true }));
       const response = await axios.get(apiUrl("/api/onboarding/status"), {
+        timeout: ONBOARDING_STATUS_TIMEOUT_MS,
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },

@@ -64,6 +64,24 @@ const SHOWCASE_FIELDS = [
   "endDate",
   "deploymentPlatform",
 ];
+const PROJECT_LIST_FIELDS = [
+  "_id",
+  "name",
+  "tagline",
+  "status",
+  "industry",
+  "thumbnail",
+  "clientName",
+  "clientCompany",
+  "startDate",
+  "endDate",
+  "isFeatured",
+  "isVisibleInShowcase",
+  "createdAt",
+  "updatedAt",
+  "createdBy",
+  "collaborators",
+].join(" ");
 
 const URL_FIELDS = ["liveUrl", "stagingUrl", "clientWebsite", "githubUrl"];
 const STATUSES = ["completed", "ongoing", "maintenance"];
@@ -283,8 +301,14 @@ exports.getProjects = catchAsync(async (req, res) => {
   const skip = (safePage - 1) * safeLimit;
 
   const [projects, total] = await Promise.all([
-    Project.find(query).sort(sort).skip(skip).limit(safeLimit).lean(),
-    Project.countDocuments(query),
+    Project.find(query)
+      .select(PROJECT_LIST_FIELDS)
+      .sort(sort)
+      .skip(skip)
+      .limit(safeLimit)
+      .maxTimeMS(3000)
+      .lean(),
+    Project.countDocuments(query).maxTimeMS(3000),
   ]);
 
   res.json({

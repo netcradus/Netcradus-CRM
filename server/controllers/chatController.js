@@ -23,12 +23,14 @@ async function getConversations(req, res) {
       participants: currentUserId,
       hiddenFor: { $ne: currentUserId },
     })
+      .select("participants hiddenFor lastMessageId lastMessageAt updatedAt")
       .populate("participants", "_id name email role department lastSeenAt")
       .populate({
         path: "lastMessageId",
         populate: { path: "senderId", select: "_id name email" },
       })
       .sort({ lastMessageAt: -1, updatedAt: -1 })
+      .maxTimeMS(3000)
       .lean();
 
     const conversationIds = conversations.map((conversation) => conversation._id);
@@ -49,6 +51,7 @@ async function getConversations(req, res) {
             },
           },
         ])
+          .option({ maxTimeMS: 3000 })
       : [];
 
     const unreadCountMap = unreadCounts.reduce((accumulator, item) => {

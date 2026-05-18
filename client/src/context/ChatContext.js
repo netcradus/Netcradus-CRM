@@ -1,12 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import { apiUrl } from "../config/api";
 import { disconnectAppSocket, getAppSocket } from "../services/socket";
 
 const ChatContext = createContext(null);
+const CHAT_REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_CHAT_REQUEST_TIMEOUT_MS || 5000);
 
 const getAuthConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  timeout: CHAT_REQUEST_TIMEOUT_MS,
 });
 
 function normalizeDirectoryUsers(items = [], currentUserId) {
@@ -65,6 +68,7 @@ function applyPresence(conversation, onlineMap) {
 }
 
 export function ChatProvider({ children }) {
+  const location = useLocation();
   const token = localStorage.getItem("token");
   const currentUserId = localStorage.getItem("userId");
   const [conversations, setConversations] = useState([]);
@@ -79,6 +83,8 @@ export function ChatProvider({ children }) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
   const socketRef = useRef(null);
+  const chatRouteActive = location.pathname === "/messages";
+  const shouldInitializeChat = Boolean(token && (launcherOpen || chatRouteActive));
 
   const unreadCount = useMemo(
     () => conversations.reduce((total, conversation) => total + (conversation.unreadCount || 0), 0),
@@ -98,6 +104,13 @@ export function ChatProvider({ children }) {
       setLoadingConversations(false);
     }
   }, [token]);
+
+  const bootstrapChat = useCallback(async (options = {}) => {
+    if (options.openLauncher) {
+      setLauncherOpen(true);
+    }
+    await fetchConversations();
+  }, [fetchConversations]);
 
   const fetchDirectory = useCallback(async (search = "") => {
     if (!token) return [];
@@ -288,13 +301,6 @@ export function ChatProvider({ children }) {
   }, [fetchMessages, paginationByConversation]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      fetchConversations();
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [fetchConversations]);
-
-  useEffect(() => {
     if (!Object.keys(onlineUsers).length) return;
     setConversations((current) => current.map((conversation) => applyPresence(conversation, onlineUsers)));
   }, [onlineUsers]);
@@ -315,14 +321,19 @@ export function ChatProvider({ children }) {
   }, [conversations, markConversationRead, selectedConversationId, socketReady]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!shouldInitializeChat) {
+      setSocketReady(false);
+      disconnectAppSocket();
+      socketRef.current = null;
+      return undefined;
+    }
 
     const socket = getAppSocket(token);
     socketRef.current = socket;
 
     const handleReady = () => {
       setSocketReady(true);
-      window.setTimeout(fetchConversations, 800);
+      window.setTimeout(fetchConversations, 250);
     };
 
     const handleDisconnect = () => {
@@ -453,12 +464,13 @@ export function ChatProvider({ children }) {
       disconnectAppSocket();
       socketRef.current = null;
     };
-  }, [currentUserId, fetchConversations, markConversationRead, selectedConversationId, token]);
+  }, [currentUserId, fetchConversations, markConversationRead, selectedConversationId, shouldInitializeChat, token]);
 
 
   const value = useMemo(() => ({
     conversations,
     createConversation,
+    bootstrapChat,
     directory,
     fetchDirectory,
     fetchMessages,
@@ -485,6 +497,7 @@ export function ChatProvider({ children }) {
   }), [
     conversations,
     createConversation,
+    bootstrapChat,
     directory,
     fetchDirectory,
     fetchMessages,
