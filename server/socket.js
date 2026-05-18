@@ -241,20 +241,24 @@ function initializeSocket(server) {
           return;
         }
 
-        const conversation = await Conversation.findOne({
-          _id: conversationId,
-          participants: socket.user._id,
-        }).select("_id");
+        const roomName = getConversationRoom(conversationId);
+        if (!socket.rooms.has(roomName)) {
+          const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: socket.user._id,
+          }).select("_id").lean();
 
-        if (!conversation) {
-          callback({ success: false, message: "Conversation not found" });
-          return;
+          if (!conversation) {
+            callback({ success: false, message: "Conversation not found" });
+            return;
+          }
+          socket.join(roomName);
         }
 
         const timerKey = `${conversationId}:${socket.user._id}`;
         clearTimeout(typingTimers.get(timerKey));
 
-        ioInstance.to(getConversationRoom(conversationId)).emit("user_typing", {
+        ioInstance.to(roomName).emit("user_typing", {
           conversationId: String(conversationId),
           userId: String(socket.user._id),
           userName: socket.user.name,
@@ -265,7 +269,7 @@ function initializeSocket(server) {
           typingTimers.set(
             timerKey,
             setTimeout(() => {
-              ioInstance.to(getConversationRoom(conversationId)).emit("user_typing", {
+              ioInstance.to(roomName).emit("user_typing", {
                 conversationId: String(conversationId),
                 userId: String(socket.user._id),
                 userName: socket.user.name,

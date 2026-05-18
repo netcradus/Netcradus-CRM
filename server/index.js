@@ -6,11 +6,17 @@ const helmet = require("helmet");
 const connectDB = require("./config/db");
 const { initializeSocket } = require("./socket");
 const { registerCronJobs, getCronLastRun } = require("./cron");
+const { isDriveEnabled } = require("./utils/featureFlags");
 
 dotenv.config();
 connectDB();
 
-const { checkDriveHealth } = require('./config/drive');
+const checkDriveHealth = async () => {
+  if (!isDriveEnabled()) {
+    return { status: "maintenance", message: "Drive is temporarily unavailable for maintenance." };
+  }
+  return require("./config/drive").checkDriveHealth();
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +25,7 @@ app.set("trust proxy", 1);
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 
 app.get("/", (req, res) => {
   res.send("NetCradus CRM Backend is running");
@@ -133,8 +139,18 @@ app.use("/api/meetings", meetingRoutes);
 const solutionRoutes = require("./routes/solutionRoutes");
 app.use("/api/solutions", solutionRoutes);
 
-const documentRoutes = require("./routes/documentRoutes");
-app.use("/api/documents", documentRoutes);
+if (isDriveEnabled()) {
+  const documentRoutes = require("./routes/documentRoutes");
+  app.use("/api/documents", documentRoutes);
+} else {
+  app.use("/api/documents", (req, res) => {
+    res.status(503).json({
+      success: false,
+      code: "DRIVE_MAINTENANCE",
+      message: "Drive is temporarily unavailable while we perform maintenance.",
+    });
+  });
+}
 
 const forecastRoutes = require("./routes/forecastRoutes");
 app.use("/api/forecasts", forecastRoutes);
@@ -160,7 +176,11 @@ app.use("/api/management", managementRoutes);
 const passwordManagerRoutes = require("./routes/passwordManagerRoutes");
 app.use("/api/password-manager", passwordManagerRoutes);
 
-registerCronJobs();
+if (process.env.DISABLE_CRON === "true") {
+  console.log("[CRON] Disabled by DISABLE_CRON=true");
+} else {
+  registerCronJobs();
+}
 
 initializeSocket(server);
 
@@ -170,6 +190,10 @@ server.listen(PORT, "0.0.0.0", async () => {
 
   // Drive Startup Check
   const driveStatus = await checkDriveHealth();
+  if (driveStatus.status === 'maintenance') {
+    console.log('[Drive] Skipping startup health check; Drive is in maintenance mode.');
+    return;
+  }
   if (driveStatus.status !== 'ok') {
     console.error('\n⚠️  DRIVE CONNECTION FAILED — file uploads will not work. Check OAuth credentials.');
     console.error(`Reason: ${driveStatus.message}\n`);

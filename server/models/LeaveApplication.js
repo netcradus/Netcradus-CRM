@@ -23,4 +23,7 @@ const leaveApplicationSchema = new mongoose.Schema({
   documents: [String]  // optional — link to uploaded docs
 }, { timestamps: true });
 
+leaveApplicationSchema.index({ userId: 1, status: 1, from: 1, to: 1 });
+leaveApplicationSchema.index({ status: 1, from: 1, to: 1 });
+
 module.exports = mongoose.model('LeaveApplication', leaveApplicationSchema);

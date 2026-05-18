@@ -26,38 +26,34 @@ async function markAbsent() {
     }
 
     const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } }).select('_id').lean();
-    let count = 0;
+    const userIds = users.map((user) => user._id);
+    if (!userIds.length) return 0;
 
-    for (const user of users) {
-      // Check if record already exists
-      const existing = await AttendanceRecord.findOne({ userId: user._id, shiftDate });
-      if (existing) continue;
-
-      // Check if user has approved leave for today
-      const leave = await LeaveApplication.findOne({
-        userId: user._id,
+    const [existingRecords, approvedLeaves] = await Promise.all([
+      AttendanceRecord.find({ userId: { $in: userIds }, shiftDate }).select('userId').lean(),
+      LeaveApplication.find({
+        userId: { $in: userIds },
         status: 'approved',
         from: { $lte: shiftDate },
         to: { $gte: shiftDate },
-      });
+      }).select('userId').lean(),
+    ]);
 
-      if (leave) {
-        // Create on_leave record
-        await AttendanceRecord.create({
-          userId: user._id,
-          shiftDate,
-          status: 'on_leave',
-        });
-      } else {
-        // Mark absent
-        await AttendanceRecord.create({
-          userId: user._id,
-          shiftDate,
-          status: 'absent',
-        });
-      }
-      count++;
+    const existingUserIds = new Set(existingRecords.map((record) => String(record.userId)));
+    const leaveUserIds = new Set(approvedLeaves.map((leave) => String(leave.userId)));
+    const recordsToCreate = userIds
+      .filter((userId) => !existingUserIds.has(String(userId)))
+      .map((userId) => ({
+        userId,
+        shiftDate,
+        status: leaveUserIds.has(String(userId)) ? 'on_leave' : 'absent',
+      }));
+
+    if (recordsToCreate.length) {
+      await AttendanceRecord.insertMany(recordsToCreate, { ordered: false });
     }
+
+    const count = recordsToCreate.length;
 
     if (count > 0) {
       console.log(`[CRON markAbsent] Processed ${count} user(s) for ${shiftDate.toISOString().split('T')[0]}.`);

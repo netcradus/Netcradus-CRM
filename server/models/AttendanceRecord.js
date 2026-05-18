@@ -34,5 +34,7 @@ const attendanceRecordSchema = new mongoose.Schema({
 
 // Ensure one record per user per shiftDay
 attendanceRecordSchema.index({ userId: 1, shiftDate: 1 }, { unique: true });
+attendanceRecordSchema.index({ shiftDate: 1 });
+attendanceRecordSchema.index({ punchOut: 1, punchIn: 1 });
 
 module.exports = mongoose.model('AttendanceRecord', attendanceRecordSchema);

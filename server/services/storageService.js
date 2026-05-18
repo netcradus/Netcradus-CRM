@@ -30,7 +30,7 @@ const ALLOWED_MIME_TYPES = [
   'text/csv',
 ];
 
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_SIZE_BYTES = Number(process.env.MAX_UPLOAD_MB || 10) * 1024 * 1024;
 
 /**
  * Sanitizes a folder name: alphanumeric, hyphens only, max 50 chars.
@@ -276,7 +276,7 @@ const uploadToFolder = async (userId, folderId, file, entityType = null, entityI
 
   // Validate file size
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    const err = new Error('File exceeds the 50MB size limit.');
+    const err = new Error(`File exceeds the ${Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB size limit.`);
     err.statusCode = 413;
     throw err;
   }

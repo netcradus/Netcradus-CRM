@@ -10,7 +10,7 @@ async function taskDueReminder() {
       dueDate: { $gte: now, $lte: next24Hours },
       status: { $nin: ["completed", "reviewed"] },
       $or: [{ reminderSentAt: null }, { reminderSentAt: { $exists: false } }],
-    }).select("_id title assignedTo");
+    }).select("_id title assignedTo").lean();
 
     for (const task of tasks) {
       await createNotifications({
@@ -19,8 +19,13 @@ async function taskDueReminder() {
         message: `Reminder: "${task.title}" is due within 24 hours`,
       });
 
-      task.reminderSentAt = new Date();
-      await task.save();
+    }
+
+    if (tasks.length) {
+      await Task.updateMany(
+        { _id: { $in: tasks.map((task) => task._id) } },
+        { $set: { reminderSentAt: new Date() } }
+      );
     }
 
     if (tasks.length > 0) {

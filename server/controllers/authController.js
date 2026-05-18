@@ -1,11 +1,21 @@
 const crypto = require("crypto");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Contact = require("../models/Contact");
-const storageService = require("../services/storageService");
 const AdminDevice = require("../models/AdminDevice");
 const { UAParser } = require("ua-parser-js");
+const { isDriveEnabled } = require("../utils/featureFlags");
+const storageService = {
+  provisionUserStorage: (...args) => {
+    if (!isDriveEnabled()) {
+      const error = new Error("Drive is temporarily unavailable for maintenance.");
+      error.code = "DRIVE_MAINTENANCE";
+      throw error;
+    }
+    return require("../services/storageService").provisionUserStorage(...args);
+  },
+};
 const {
   logAuthEvent,
   generateDeviceFingerprint,
@@ -159,9 +169,10 @@ const login = async (req, res) => {
     }
 
     // Check if user exists by email or username
-    const user = await User.findOne({
-      $or: [{ email: identifier.toLowerCase() }, { name: identifier }],
-    });
+    const lookup = identifier.includes("@")
+      ? { email: identifier.toLowerCase() }
+      : { name: identifier };
+    const user = await User.findOne(lookup);
 
     if (user) {
     } else {
