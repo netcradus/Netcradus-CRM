@@ -6,12 +6,43 @@ import { apiUrl } from "../../config/api";
 const OnboardingContext = createContext(null);
 const DEFAULT_GRACE_DAYS = Number(process.env.REACT_APP_ONBOARDING_GRACE_PERIOD_DAYS || 3);
 const ONBOARDING_STATUS_TIMEOUT_MS = Number(process.env.REACT_APP_ONBOARDING_STATUS_TIMEOUT_MS || 5000);
+const ONBOARDING_CACHE_KEY = "onboardingStatusCache";
+const ENFORCE_ONBOARDING_REDIRECT = String(process.env.REACT_APP_ENFORCE_ONBOARDING_REDIRECT || "false").toLowerCase() === "true";
+
+const getCachedStatus = () => {
+  try {
+    const raw = localStorage.getItem(ONBOARDING_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      status: parsed.status || "unknown",
+      hasRecord: Boolean(parsed.hasRecord),
+      completedAt: parsed.completedAt || null,
+      daysRemaining: Number(parsed.daysRemaining ?? DEFAULT_GRACE_DAYS),
+      loading: false,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const persistStatus = (nextState) => {
+  try {
+    localStorage.setItem(ONBOARDING_CACHE_KEY, JSON.stringify({
+      status: nextState.status,
+      hasRecord: nextState.hasRecord,
+      completedAt: nextState.completedAt,
+      daysRemaining: nextState.daysRemaining,
+    }));
+  } catch {}
+};
 
 export function OnboardingProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [state, setState] = useState({
-    status: "pending",
+  const [state, setState] = useState(() => getCachedStatus() || {
+    status: "unknown",
     hasRecord: false,
     completedAt: null,
     daysRemaining: DEFAULT_GRACE_DAYS,
@@ -23,13 +54,15 @@ export function OnboardingProvider({ children }) {
 
   const refreshStatus = useCallback(async () => {
     if (isExempt) {
-      setState({
+      const nextState = {
         status: "complete",
         hasRecord: false,
         completedAt: null,
         daysRemaining: DEFAULT_GRACE_DAYS,
         loading: false,
-      });
+      };
+      persistStatus(nextState);
+      setState(nextState);
       return;
     }
 
@@ -42,18 +75,24 @@ export function OnboardingProvider({ children }) {
         },
       });
 
-      setState({
+      const nextState = {
         status: response.data?.status || "pending",
         hasRecord: Boolean(response.data?.hasRecord),
         completedAt: response.data?.completedAt || null,
         daysRemaining: Number(response.data?.daysRemaining ?? DEFAULT_GRACE_DAYS),
         loading: false,
-      });
+      };
+      persistStatus(nextState);
+      setState(nextState);
     } catch (error) {
-      setState((current) => ({
-        ...current,
+      const cached = getCachedStatus();
+      setState(cached || {
+        status: "unknown",
+        hasRecord: false,
+        completedAt: null,
+        daysRemaining: DEFAULT_GRACE_DAYS,
         loading: false,
-      }));
+      });
     }
   }, [isExempt]);
 
@@ -66,6 +105,7 @@ export function OnboardingProvider({ children }) {
       (response) => response,
       (error) => {
         if (
+          ENFORCE_ONBOARDING_REDIRECT &&
           error.response?.status === 403 &&
           error.response?.data?.code === "ONBOARDING_REQUIRED" &&
           location.pathname !== "/onboarding"
@@ -85,16 +125,20 @@ export function OnboardingProvider({ children }) {
   const value = useMemo(
     () => ({
       ...state,
-      gracePeriodExpired: !isExempt && state.status !== "complete" && state.daysRemaining <= 0,
+      gracePeriodExpired: !isExempt && state.status !== "complete" && state.status !== "unknown" && state.daysRemaining <= 0,
       isExempt,
       refreshStatus,
-      markComplete: () =>
-        setState((current) => ({
-          ...current,
+      markComplete: () => {
+        const nextState = {
+          ...state,
           status: "complete",
+          hasRecord: true,
           completedAt: new Date().toISOString(),
           loading: false,
-        })),
+        };
+        persistStatus(nextState);
+        setState(nextState);
+      },
     }),
     [isExempt, refreshStatus, state]
   );

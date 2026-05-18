@@ -8,11 +8,7 @@ const {
     updateTicketStatus, 
     upload 
 } = require("../controllers/ticketController");
-const authMiddleware = require("../middleware/authMiddleware");
 const rbac = require("../middleware/rbac");
-
-// Apply auth to all ticket routes
-router.use(authMiddleware);
 
 // Create Ticket (Any role)
 router.post("/", upload.array("attachments", 5), createTicket);

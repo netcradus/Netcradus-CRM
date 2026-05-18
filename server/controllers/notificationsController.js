@@ -3,16 +3,17 @@ const TaskNotification = require("../models/TaskNotification");
 async function getNotifications(req, res) {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
-    const notifications = await TaskNotification.find({ userId: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .maxTimeMS(2000)
-      .lean();
-
-    const unreadCount = await TaskNotification.countDocuments({
-      userId: req.user._id,
-      isRead: false,
-    }).maxTimeMS(2000);
+    const [notifications, unreadCount] = await Promise.all([
+      TaskNotification.find({ userId: req.user._id })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .maxTimeMS(2000)
+        .lean(),
+      TaskNotification.countDocuments({
+        userId: req.user._id,
+        isRead: false,
+      }).maxTimeMS(2000),
+    ]);
 
     return res.json({ success: true, data: notifications, unreadCount });
   } catch (error) {

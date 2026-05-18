@@ -1,10 +1,9 @@
 const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
 const managementController = require("../controllers/managementController");
 
 const router = express.Router();
 
-router.use(authMiddleware, managementController.ensureAccess);
+router.use(managementController.ensureAccess);
 
 router.get("/sidebar-summary", managementController.getSidebarSummary);
 

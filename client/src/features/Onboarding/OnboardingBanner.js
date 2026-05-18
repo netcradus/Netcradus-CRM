@@ -6,7 +6,7 @@ function OnboardingBanner() {
   const navigate = useNavigate();
   const { status, loading, gracePeriodExpired, daysRemaining, isExempt } = useOnboarding();
 
-  if (loading || isExempt || status === "complete") {
+  if (loading || isExempt || status === "complete" || status === "unknown") {
     return null;
   }
 

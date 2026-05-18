@@ -17,6 +17,9 @@ import axios from "axios";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import { apiUrl } from "../../config/api";
 
+const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
+
 const STATUS_COLORS = {
   open: "var(--color-warning)",
   "in-progress": "var(--color-accent)",
@@ -52,6 +55,7 @@ function SupportDashboard({ preview }) {
       try {
         const { data } = await axios.get(apiUrl("/api/tickets"), {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
         });
         setTickets(data.data || []);
       } catch (error) {
@@ -62,7 +66,7 @@ function SupportDashboard({ preview }) {
     };
 
     fetchTickets();
-    const interval = setInterval(fetchTickets, 60000);
+    const interval = setInterval(fetchTickets, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token]);
 

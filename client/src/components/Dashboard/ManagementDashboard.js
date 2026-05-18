@@ -18,6 +18,9 @@ import {
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import { useNavigate } from "react-router-dom";
 
+const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
+
 const TASK_COLORS = {
   pending: "var(--color-warning)",
   in_progress: "var(--color-accent)",
@@ -55,9 +58,9 @@ const ManagementDashboard = () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [leadsRes, tasksRes, ticketsRes] = await Promise.all([
-          axios.get(apiUrl("/api/leads?limit=100"), { headers }),
-          axios.get(apiUrl("/api/tasks/my-tasks"), { headers }),
-          axios.get(apiUrl("/api/tickets"), { headers }),
+          axios.get(apiUrl("/api/leads?limit=100"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
+          axios.get(apiUrl("/api/tasks/my-tasks"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
+          axios.get(apiUrl("/api/tickets"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
         ]);
 
         const allLeads = leadsRes.data?.data || [];
@@ -78,7 +81,7 @@ const ManagementDashboard = () => {
     };
 
     fetchStats();
-    const interval = setInterval(fetchStats, 60000);
+    const interval = setInterval(fetchStats, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token, userId]);
 
