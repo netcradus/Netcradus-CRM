@@ -29,6 +29,8 @@ import { apiUrl } from "../../config/api";
 const BASE_PROJECTS = apiUrl("/api/projects");
 const BASE_COLUMNS = apiUrl("/api/columns");
 const TECH_CHART_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
+const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
 const formatRoleLabel = (value = "") =>
   String(value)
@@ -46,6 +48,7 @@ const formatDate = (value) => {
 
 const getAuthConfig = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
 });
 
 const asArray = (payload) => {
@@ -85,7 +88,7 @@ function TechDashboard({ preview = false }) {
     };
 
     fetchBoardData();
-    const interval = setInterval(fetchBoardData, 60000);
+    const interval = setInterval(fetchBoardData, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, []);
 

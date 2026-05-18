@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
 const rbac = require('../middleware/rbac');
 const {
   getHolidays,
@@ -8,8 +7,6 @@ const {
   updateHoliday,
   deleteHoliday,
 } = require('../controllers/holidayController');
-
-router.use(authMiddleware);
 
 router.get('/', getHolidays);
 router.post('/', rbac(['super_user', 'hr']), createHoliday);

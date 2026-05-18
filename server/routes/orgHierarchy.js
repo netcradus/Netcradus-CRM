@@ -1,5 +1,4 @@
 const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
 const rbac = require("../middleware/rbac");
 const {
   getHierarchy,
@@ -12,9 +11,9 @@ const {
 
 const router = express.Router();
 
-router.get("/assignable-users", authMiddleware, getAssignableUsers);
+router.get("/assignable-users", getAssignableUsers);
 
-router.use(authMiddleware, rbac(["super_user"]));
+router.use(rbac(["super_user"]));
 
 router.get("/", getHierarchy);
 router.post("/", createHierarchyNode);

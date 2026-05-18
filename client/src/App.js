@@ -100,11 +100,7 @@ function ProtectedApp() {
 }
 
 function ProtectedLayout() {
-  const { loading, gracePeriodExpired, status, isExempt } = useOnboarding();
-
-  if (!isExempt && !loading && gracePeriodExpired && status !== "complete") {
-    return <Navigate to="/onboarding" replace />;
-  }
+  useOnboarding();
 
   return (
     <ChatProvider>

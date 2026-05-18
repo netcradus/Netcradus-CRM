@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 const INVALID_TOKEN_VALUES = new Set(["undefined", "null", ""]);
-const USER_CACHE_TTL_MS = Number(process.env.AUTH_USER_CACHE_TTL_MS || 15000);
+const USER_CACHE_TTL_MS = Number(process.env.AUTH_USER_CACHE_TTL_MS || 300000);
 const USER_CACHE_MAX = Number(process.env.AUTH_USER_CACHE_MAX || 500);
 const userCache = new Map();
 

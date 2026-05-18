@@ -12,7 +12,15 @@ const normalizeEmail = (value = "") => String(value).trim().toLowerCase();
 const isValidDate = (value) => value && !Number.isNaN(new Date(value).getTime());
 
 const buildStatusPayload = async (userId, createdAt) => {
-  const record = await OnboardingRecord.findOne({ userId }).lean();
+  let record = null;
+  try {
+    record = await OnboardingRecord.findOne({ userId })
+      .select("onboardingStatus completedAt")
+      .maxTimeMS(1000)
+      .lean();
+  } catch (error) {
+    console.error("[Onboarding] Status lookup failed:", error.message);
+  }
   const elapsed = Date.now() - new Date(createdAt).getTime();
   const daysRemaining = Math.max(0, Math.ceil((GRACE_MS - elapsed) / DAY_MS));
 

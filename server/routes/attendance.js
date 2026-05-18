@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
 const rbac = require('../middleware/rbac');
 const rateLimit = require('express-rate-limit');
 const {
@@ -36,9 +35,6 @@ const punchLimiter = rateLimit({
   keyGenerator: (req) => `punch_${req.user._id}`,
   validate: { keyGeneratorIpFallback: false },
 });
-
-// All routes require auth
-router.use(authMiddleware);
 
 // Punch In / Out
 router.post('/punch-in', punchLimiter, punchIn);

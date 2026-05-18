@@ -65,8 +65,7 @@ const healthRoutes = require("./routes/healthRoutes");
 app.use("/api/health", healthRoutes);
 
 const authMiddleware = require("./middleware/authMiddleware");
-const onboardingExemptMiddleware = require("./middleware/onboardingExemptMiddleware");
-app.use("/api", authMiddleware, onboardingExemptMiddleware);
+app.use("/api", authMiddleware);
 
 app.use("/api/conversations", require("./routes/conversationRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes"));

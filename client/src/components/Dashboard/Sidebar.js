@@ -14,7 +14,7 @@ import useOnboarding from "../../features/Onboarding/useOnboarding";
 const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, onHoverExpanded, onHoverCollapsed, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { gracePeriodExpired } = useOnboarding();
+  useOnboarding();
   const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
   const [openSubmenu, setOpenSubmenu] = useState(null);
 
@@ -26,19 +26,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
     navigate("/login");
   };
 
-  const guardNavigation = useCallback((event) => {
-    if (!gracePeriodExpired) {
-      return false;
-    }
-
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    navigate("/onboarding");
-    if (window.innerWidth <= 768) {
-      onCloseMobile?.();
-    }
-    return true;
-  }, [gracePeriodExpired, navigate, onCloseMobile]);
+  const guardNavigation = useCallback(() => false, []);
 
   const canShowNavItem = useCallback((item) => {
     const hiddenForRoles = item.hiddenForRoles || [];
@@ -76,14 +64,6 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
   };
 
   const handleLeafNavigation = () => {
-    if (gracePeriodExpired) {
-      navigate("/onboarding");
-      if (window.innerWidth <= 768) {
-        onCloseMobile?.();
-      }
-      return;
-    }
-
     if (window.innerWidth <= 768) {
       onCloseMobile?.();
     }

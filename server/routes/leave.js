@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
 const rbac = require('../middleware/rbac');
 const {
   applyLeave,
@@ -12,8 +11,6 @@ const {
   rejectLeave,
   cancelLeave,
 } = require('../controllers/leaveController');
-
-router.use(authMiddleware);
 
 router.get('/types', getLeaveTypes);
 router.post('/apply', applyLeave);

@@ -26,6 +26,9 @@ import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ManagementDashboard from "./ManagementDashboard";
 
+const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
+
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
 
 const formatRoleLabel = (role = "general") =>
@@ -51,6 +54,7 @@ const SuperUserDashboard = () => {
       try {
         const res = await axios.get(apiUrl("/api/auth/users"), {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
         });
         setUsers(res.data);
       } catch (err) {
@@ -65,6 +69,7 @@ const SuperUserDashboard = () => {
       try {
         const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
           headers: { Authorization: `Bearer ${token}` },
+          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
         });
         setAttendanceSnapshot(res.data.data);
       } catch (err) {
@@ -72,7 +77,7 @@ const SuperUserDashboard = () => {
       }
     };
     fetchAttendance();
-    const interval = setInterval(fetchAttendance, 60000);
+    const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token]);
 

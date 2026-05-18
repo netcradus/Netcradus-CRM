@@ -20,6 +20,9 @@ import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 
+const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
+
 const DEPARTMENT_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
 const LEAVE_STATUS_COLORS = {
   approved: "var(--color-success)",
@@ -53,9 +56,9 @@ const HRDashboard = ({ preview }) => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const [attendanceRes, leaveRes, expenseSummaryRes] = await Promise.all([
-          axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers }),
-          axios.get(apiUrl("/api/leave/applications"), { headers }),
-          axios.get(apiUrl("/api/expenses/dashboard-summary"), { headers }),
+          axios.get(apiUrl("/api/attendance/admin/today-snapshot"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
+          axios.get(apiUrl("/api/leave/applications"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
+          axios.get(apiUrl("/api/expenses/dashboard-summary"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
         ]);
 
         setAttendanceSnapshot(attendanceRes.data.data);
@@ -81,7 +84,7 @@ const HRDashboard = ({ preview }) => {
     };
 
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 60000);
+    const interval = setInterval(fetchDashboardData, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token]);
 

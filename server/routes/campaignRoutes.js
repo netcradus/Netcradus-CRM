@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const campaignsController = require('../controllers/campaignController');
-const authMiddleware = require("../middleware/authMiddleware");
 const rbac = require("../middleware/rbac");
 const { DIGITAL_MEDIA_ROLES } = require("../utils/digitalMediaAccess");
 
-router.use(authMiddleware, rbac(DIGITAL_MEDIA_ROLES));
+router.use(rbac(DIGITAL_MEDIA_ROLES));
 
 router.get('/', campaignsController.getCampaigns);
 router.get('/:id', campaignsController.getCampaign);
