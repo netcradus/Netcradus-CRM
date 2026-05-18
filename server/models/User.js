@@ -89,6 +89,9 @@ const userSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+userSchema.index({ name: 1 });
+userSchema.index({ role: 1, isActive: 1 });
+
 // Optional: if user is locked out, we can check virtual
 userSchema.virtual('isLocked').get(function () {
   return !!(this.accountLockedUntil && this.accountLockedUntil > Date.now());

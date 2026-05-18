@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+const { isDriveEnabled } = require('../utils/featureFlags');
 
 /**
  * Initializes the Google Drive API client using OAuth2 with Refresh Tokens.
@@ -6,6 +6,11 @@ const { google } = require('googleapis');
  */
 const initDrive = () => {
   try {
+    if (!isDriveEnabled()) {
+      console.warn('[Drive] Maintenance mode enabled. Drive features are unavailable.');
+      return null;
+    }
+
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
@@ -15,6 +20,7 @@ const initDrive = () => {
       return null;
     }
 
+    const { google } = require('googleapis');
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
@@ -39,6 +45,10 @@ const drive = initDrive();
  * Used for both technical health checks and server startup validation.
  */
 const checkDriveHealth = async () => {
+  if (!isDriveEnabled()) {
+    return { status: 'maintenance', message: 'Drive is temporarily unavailable for maintenance.' };
+  }
+
   if (!drive) {
     return { status: 'error', message: 'Drive client not initialized.' };
   }

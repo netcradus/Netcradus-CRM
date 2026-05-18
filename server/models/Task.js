@@ -115,6 +115,7 @@ const taskSchema = new mongoose.Schema(
 
 taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ role: 1, priority: 1, dueDate: 1 });
+taskSchema.index({ dueDate: 1, status: 1, reminderSentAt: 1 });
 taskSchema.index({ createdAt: -1 });
 taskSchema.index({ assignedTo: 1, queuePosition: 1 }); // queue ordering
 

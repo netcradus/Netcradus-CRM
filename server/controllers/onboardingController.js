@@ -1,7 +1,7 @@
 const OnboardingRecord = require("../models/OnboardingRecord");
-const onboardingDriveService = require("../services/onboardingDriveService");
 const onboardingPdfService = require("../services/onboardingPdfService");
 const onboardingEmailService = require("../services/onboardingEmailService");
+const { isDriveEnabled } = require("../utils/featureFlags");
 
 const GRACE_DAYS = Number(process.env.ONBOARDING_GRACE_PERIOD_DAYS || 3);
 const GRACE_MS = GRACE_DAYS * 24 * 60 * 60 * 1000;
@@ -115,7 +115,12 @@ const processUpload = async (file, employeeUserId) => {
     return null;
   }
 
+  if (!isDriveEnabled()) {
+    return null;
+  }
+
   try {
+    const onboardingDriveService = require("../services/onboardingDriveService");
     return await onboardingDriveService.uploadToHrFolder(
       file.buffer,
       file.originalname,
@@ -354,11 +359,16 @@ const submitStep2 = async (req, res) => {
     },
   ];
 
-  const driveFetchResults = await Promise.allSettled(
-    driveFiles
-      .filter((file) => file.fileId !== null && file.fileId !== undefined)
-      .map((file) => onboardingDriveService.getFileAsBase64(file.fileId, file.fileName))
-  );
+  const onboardingDriveService = isDriveEnabled()
+    ? require("../services/onboardingDriveService")
+    : null;
+  const driveFetchResults = onboardingDriveService
+    ? await Promise.allSettled(
+        driveFiles
+          .filter((file) => file.fileId !== null && file.fileId !== undefined)
+          .map((file) => onboardingDriveService.getFileAsBase64(file.fileId, file.fileName))
+      )
+    : [];
 
   const driveAttachments = driveFetchResults
     .filter((result) => result.status === "fulfilled" && result.value !== null)

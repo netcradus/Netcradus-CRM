@@ -6,36 +6,49 @@ const leaveAccrual = require("./leaveAccrual");
 const taskDueReminder = require("./taskDueReminder");
 
 const cronLastRun = {};
+const runningJobs = new Set();
+
+const runJob = async (name, task) => {
+  if (runningJobs.has(name)) {
+    console.log(`[CRON] Skipping ${name}; previous run still active.`);
+    return;
+  }
+
+  runningJobs.add(name);
+  const startedAt = Date.now();
+  try {
+    await task();
+    cronLastRun[name] = new Date().toISOString();
+  } catch (error) {
+    console.error(`[CRON ${name}] Error:`, error.message);
+  } finally {
+    runningJobs.delete(name);
+    const durationMs = Date.now() - startedAt;
+    if (durationMs > 5000) {
+      console.log(`[CRON] ${name} completed in ${durationMs}ms.`);
+    }
+  }
+};
 
 function registerCronJobs() {
-  cron.schedule("*/30 * * * *", async () => {
-    console.log("[CRON] Running autoPunchOut...");
-    await autoPunchOut();
-    cronLastRun.autoPunchOut = new Date().toISOString();
+  cron.schedule(process.env.CRON_AUTO_PUNCH_OUT || "7 * * * *", async () => {
+    await runJob("autoPunchOut", autoPunchOut);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
-  cron.schedule("59 23 * * *", async () => {
-    console.log("[CRON] Running markAbsent...");
-    await markAbsent();
-    cronLastRun.markAbsent = new Date().toISOString();
+  cron.schedule(process.env.CRON_MARK_ABSENT || "59 23 * * *", async () => {
+    await runJob("markAbsent", markAbsent);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
-  cron.schedule("5 0 1 * *", async () => {
-    console.log("[CRON] Running monthlySummary...");
-    await monthlySummary();
-    cronLastRun.monthlySummary = new Date().toISOString();
+  cron.schedule(process.env.CRON_MONTHLY_SUMMARY || "5 0 1 * *", async () => {
+    await runJob("monthlySummary", monthlySummary);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
-  cron.schedule("10 0 1 * *", async () => {
-    console.log("[CRON] Running leaveAccrual...");
-    await leaveAccrual();
-    cronLastRun.leaveAccrual = new Date().toISOString();
+  cron.schedule(process.env.CRON_LEAVE_ACCRUAL || "10 0 1 * *", async () => {
+    await runJob("leaveAccrual", leaveAccrual);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
-  cron.schedule("0 * * * *", async () => {
-    console.log("[CRON] Running taskDueReminder...");
-    await taskDueReminder();
-    cronLastRun.taskDueReminder = new Date().toISOString();
+  cron.schedule(process.env.CRON_TASK_DUE_REMINDER || "17 */2 * * *", async () => {
+    await runJob("taskDueReminder", taskDueReminder);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
   console.log(`All cron jobs registered (TZ: ${process.env.COMPANY_TIMEZONE || "Asia/Kolkata"})`);

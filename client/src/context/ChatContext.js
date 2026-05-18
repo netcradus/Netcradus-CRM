@@ -125,24 +125,6 @@ export function ChatProvider({ children }) {
     }
   }, [currentUserId, token]);
 
-  const fetchOnlineStatus = useCallback(async (userIds = []) => {
-    if (!token || !userIds.length) return;
-
-    try {
-      const { data } = await axios.get(
-        apiUrl(`/api/users/online-status?userIds=${userIds.join(",")}`),
-        getAuthConfig()
-      );
-      const statusMap = (data.data || []).reduce((accumulator, entry) => {
-        accumulator[entry.userId] = entry;
-        return accumulator;
-      }, {});
-      setOnlineUsers((current) => ({ ...current, ...statusMap }));
-    } catch (error) {
-      console.error("Failed to fetch online status", error);
-    }
-  }, [token]);
-
   const fetchMessages = useCallback(async (conversationId, page = 1) => {
     if (!token || !conversationId) return;
 
@@ -306,27 +288,16 @@ export function ChatProvider({ children }) {
   }, [fetchMessages, paginationByConversation]);
 
   useEffect(() => {
-    fetchConversations();
-    fetchDirectory();
-  }, [fetchConversations, fetchDirectory]);
-
-  useEffect(() => {
-    const ids = conversations.map((conversation) => conversation.counterpart?._id).filter(Boolean);
-    if (ids.length) {
-      fetchOnlineStatus(ids);
-    }
-  }, [conversations, fetchOnlineStatus]);
+    const timer = window.setTimeout(() => {
+      fetchConversations();
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [fetchConversations]);
 
   useEffect(() => {
     if (!Object.keys(onlineUsers).length) return;
     setConversations((current) => current.map((conversation) => applyPresence(conversation, onlineUsers)));
   }, [onlineUsers]);
-
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length && !launcherOpen) {
-      setSelectedConversationId(conversations[0]._id);
-    }
-  }, [conversations, selectedConversationId, launcherOpen]);
 
   useEffect(() => {
     if (selectedConversationId && !messagesByConversation[selectedConversationId]) {
@@ -351,7 +322,7 @@ export function ChatProvider({ children }) {
 
     const handleReady = () => {
       setSocketReady(true);
-      fetchConversations();
+      window.setTimeout(fetchConversations, 800);
     };
 
     const handleDisconnect = () => {
