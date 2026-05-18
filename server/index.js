@@ -3,13 +3,13 @@ const http = require("http");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
+const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const { initializeSocket } = require("./socket");
 const { registerCronJobs, getCronLastRun } = require("./cron");
 const { isDriveEnabled } = require("./utils/featureFlags");
 
 dotenv.config();
-connectDB();
 
 const checkDriveHealth = async () => {
   if (!isDriveEnabled()) {
@@ -39,8 +39,21 @@ app.get("/healthz", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+const requireDbReady = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: "Database is reconnecting. Please retry shortly.",
+    });
+  }
+  next();
+};
+
+app.use("/api", requireDbReady);
+
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
+
 const onboardingRoutes = require("./routes/onboardingRoutes");
 app.use("/api/onboarding", onboardingRoutes);
 
@@ -55,93 +68,40 @@ const authMiddleware = require("./middleware/authMiddleware");
 const onboardingExemptMiddleware = require("./middleware/onboardingExemptMiddleware");
 app.use("/api", authMiddleware, onboardingExemptMiddleware);
 
-const conversationRoutes = require("./routes/conversationRoutes");
-app.use("/api/conversations", conversationRoutes);
-const messageRoutes = require("./routes/messageRoutes");
-app.use("/api/messages", messageRoutes);
-const userPresenceRoutes = require("./routes/userPresenceRoutes");
-app.use("/api/users", userPresenceRoutes);
-const orgHierarchyRoutes = require("./routes/orgHierarchy");
-app.use("/api/org-hierarchy", orgHierarchyRoutes);
-
-const leadsRoutes = require("./routes/leadsRoutes");
-app.use("/api/leads", leadsRoutes);
-
-const accountRoutes = require("./routes/accountRoutes");
-app.use("/api/accounts", accountRoutes);
-
-const expenseRoutes = require("./routes/expenseRoutes");
-app.use("/api/expenses", expenseRoutes);
-
-const callsRoutes = require("./routes/callsRoutes");
-app.use("/api/calls", callsRoutes);
-
-const contactRoutes = require("./routes/contactRoutes");
-app.use("/api/contacts", contactRoutes);
-
-const dealsRoutes = require("./routes/dealsRoutes");
-app.use("/api/deals", dealsRoutes);
-
-const taskRoutes = require("./routes/taskRoutes");
-app.use("/api/tasks", taskRoutes);
-
-const notificationRoutes = require("./routes/notificationRoutes");
-app.use("/api/notifications", notificationRoutes);
-
-const projectRoutes = require("./routes/projectRoutes");
-app.use("/api/projects", projectRoutes);
-
-const columnRoutes = require("./routes/columnRoutes");
-app.use("/api/columns", columnRoutes);
-
-const productRoutes = require("./routes/productRoutes");
-app.use("/api/products", productRoutes);
-
-const quoteRoutes = require("./routes/quoteRoutes");
-app.use("/api/quotes", quoteRoutes);
-
-const salesOrderRoutes = require("./routes/salesOrderRoutes");
-app.use("/api/salesorders", salesOrderRoutes);
-
-const purchaseOrderRoutes = require("./routes/purchaseOrderRoutes");
-app.use("/api/purchase-orders", purchaseOrderRoutes);
-
-const invoiceRoutes = require("./routes/invoiceRoutes");
-app.use("/api/invoices", invoiceRoutes);
-const interviewRoutes = require("./routes/interviewRoutes");
-app.use("/api/interviews", interviewRoutes);
-
-const salesInboxRoutes = require("./routes/salesInboxRoutes");
-app.use("/api/sales-inbox", salesInboxRoutes);
-
-const campaignRoutes = require("./routes/campaignRoutes");
-app.use("/api/campaigns", campaignRoutes);
-const socialRoutes = require("./routes/socialRoutes");
-app.use("/api/social", socialRoutes);
-const mediaRoutes = require("./routes/mediaRoutes");
-app.use("/api/media", mediaRoutes);
-const audienceRoutes = require("./routes/audienceRoutes");
-app.use("/api/audience", audienceRoutes);
-const utmRoutes = require("./routes/utmRoutes");
-app.use("/api/utm", utmRoutes);
-const approvalRoutes = require("./routes/approvalRoutes");
-app.use("/api/approval", approvalRoutes);
-
-const priceBookRoutes = require("./routes/priceBooks");
-app.use("/api/pricebooks", priceBookRoutes);
-
-const caseRoutes = require("./routes/caseRoutes");
-app.use("/api/cases", caseRoutes);
-
-const meetingRoutes = require("./routes/meetingRoutes");
-app.use("/api/meetings", meetingRoutes);
-
-const solutionRoutes = require("./routes/solutionRoutes");
-app.use("/api/solutions", solutionRoutes);
+app.use("/api/conversations", require("./routes/conversationRoutes"));
+app.use("/api/messages", require("./routes/messageRoutes"));
+app.use("/api/users", require("./routes/userPresenceRoutes"));
+app.use("/api/org-hierarchy", require("./routes/orgHierarchy"));
+app.use("/api/leads", require("./routes/leadsRoutes"));
+app.use("/api/accounts", require("./routes/accountRoutes"));
+app.use("/api/expenses", require("./routes/expenseRoutes"));
+app.use("/api/calls", require("./routes/callsRoutes"));
+app.use("/api/contacts", require("./routes/contactRoutes"));
+app.use("/api/deals", require("./routes/dealsRoutes"));
+app.use("/api/tasks", require("./routes/taskRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/projects", require("./routes/projectRoutes"));
+app.use("/api/columns", require("./routes/columnRoutes"));
+app.use("/api/products", require("./routes/productRoutes"));
+app.use("/api/quotes", require("./routes/quoteRoutes"));
+app.use("/api/salesorders", require("./routes/salesOrderRoutes"));
+app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes"));
+app.use("/api/invoices", require("./routes/invoiceRoutes"));
+app.use("/api/interviews", require("./routes/interviewRoutes"));
+app.use("/api/sales-inbox", require("./routes/salesInboxRoutes"));
+app.use("/api/campaigns", require("./routes/campaignRoutes"));
+app.use("/api/social", require("./routes/socialRoutes"));
+app.use("/api/media", require("./routes/mediaRoutes"));
+app.use("/api/audience", require("./routes/audienceRoutes"));
+app.use("/api/utm", require("./routes/utmRoutes"));
+app.use("/api/approval", require("./routes/approvalRoutes"));
+app.use("/api/pricebooks", require("./routes/priceBooks"));
+app.use("/api/cases", require("./routes/caseRoutes"));
+app.use("/api/meetings", require("./routes/meetingRoutes"));
+app.use("/api/solutions", require("./routes/solutionRoutes"));
 
 if (isDriveEnabled()) {
-  const documentRoutes = require("./routes/documentRoutes");
-  app.use("/api/documents", documentRoutes);
+  app.use("/api/documents", require("./routes/documentRoutes"));
 } else {
   app.use("/api/documents", (req, res) => {
     res.status(503).json({
@@ -152,52 +112,43 @@ if (isDriveEnabled()) {
   });
 }
 
-const forecastRoutes = require("./routes/forecastRoutes");
-app.use("/api/forecasts", forecastRoutes);
-
-const attendanceRoutes = require("./routes/attendance");
-app.use("/api/attendance", attendanceRoutes);
-
-const leaveRoutes = require("./routes/leave");
-app.use("/api/leave", leaveRoutes);
-
-const holidayRoutes = require("./routes/holidays");
-app.use("/api/holidays", holidayRoutes);
-
-const visitRoutes = require("./routes/visitRoutes");
-app.use("/api/visits", visitRoutes);
-
-const ticketRoutes = require("./routes/ticketRoutes");
-app.use("/api/tickets", ticketRoutes);
-
-const managementRoutes = require("./routes/managementRoutes");
-app.use("/api/management", managementRoutes);
-
-const passwordManagerRoutes = require("./routes/passwordManagerRoutes");
-app.use("/api/password-manager", passwordManagerRoutes);
-
-if (process.env.DISABLE_CRON === "true") {
-  console.log("[CRON] Disabled by DISABLE_CRON=true");
-} else {
-  registerCronJobs();
-}
-
-initializeSocket(server);
+app.use("/api/forecasts", require("./routes/forecastRoutes"));
+app.use("/api/attendance", require("./routes/attendance"));
+app.use("/api/leave", require("./routes/leave"));
+app.use("/api/holidays", require("./routes/holidays"));
+app.use("/api/visits", require("./routes/visitRoutes"));
+app.use("/api/tickets", require("./routes/ticketRoutes"));
+app.use("/api/management", require("./routes/managementRoutes"));
+app.use("/api/password-manager", require("./routes/passwordManagerRoutes"));
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, "0.0.0.0", async () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
 
-  // Drive Startup Check
-  const driveStatus = await checkDriveHealth();
-  if (driveStatus.status === 'maintenance') {
-    console.log('[Drive] Skipping startup health check; Drive is in maintenance mode.');
-    return;
-  }
-  if (driveStatus.status !== 'ok') {
-    console.error('\n⚠️  DRIVE CONNECTION FAILED — file uploads will not work. Check OAuth credentials.');
-    console.error(`Reason: ${driveStatus.message}\n`);
+const startServer = async () => {
+  await connectDB();
+
+  if (process.env.DISABLE_CRON === "true") {
+    console.log("[CRON] Disabled by DISABLE_CRON=true");
   } else {
-    console.log('✅ DRIVE CONNECTED — Storage system operational.');
+    registerCronJobs();
   }
-});
+
+  initializeSocket(server);
+
+  server.listen(PORT, "0.0.0.0", async () => {
+    console.log(`Server is running on port ${PORT}`);
+
+    const driveStatus = await checkDriveHealth();
+    if (driveStatus.status === "maintenance") {
+      console.log("[Drive] Skipping startup health check; Drive is in maintenance mode.");
+      return;
+    }
+    if (driveStatus.status !== "ok") {
+      console.error("\nDRIVE CONNECTION FAILED - file uploads will not work. Check OAuth credentials.");
+      console.error(`Reason: ${driveStatus.message}\n`);
+    } else {
+      console.log("DRIVE CONNECTED - Storage system operational.");
+    }
+  });
+};
+
+startServer();

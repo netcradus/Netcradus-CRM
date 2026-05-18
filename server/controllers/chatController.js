@@ -288,23 +288,43 @@ async function getOnlineStatus(req, res) {
       .filter(Boolean);
 
     const userIds = ids.length
-      ? ids
+      ? ids.filter((id) => mongoose.Types.ObjectId.isValid(id)).slice(0, 50)
       : (
           await Conversation.find({ participants: req.user._id })
             .select("participants")
+            .maxTimeMS(2000)
             .lean()
         ).flatMap((conversation) => conversation.participants.map(String));
 
     const uniqueUserIds = [...new Set(userIds.filter((userId) => userId !== String(req.user._id)))];
-    const users = await User.find({ _id: { $in: uniqueUserIds } }).select("_id lastSeenAt").lean();
     const presenceMap = getPresenceForUsers(uniqueUserIds);
+
+    if (ids.length) {
+      return res.json({
+        success: true,
+        data: uniqueUserIds.map((userId) => ({
+          userId,
+          isOnline: Boolean(presenceMap[userId]?.isOnline),
+          lastSeen: presenceMap[userId]?.lastSeen || null,
+        })),
+      });
+    }
+
+    const users = await User.find({ _id: { $in: uniqueUserIds } })
+      .select("_id lastSeenAt")
+      .maxTimeMS(2000)
+      .lean();
+    const lastSeenMap = users.reduce((acc, user) => {
+      acc[String(user._id)] = user.lastSeenAt || null;
+      return acc;
+    }, {});
 
     return res.json({
       success: true,
       data: uniqueUserIds.map((userId) => ({
         userId,
         isOnline: Boolean(presenceMap[userId]?.isOnline),
-        lastSeen: presenceMap[userId]?.lastSeen || users.find((user) => String(user._id) === userId)?.lastSeenAt || null,
+        lastSeen: presenceMap[userId]?.lastSeen || lastSeenMap[userId] || null,
       })),
     });
   } catch (error) {
