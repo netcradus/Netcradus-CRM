@@ -26,6 +26,7 @@ const TASK_COLORS = {
   in_progress: "var(--color-accent)",
   completed: "var(--color-success)",
   reviewed: "var(--color-info)",
+  approved: "var(--color-success)",
 };
 
 const TICKET_COLORS = {
@@ -47,6 +48,7 @@ const ManagementDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     leads: [],
     tasks: [],
+    selfTasks: [],
     tickets: [],
   });
   const userName = localStorage.getItem("userName") || "User";
@@ -57,9 +59,10 @@ const ManagementDashboard = () => {
     const fetchStats = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [leadsRes, tasksRes, ticketsRes] = await Promise.all([
+        const [leadsRes, tasksRes, selfTasksRes, ticketsRes] = await Promise.all([
           axios.get(apiUrl("/api/leads?limit=100"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
           axios.get(apiUrl("/api/tasks/my-tasks"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
+          axios.get(apiUrl("/api/tasks/self/mine?status=approved"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
           axios.get(apiUrl("/api/tickets"), { headers, timeout: DASHBOARD_REQUEST_TIMEOUT_MS }),
         ]);
 
@@ -73,10 +76,11 @@ const ManagementDashboard = () => {
         setDashboardData({
           leads: myLeads,
           tasks: tasksRes.data?.data || [],
+          selfTasks: selfTasksRes.data?.tasks || [],
           tickets: ticketsRes.data?.data || [],
         });
       } catch (err) {
-        setDashboardData({ leads: [], tasks: [], tickets: [] });
+        setDashboardData({ leads: [], tasks: [], selfTasks: [], tickets: [] });
       }
     };
 
@@ -89,6 +93,7 @@ const ManagementDashboard = () => {
     () => ({
       leads: dashboardData.leads.length,
       tasks: dashboardData.tasks.length,
+      completedTasks: dashboardData.tasks.filter((task) => ["completed", "reviewed"].includes(task.status)).length + dashboardData.selfTasks.length,
       tickets: dashboardData.tickets.length,
       activeTasks: dashboardData.tasks.filter((task) => task.status === "in_progress").length,
     }),
@@ -100,13 +105,14 @@ const ManagementDashboard = () => {
       acc[task.status] = (acc[task.status] || 0) + 1;
       return acc;
     }, {});
+    grouped.approved = (grouped.approved || 0) + dashboardData.selfTasks.length;
 
     return Object.entries(grouped).map(([name, value]) => ({
       name,
       value,
       color: TASK_COLORS[name] || "var(--color-bg-elevated)",
     }));
-  }, [dashboardData.tasks]);
+  }, [dashboardData.selfTasks.length, dashboardData.tasks]);
 
   const ticketStatusData = useMemo(() => {
     const grouped = dashboardData.tickets.reduce((acc, ticket) => {
@@ -135,6 +141,7 @@ const ManagementDashboard = () => {
     const totals = {
       Leads: dashboardData.leads.length,
       Tasks: dashboardData.tasks.length,
+      Completed: dashboardData.tasks.filter((task) => ["completed", "reviewed"].includes(task.status)).length + dashboardData.selfTasks.length,
       Tickets: dashboardData.tickets.length,
       Active: dashboardData.tasks.filter((task) => task.status === "in_progress").length,
     };
@@ -166,6 +173,10 @@ const ManagementDashboard = () => {
         <div className="nc-stat-card">
           <span className="metric-label">Active Tasks</span>
           <span className="metric-value" style={{ color: 'var(--color-accent)' }}>{stats.activeTasks}</span>
+        </div>
+        <div className="nc-stat-card">
+          <span className="metric-label">Completed Tasks</span>
+          <span className="metric-value" style={{ color: 'var(--color-success)' }}>{stats.completedTasks}</span>
         </div>
       </div>
 

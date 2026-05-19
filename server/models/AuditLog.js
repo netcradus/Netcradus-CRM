@@ -7,6 +7,7 @@ const auditLogSchema = new mongoose.Schema({
   documentId: mongoose.Schema.Types.ObjectId,
   entityType: String,
   entityId: mongoose.Schema.Types.ObjectId,
+  note: String,
   targetId: mongoose.Schema.Types.ObjectId,     // generic target (attendance/leave)
   targetModel: String,                           // e.g. 'LeaveApplication'
   details: { type: mongoose.Schema.Types.Mixed },
