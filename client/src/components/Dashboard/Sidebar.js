@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Home, Users, Briefcase, Ticket, Layout, Layers, Monitor, CircleDollarSign, 
-  FileText, Receipt, FileEdit, ShoppingCart, Package, Book, Database, Target, 
-  Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3, 
-  Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box, 
-  BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare, 
+  Home, Users, Briefcase, Ticket, Layout, Layers, Monitor, CircleDollarSign,
+  FileText, Receipt, FileEdit, ShoppingCart, Package, Book, Database, Target,
+  Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3,
+  Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box,
+  BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare,
   HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -114,13 +114,14 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       ]
     });
 
-    if (canAccess(role, [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals])) items.push({
+    if (canAccess(role, [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings])) items.push({
       label: "CRM",
       path: "/leads",
       icon: <Database size={20} />,
-      roles: [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals],
+      roles: [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings],
       submenu: [
         { label: "Leads", path: "/leads", icon: <Target size={18} />, roles: ACCESS_GROUPS.crmLeads },
+        { label: "Meetings", path: "/meetings", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.meetings },
         { label: "Contacts", path: "/contacts", icon: <Contact size={18} />, roles: ACCESS_GROUPS.crmContacts },
         { label: "Accounts", path: "/accounts", icon: <Building size={18} />, roles: ACCESS_GROUPS.crmAccounts },
         { label: "Deals", path: "/deals", icon: <Coins size={18} />, roles: ACCESS_GROUPS.crmDeals },

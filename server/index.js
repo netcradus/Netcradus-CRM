@@ -96,7 +96,7 @@ app.use("/api/utm", require("./routes/utmRoutes"));
 app.use("/api/approval", require("./routes/approvalRoutes"));
 app.use("/api/pricebooks", require("./routes/priceBooks"));
 app.use("/api/cases", require("./routes/caseRoutes"));
-app.use("/api/meetings", require("./routes/meetingRoutes"));
+app.use("/api/meetings", require("./routes/meetingsRoutes"));
 app.use("/api/solutions", require("./routes/solutionRoutes"));
 
 if (isDriveEnabled()) {

@@ -21,9 +21,17 @@ const dealSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    
+    expectedCloseDate: {
+      type: Date,
+      default: null,
+    },
+    sourceLead: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lead",
+      default: null,
+    },
   },
-  { timestamps: true } // automatically adds createdAt and updatedAt fields
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Deal", dealSchema);

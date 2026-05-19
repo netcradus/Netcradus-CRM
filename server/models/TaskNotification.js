@@ -24,7 +24,15 @@ const taskNotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["task", "storage_low", "general"],
+      enum: [
+        "task",
+        "task_completed",
+        "storage_low",
+        "general",
+        "self_task_approval_requested",
+        "self_task_approved",
+        "self_task_rejected",
+      ],
       default: "general"
     },
     isRead: {

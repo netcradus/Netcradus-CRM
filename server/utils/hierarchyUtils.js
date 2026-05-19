@@ -1,4 +1,25 @@
 const OrgHierarchy = require('../models/OrgHierarchy');
+const User = require('../models/User');
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const superiorCache = new Map();
+const subordinateCache = new Map();
+
+function getCached(cache, key) {
+  const cached = cache.get(String(key));
+  if (!cached || cached.expiresAt <= Date.now()) {
+    cache.delete(String(key));
+    return null;
+  }
+  return cached.value;
+}
+
+function setCached(cache, key, value) {
+  cache.set(String(key), {
+    value,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+}
 
 async function getDescendantUserIds(nodeId) {
   const allNodes = await OrgHierarchy.find().select('_id parentId userId').lean();
@@ -24,6 +45,80 @@ async function getDescendantUserIds(nodeId) {
   }
 
   return descendantIds;
+}
+
+async function getSuperiorsForUser(userId) {
+  const cached = getCached(superiorCache, userId);
+  if (cached) return cached;
+
+  const allNodes = await OrgHierarchy.find().select('_id parentId userId').lean();
+  const nodesById = new Map(allNodes.map((node) => [String(node._id), node]));
+  const currentEntry = allNodes.find((node) => String(node.userId) === String(userId));
+
+  if (!currentEntry?.parentId) {
+    setCached(superiorCache, userId, []);
+    return [];
+  }
+
+  const chainUserIds = [];
+  const seenNodeIds = new Set();
+  let parentId = String(currentEntry.parentId);
+
+  while (parentId && !seenNodeIds.has(parentId)) {
+    seenNodeIds.add(parentId);
+    const parent = nodesById.get(parentId);
+    if (!parent) break;
+    if (parent.userId) chainUserIds.push(String(parent.userId));
+    parentId = parent.parentId ? String(parent.parentId) : null;
+  }
+
+  if (!chainUserIds.length) {
+    setCached(superiorCache, userId, []);
+    return [];
+  }
+
+  const activeUsers = await User.find({
+    _id: { $in: chainUserIds },
+    isDisabled: false,
+  }).select('_id').lean();
+  const activeUserIds = new Set(activeUsers.map((user) => String(user._id)));
+  const activeChain = chainUserIds.filter((id) => activeUserIds.has(id));
+
+  setCached(superiorCache, userId, activeChain);
+  return activeChain;
+}
+
+async function isUserSuperiorTo(superiorUserId, subordinateUserId) {
+  if (String(superiorUserId) === String(subordinateUserId)) return false;
+  const superiors = await getSuperiorsForUser(subordinateUserId);
+  return superiors.some((id) => String(id) === String(superiorUserId));
+}
+
+async function getSubordinatesForUser(userId) {
+  const cached = getCached(subordinateCache, userId);
+  if (cached) return cached;
+
+  const currentEntry = await OrgHierarchy.findOne({ userId }).select('_id').lean();
+  if (!currentEntry) {
+    setCached(subordinateCache, userId, []);
+    return [];
+  }
+
+  const descendantIds = await getDescendantUserIds(currentEntry._id);
+  if (!descendantIds.length) {
+    setCached(subordinateCache, userId, []);
+    return [];
+  }
+
+  const activeUsers = await User.find({
+    _id: { $in: descendantIds },
+    isDisabled: false,
+  }).select('_id').lean();
+  const activeUserIds = new Set(activeUsers.map((user) => String(user._id)));
+  const activeDescendants = descendantIds.filter((id) => activeUserIds.has(id));
+
+  setCached(subordinateCache, userId, activeDescendants);
+  return activeDescendants;
 }
 
 /**
@@ -107,4 +202,11 @@ async function canAssignTask(currentUserId, targetUserId, currentUserRole) {
   };
 }
 
-module.exports = { getAssignableUserIds, getDescendantUserIds, canAssignTask };
+module.exports = {
+  getAssignableUserIds,
+  getDescendantUserIds,
+  getSuperiorsForUser,
+  isUserSuperiorTo,
+  getSubordinatesForUser,
+  canAssignTask,
+};

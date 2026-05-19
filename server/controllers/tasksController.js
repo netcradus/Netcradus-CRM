@@ -2,12 +2,20 @@ const mongoose = require("mongoose");
 const Task = require("../models/Task");
 const TaskComment = require("../models/TaskComment");
 const User = require("../models/User");
+const AuditLog = require("../models/AuditLog");
+const OrgHierarchy = require("../models/OrgHierarchy");
 const {
   REVIEWER_ROLES,
   createNotifications,
   getReviewerUserIds,
 } = require("../services/taskNotificationService");
-const { canAssignTask, getAssignableUserIds } = require("../utils/hierarchyUtils");
+const {
+  canAssignTask,
+  getAssignableUserIds,
+  getSuperiorsForUser,
+  isUserSuperiorTo,
+  getSubordinatesForUser,
+} = require("../utils/hierarchyUtils");
 const {
   assignToQueue,
   progressTaskQueue,
@@ -20,7 +28,11 @@ const ALL_VALID_STATUSES = ["pending", "in_progress", "completed", "reviewed", "
 const TASK_POPULATE = [
   { path: "assignedBy", select: "name email role" },
   { path: "assignedTo", select: "name email role" },
+  { path: "createdBy", select: "name email role department" },
+  { path: "approvedBy", select: "name email role" },
+  { path: "rejectedBy", select: "name email role" },
   { path: "statusHistory.changedBy", select: "name email role" },
+  { path: "approvalHistory.performedBy", select: "name email role" },
 ];
 
 function isReviewer(user) {
@@ -42,6 +54,10 @@ function canViewAllTasks(user) {
 function canManageTask(user, task) {
   if (user?.role === "super_user") return true;
   if (user?.role === "admin") return true;
+  if (task?.taskType === "self") {
+    const creatorId = task?.createdBy?._id || task?.createdBy;
+    return String(creatorId) === String(user._id);
+  }
   const assignedById = task?.assignedBy?._id || task?.assignedBy;
   return String(assignedById) === String(user._id);
 }
@@ -50,10 +66,23 @@ function canAccessTask(user, task) {
   if (canViewAllTasks(user)) return true;
   const assignedToId = task?.assignedTo?._id || task?.assignedTo;
   const assignedById = task?.assignedBy?._id || task?.assignedBy;
+  const createdById = task?.createdBy?._id || task?.createdBy;
 
-  return [assignedToId, assignedById]
+  return [assignedToId, assignedById, createdById]
     .filter(Boolean)
     .some((id) => String(id) === String(user._id));
+}
+
+async function writeTaskAudit({ action, performedBy, taskId, note = "", details = {} }) {
+  return AuditLog.create({
+    action,
+    performedBy,
+    userId: performedBy,
+    entityType: "Task",
+    entityId: taskId,
+    note,
+    details,
+  });
 }
 
 async function getVisibleTaskUserIds(currentUser) {
@@ -67,6 +96,10 @@ async function buildTaskQuery(query = {}, currentUser, options = {}) {
   const filter = {};
   const andFilters = [];
   const { status, role, priority, assignedTo, search, startDate, endDate } = query;
+
+  if (!options.includeSelfTasks) {
+    andFilters.push({ taskType: { $ne: "self" } });
+  }
 
   if (options.onlyMine) {
     andFilters.push({ assignedTo: currentUser._id });
@@ -181,6 +214,7 @@ async function createTask(req, res) {
       description: description?.trim() || "",
       assignedBy: req.user._id,
       assignedTo: assignee._id,
+      createdBy: req.user._id,
       role: assignee.role,
       priority: ["low", "medium", "high", "urgent"].includes(priority) ? priority : "medium",
       status: queueData.status,
@@ -214,6 +248,314 @@ async function createTask(req, res) {
   } catch (error) {
     console.error("Create Task Error:", error);
     return res.status(500).json({ success: false, message: "Failed to create task", error: error.message });
+  }
+}
+
+async function createSelfTask(req, res) {
+  try {
+    if (req.user.role === "super_user") {
+      return res.status(403).json({ success: false, message: "Super users cannot create self tasks." });
+    }
+
+    const { title, description, priority, dueDate, estimatedHours } = req.body;
+    const trimmedTitle = String(title || "").trim();
+    const trimmedDescription = String(description || "").trim();
+
+    if (!trimmedTitle) {
+      return res.status(400).json({ success: false, message: "Title is required" });
+    }
+    if (trimmedTitle.length > 200) {
+      return res.status(400).json({ success: false, message: "Title cannot exceed 200 characters" });
+    }
+    if (trimmedDescription.length > 2000) {
+      return res.status(400).json({ success: false, message: "Description cannot exceed 2000 characters" });
+    }
+    if (dueDate) {
+      const dueDateError = validateDueDate(dueDate);
+      if (dueDateError) {
+        return res.status(400).json({ success: false, message: dueDateError });
+      }
+    }
+
+    const task = await Task.create({
+      title: trimmedTitle,
+      description: trimmedDescription,
+      assignedBy: null,
+      assignedTo: req.user._id,
+      createdBy: req.user._id,
+      role: req.user.role,
+      priority: ["low", "medium", "high", "urgent"].includes(priority) ? priority : "medium",
+      status: "pending",
+      dueDate: dueDate ? new Date(dueDate) : null,
+      estimatedHours: estimatedHours != null && estimatedHours !== "" ? Number(estimatedHours) : null,
+      taskType: "self",
+      selfTaskStatus: "draft",
+      statusHistory: [
+        {
+          status: "pending",
+          changedBy: req.user._id,
+          note: "Self task created",
+        },
+      ],
+    });
+
+    await writeTaskAudit({
+      action: "self_task_created",
+      performedBy: req.user._id,
+      taskId: task._id,
+    });
+
+    const populatedTask = await Task.findById(task._id).populate(TASK_POPULATE).lean();
+    return res.status(201).json({ success: true, data: populatedTask });
+  } catch (error) {
+    console.error("Create Self Task Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to create self task", error: error.message });
+  }
+}
+
+async function submitSelfTaskForApproval(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.taskId, res);
+    if (!task) return;
+
+    if (task.taskType !== "self") {
+      return res.status(400).json({ success: false, message: "Only self tasks can be submitted for approval" });
+    }
+    if (String(task.createdBy) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: "Only the task creator can submit this task for approval" });
+    }
+    if (!["draft", "revision"].includes(task.selfTaskStatus)) {
+      return res.status(400).json({ success: false, message: "This self task cannot be submitted in its current state" });
+    }
+    if (task.status !== "completed") {
+      return res.status(400).json({ success: false, message: "Mark the task as complete before submitting for approval." });
+    }
+
+    const hierarchyEntry = await OrgHierarchy.findOne({ userId: req.user._id }).select("parentId").lean();
+    if (!hierarchyEntry?.parentId) {
+      return res.status(400).json({
+        success: false,
+        message: "You have no manager assigned. Contact HR to set up your reporting hierarchy before submitting self tasks.",
+      });
+    }
+
+    const wasRevision = task.selfTaskStatus === "revision";
+    task.selfTaskStatus = "pending_approval";
+    task.submittedForApprovalAt = new Date();
+    if (wasRevision) task.revisionCount += 1;
+    task.approvalHistory.push({
+      action: wasRevision ? "revised" : "submitted",
+      performedBy: req.user._id,
+      performedAt: new Date(),
+    });
+
+    await task.save();
+
+    const superiorUserIds = await getSuperiorsForUser(req.user._id);
+    if (superiorUserIds.length) {
+      await createNotifications({
+        taskId: task._id,
+        userIds: superiorUserIds,
+        message: `${req.user.name || "An employee"} submitted a self task for approval: ${task.title}`,
+        targetPath: "/tasks?tab=pending-approvals",
+        type: "self_task_approval_requested",
+      });
+    } else {
+      const superUsers = await User.find({ role: "super_user", isDisabled: false }).select("_id").lean();
+      await createNotifications({
+        taskId: task._id,
+        userIds: superUsers.map((user) => user._id),
+        message: `${req.user.name || "An employee"} submitted a self task, but no active superior is available: ${task.title}`,
+        targetPath: "/tasks?tab=pending-approvals",
+        type: "self_task_approval_requested",
+      });
+    }
+
+    await writeTaskAudit({
+      action: wasRevision ? "self_task_revised" : "self_task_submitted",
+      performedBy: req.user._id,
+      taskId: task._id,
+    });
+
+    const updatedTask = await Task.findById(task._id).populate(TASK_POPULATE).lean();
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Submit Self Task Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to submit self task", error: error.message });
+  }
+}
+
+async function approveSelfTask(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.taskId, res);
+    if (!task) return;
+
+    if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
+      return res.status(400).json({ success: false, message: "This self task is not pending approval" });
+    }
+    if (!(await isUserSuperiorTo(req.user._id, task.createdBy))) {
+      return res.status(403).json({ success: false, message: "You are not authorised to approve this task." });
+    }
+
+    const note = String(req.body.note || "").trim().slice(0, 500);
+    const reviewedAt = new Date();
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: task._id, selfTaskStatus: "pending_approval" },
+      {
+        $set: {
+          selfTaskStatus: "approved",
+          approvedBy: req.user._id,
+          approvedAt: reviewedAt,
+          approvalNote: note,
+          rejectedBy: null,
+          rejectedAt: null,
+          rejectionReason: "",
+        },
+        $push: {
+          approvalHistory: {
+            action: "approved",
+            performedBy: req.user._id,
+            performedAt: reviewedAt,
+            note,
+          },
+        },
+      },
+      { new: true }
+    ).populate(TASK_POPULATE).lean();
+
+    if (!updatedTask) {
+      return res.status(409).json({ success: false, message: "This task has already been reviewed." });
+    }
+
+    await createNotifications({
+      taskId: task._id,
+      userIds: [task.createdBy],
+      message: `Your self task "${task.title}" has been approved by ${req.user.name || "your manager"}.`,
+      targetPath: "/tasks?tab=self",
+      type: "self_task_approved",
+    });
+
+    await writeTaskAudit({
+      action: "self_task_approved",
+      performedBy: req.user._id,
+      taskId: task._id,
+      note,
+    });
+
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Approve Self Task Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to approve self task", error: error.message });
+  }
+}
+
+async function rejectSelfTask(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.taskId, res);
+    if (!task) return;
+
+    const reason = String(req.body.reason || "").trim();
+    if (reason.length < 10) {
+      return res.status(400).json({ success: false, message: "Rejection reason must be at least 10 characters" });
+    }
+    if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
+      return res.status(400).json({ success: false, message: "This self task is not pending approval" });
+    }
+    if (!(await isUserSuperiorTo(req.user._id, task.createdBy))) {
+      return res.status(403).json({ success: false, message: "You are not authorised to approve this task." });
+    }
+
+    const reviewedAt = new Date();
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: task._id, selfTaskStatus: "pending_approval" },
+      {
+        $set: {
+          selfTaskStatus: "rejected",
+          rejectedBy: req.user._id,
+          rejectedAt: reviewedAt,
+          rejectionReason: reason.slice(0, 500),
+          approvedBy: null,
+          approvedAt: null,
+          approvalNote: "",
+        },
+        $push: {
+          approvalHistory: {
+            action: "rejected",
+            performedBy: req.user._id,
+            performedAt: reviewedAt,
+            note: reason.slice(0, 500),
+          },
+        },
+      },
+      { new: true }
+    ).populate(TASK_POPULATE).lean();
+
+    if (!updatedTask) {
+      return res.status(409).json({ success: false, message: "This task has already been reviewed." });
+    }
+
+    await createNotifications({
+      taskId: task._id,
+      userIds: [task.createdBy],
+      message: `Your self task "${task.title}" was rejected. Reason: ${reason.slice(0, 500)}`,
+      targetPath: "/tasks?tab=self",
+      type: "self_task_rejected",
+    });
+
+    await writeTaskAudit({
+      action: "self_task_rejected",
+      performedBy: req.user._id,
+      taskId: task._id,
+      note: reason.slice(0, 500),
+    });
+
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Reject Self Task Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to reject self task", error: error.message });
+  }
+}
+
+async function getPendingApprovals(req, res) {
+  try {
+    const subordinateUserIds = await getSubordinatesForUser(req.user._id);
+    const tasks = subordinateUserIds.length
+      ? await Task.find({
+          taskType: "self",
+          selfTaskStatus: "pending_approval",
+          createdBy: { $in: subordinateUserIds },
+        })
+          .populate(TASK_POPULATE)
+          .sort({ submittedForApprovalAt: 1 })
+          .lean()
+      : [];
+
+    return res.json({ success: true, tasks, total: tasks.length });
+  } catch (error) {
+    console.error("Get Pending Approvals Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch pending approvals", error: error.message });
+  }
+}
+
+async function getMySelfTasks(req, res) {
+  try {
+    const filter = {
+      taskType: "self",
+      createdBy: req.user._id,
+    };
+    if (req.query.status) {
+      filter.selfTaskStatus = req.query.status;
+    }
+
+    const tasks = await Task.find(filter)
+      .populate(TASK_POPULATE)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, tasks, total: tasks.length });
+  } catch (error) {
+    console.error("Get My Self Tasks Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch self tasks", error: error.message });
   }
 }
 
@@ -322,6 +664,9 @@ async function updateTask(req, res) {
     if (!canManageTask(req.user, task)) {
       return res.status(403).json({ success: false, message: "You can only update tasks that you assigned" });
     }
+    if (task.taskType === "self" && !["draft", "rejected", "revision"].includes(task.selfTaskStatus)) {
+      return res.status(403).json({ success: false, message: "Only draft or rejected self tasks can be edited" });
+    }
 
     const { title, description, dueDate, priority, status } = req.body;
 
@@ -344,11 +689,15 @@ async function updateTask(req, res) {
     }
 
     if (dueDate !== undefined) {
-      const dueDateError = validateDueDate(dueDate);
-      if (dueDateError) {
-        return res.status(400).json({ success: false, message: dueDateError });
+      if (task.taskType === "self" && !dueDate) {
+        task.dueDate = null;
+      } else {
+        const dueDateError = validateDueDate(dueDate);
+        if (dueDateError) {
+          return res.status(400).json({ success: false, message: dueDateError });
+        }
+        task.dueDate = new Date(dueDate);
       }
-      task.dueDate = new Date(dueDate);
       task.reminderSentAt = null;
     }
 
@@ -368,6 +717,18 @@ async function updateTask(req, res) {
       changedBy: req.user._id,
       note: "Task details updated",
     });
+    if (task.taskType === "self" && task.selfTaskStatus === "rejected") {
+      task.selfTaskStatus = "revision";
+      task.approvedBy = null;
+      task.approvedAt = null;
+      task.approvalNote = "";
+      task.approvalHistory.push({
+        action: "revised",
+        performedBy: req.user._id,
+        performedAt: new Date(),
+        note: "Self task revised",
+      });
+    }
 
     await task.save();
 
@@ -427,6 +788,9 @@ async function deleteTask(req, res) {
 
     if (!canManageTask(req.user, task)) {
       return res.status(403).json({ success: false, message: "You can only delete tasks that you assigned" });
+    }
+    if (task.taskType === "self" && !["draft", "rejected"].includes(task.selfTaskStatus)) {
+      return res.status(403).json({ success: false, message: "Tasks pending or completed approval cannot be deleted." });
     }
 
     await Promise.all([
@@ -654,6 +1018,12 @@ async function getUserQueue(req, res) {
 
 module.exports = {
   createTask,
+  createSelfTask,
+  submitSelfTaskForApproval,
+  approveSelfTask,
+  rejectSelfTask,
+  getPendingApprovals,
+  getMySelfTasks,
   getTasks,
   getMyTasks,
   getAssignableUsers,

@@ -25,6 +25,31 @@ const taskHistorySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const approvalHistorySchema = new mongoose.Schema(
+  {
+    action: {
+      type: String,
+      enum: ["submitted", "approved", "rejected", "revised"],
+      required: true,
+    },
+    performedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    performedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    note: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+  { _id: false }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     title: {
@@ -40,12 +65,17 @@ const taskSchema = new mongoose.Schema(
     assignedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     role: {
       type: String,
@@ -65,7 +95,7 @@ const taskSchema = new mongoose.Schema(
     },
     dueDate: {
       type: Date,
-      required: true,
+      default: null,
     },
     estimatedDuration: {
       type: String,
@@ -109,6 +139,58 @@ const taskSchema = new mongoose.Schema(
       type: [taskHistorySchema],
       default: [],
     },
+    taskType: {
+      type: String,
+      enum: ["assigned", "self"],
+      default: "assigned",
+    },
+    selfTaskStatus: {
+      type: String,
+      enum: ["draft", "pending_approval", "approved", "rejected", "revision"],
+      default: undefined,
+    },
+    submittedForApprovalAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvalNote: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: "",
+    },
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: "",
+    },
+    revisionCount: {
+      type: Number,
+      default: 0,
+    },
+    approvalHistory: {
+      type: [approvalHistorySchema],
+      default: [],
+    },
   },
   { timestamps: true }
 );
@@ -118,5 +200,8 @@ taskSchema.index({ role: 1, priority: 1, dueDate: 1 });
 taskSchema.index({ dueDate: 1, status: 1, reminderSentAt: 1 });
 taskSchema.index({ createdAt: -1 });
 taskSchema.index({ assignedTo: 1, queuePosition: 1 }); // queue ordering
+taskSchema.index({ taskType: 1, selfTaskStatus: 1 });
+taskSchema.index({ approvedBy: 1 });
+taskSchema.index({ "approvalHistory.performedBy": 1 });
 
 module.exports = mongoose.model("Task", taskSchema);

@@ -268,14 +268,14 @@ const login = async (req, res) => {
         }
       }
 
-      // Device Limit (Max 3)
+      // Device Limit (Max 10)
       if (!device) {
         const verifiedCount = await AdminDevice.countDocuments({ userId: user._id, trusted: true });
         if (verifiedCount >= 10) {
           await AuditLog.create({ action: "SUPER_USER_DEVICE_LIMIT_REACHED", performedBy: user._id, ipAddress, userAgent });
           return res.status(403).json({
             action: "DEVICE_LIMIT_REACHED",
-            message: "Maximum of 3 super_user devices allowed."
+            message: "Maximum of 10 super_user devices allowed."
           });
         }
 

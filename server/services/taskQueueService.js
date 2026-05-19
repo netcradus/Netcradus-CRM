@@ -70,6 +70,7 @@ function calculateNextTaskDate(previousTask) {
 async function fetchManagedQueue(userId) {
   return Task.find({
     assignedTo: userId,
+    taskType: { $ne: "self" },
     status: { $in: QUEUE_MANAGED_STATUSES },
   })
     .sort({ queuePosition: 1, createdAt: 1 })
@@ -82,6 +83,7 @@ async function fetchManagedQueue(userId) {
 async function fetchUserQueue(userId) {
   return Task.find({
     assignedTo: userId,
+    taskType: { $ne: "self" },
     status: { $in: ALL_PENDING_STATUSES },
   })
     .sort({ queuePosition: 1, createdAt: 1 })
@@ -217,6 +219,7 @@ async function progressTaskQueue(userId) {
 
   const queuedTasks = await Task.find({
     assignedTo: userId,
+    taskType: { $ne: "self" },
     status: "queued",
   })
     .sort({ queuePosition: 1, createdAt: 1 })
@@ -270,6 +273,7 @@ async function progressTaskQueue(userId) {
 async function getUserNextAvailableDate(userId) {
   const lastTask = await Task.findOne({
     assignedTo: userId,
+    taskType: { $ne: "self" },
     status: { $in: QUEUE_MANAGED_STATUSES },
   })
     .sort({ queuePosition: -1, createdAt: -1 })

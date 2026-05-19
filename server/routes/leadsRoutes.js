@@ -1,18 +1,19 @@
-const express = require('express');
+const express = require("express");
+
+const leadsController = require("../controllers/leadsController");
+const upload = require("../middleware/upload");
+
 const router = express.Router();
-const leadsController = require('../controllers/leadsController');
 
-// Public route: Get all leads (visible to all authenticated users)
-router.get('/', leadsController.getLeads);
-
-// Protected routes: User and Admin
-router.get('/:id', leadsController.getLead);                    // Get single lead
-router.post('/', leadsController.createLead);                   // Create new lead
-router.put('/:id', leadsController.updateLead);                 // Update lead
-
-// Admin only: Delete operations
-router.delete('/bulk', leadsController.bulkDeleteLeads);        // Delete selected IDs
-router.delete('/all', leadsController.deleteAllLeads);          // Delete all matching filters
-router.delete('/:id', leadsController.deleteLead);              // Delete single lead
+router.get("/", leadsController.getLeads);
+router.get("/export", leadsController.exportLeads);
+router.post("/import", upload.single("file"), leadsController.importLeads);
+router.get("/:id", leadsController.getLead);
+router.post("/", leadsController.createLead);
+router.patch("/:id/sales-update", leadsController.salesUpdateLead);
+router.put("/:id", leadsController.updateLead);
+router.delete("/bulk", leadsController.bulkDeleteLeads);
+router.delete("/all", leadsController.deleteAllLeads);
+router.delete("/:id", leadsController.deleteLead);
 
 module.exports = router;

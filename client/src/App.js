@@ -34,7 +34,7 @@ const Documents                = lazy(() => import("./features/Documents/Documen
 const Forecasts                = lazy(() => import("./features/Forecasts/Forecasts"));
 const Tasks                    = lazy(() => import("./features/Tasks/Tasks"));
 const Accounts                 = lazy(() => import("./features/Accounts/Accounts"));
-const Meetings                 = lazy(() => import("./features/Meetings/Meetings"));
+const MeetingsPage             = lazy(() => import("./features/Meetings/MeetingsPage"));
 const Products                 = lazy(() => import("./features/Products/Products"));
 const Projects                 = lazy(() => import("./features/Projects/Projects"));
 const ProjectDetailPage        = lazy(() => import("./features/Projects/ProjectDetailPage"));
@@ -250,7 +250,7 @@ const App = () => {
               <Route path="/deals" element={<RoleRoute roles={ACCESS_GROUPS.crmDeals}><Deals /></RoleRoute>} />
               <Route path="/documents" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Documents /></RoleRoute>} />
               <Route path="/forecasts" element={<RoleRoute roles={ACCESS_GROUPS.forecasts}><Forecasts /></RoleRoute>} />
-              <Route path="/meetings" element={<RoleRoute roles={ACCESS_GROUPS.meetings}><Meetings /></RoleRoute>} />
+              <Route path="/meetings" element={<RoleRoute roles={ACCESS_GROUPS.meetings}><MeetingsPage /></RoleRoute>} />
               <Route path="/products" element={<RoleRoute roles={ACCESS_GROUPS.products}><Products /></RoleRoute>} />
               
               {/* Projects */}
