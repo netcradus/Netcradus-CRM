@@ -237,7 +237,7 @@ function Leads() {
       setEditingLeadId(null);
       await fetchLeads();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Failed to save lead.");
+      setError(requestError.response?.data?.message || requestError.response?.data?.error || "Failed to save lead.");
     }
   };
 
@@ -319,7 +319,7 @@ function Leads() {
         setSelectedLead(null);
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Failed to update lead.");
+      setError(requestError.response?.data?.message || requestError.response?.data?.error || "Failed to update lead.");
     }
   };
 

@@ -33,23 +33,57 @@ const ensureLeadAccess = (req, res) => {
   return false;
 };
 
+const extractLegacyNoteText = (entry) => {
+  const normalizedEntry = typeof entry?.toObject === "function" ? entry.toObject() : entry;
+
+  if (!normalizedEntry) {
+    return "";
+  }
+
+  if (typeof normalizedEntry === "string") {
+    return normalizedEntry.trim();
+  }
+
+  if (typeof normalizedEntry.text === "string" && normalizedEntry.text.trim()) {
+    return normalizedEntry.text.trim();
+  }
+
+  const numericKeys = Object.keys(normalizedEntry)
+    .filter((key) => /^\d+$/.test(key))
+    .sort((left, right) => Number(left) - Number(right));
+
+  if (!numericKeys.length) {
+    return "";
+  }
+
+  return numericKeys.map((key) => normalizedEntry[key]).join("").trim();
+};
+
 const ensureArrayNotes = (lead) => {
-  if (Array.isArray(lead.notes)) {
-    return lead.notes;
-  }
+  const sourceNotes = Array.isArray(lead.notes)
+    ? lead.notes
+    : typeof lead.notes === "string" && lead.notes.trim()
+      ? [lead.notes]
+      : [];
 
-  if (typeof lead.notes === "string" && lead.notes.trim()) {
-    lead.notes = [
-      {
-        text: lead.notes.trim(),
-        addedBy: lead.createdBy,
-        addedAt: lead.updatedAt || lead.createdAt || new Date(),
-      },
-    ];
-    return lead.notes;
-  }
+  const normalizedNotes = sourceNotes
+    .map((entry) => {
+      const text = extractLegacyNoteText(entry);
+      if (!text) {
+        return null;
+      }
 
-  lead.notes = [];
+      const normalizedEntry = typeof entry?.toObject === "function" ? entry.toObject() : entry;
+
+      return {
+        text,
+        addedBy: normalizedEntry?.addedBy || lead.createdBy,
+        addedAt: normalizedEntry?.addedAt || lead.updatedAt || lead.createdAt || new Date(),
+      };
+    })
+    .filter(Boolean);
+
+  lead.set("notes", normalizedNotes);
   return lead.notes;
 };
 
