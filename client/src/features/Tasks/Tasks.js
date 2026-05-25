@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { apiUrl } from "../../config/api";
 import { getNotificationSocket } from "../../services/socket";
@@ -524,7 +525,7 @@ export default function Tasks() {
                   {assignableUsers.map((user) => <option key={user._id} value={user._id}>{user.name || user.email}</option>)}
                 </select>
               </div>
-              <button className="btn btn-ghost" onClick={() => setFilters({ search: "", status: "", priority: "", assignedTo: "" })}>Reset</button>
+              <button className="btn btn-ghost" onClick={() => setFilters({ search: "", status: "", priority: "", assignedTo: "" })}><RotateCcw size={14} /> Reset</button>
             </div>
           </div>
 
@@ -564,11 +565,11 @@ export default function Tasks() {
                       <td>{formatDate(task.dueDate)}</td>
                       <td>
                         <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-                          <button className="btn btn-ghost" onClick={() => setViewTask(task)} title="View task"><Eye size={14} /></button>
-                          <button className="btn btn-ghost" onClick={() => updateStatus(task, task.status === "completed" ? "in_progress" : "completed")} title="Toggle complete"><CheckCircle2 size={14} /></button>
+                          <button className="action-button" onClick={() => setViewTask(task)} title="View task"><Eye size={16} /></button>
+                          <button className="action-button" style={{ color: "var(--color-success)" }} onClick={() => updateStatus(task, task.status === "completed" ? "in_progress" : "completed")} title="Toggle complete"><CheckCircle2 size={16} /></button>
                           {String(task.assignedBy?._id || task.assignedBy) === String(currentUserId) ? (
                             <button
-                              className="btn btn-ghost"
+                              className="action-button"
                               onClick={() => {
                                 setEditingTask(task);
                                 setForm({
@@ -581,11 +582,11 @@ export default function Tasks() {
                               }}
                               title="Edit task"
                             >
-                              <Pencil size={14} />
+                              <Pencil size={16} />
                             </button>
                           ) : null}
                           {canDeleteTask(task) ? (
-                            <button className="btn btn-ghost" style={{ color: "var(--color-error)" }} onClick={() => deleteTask(task)} title="Delete task"><Trash2 size={14} /></button>
+                            <button className="action-button" style={{ color: "var(--color-error)" }} onClick={() => deleteTask(task)} title="Delete task"><Trash2 size={16} /></button>
                           ) : null}
                         </div>
                       </td>
