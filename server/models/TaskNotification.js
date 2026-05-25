@@ -29,6 +29,7 @@ const taskNotificationSchema = new mongoose.Schema(
         "task_completed",
         "storage_low",
         "general",
+        "chat_group",
         "self_task_approval_requested",
         "self_task_approved",
         "self_task_rejected",
