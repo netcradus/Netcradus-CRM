@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, EllipsisVertical, Expand, MessageCircleMore, Plus, Search, Send, Trash2, Users, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, EllipsisVertical, Expand, MessageCircleMore, Plus, Search, Send, Trash2, Users, X } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 // import "./ChatPanel.css";
 
@@ -56,6 +56,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   const [selectedGroupUserIds, setSelectedGroupUserIds] = useState([]);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
   const [showThreadMenu, setShowThreadMenu] = useState(false);
   const [showGroupProfile, setShowGroupProfile] = useState(false);
   
@@ -63,6 +64,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const threadMenuRef = useRef(null);
+  const toastTimeoutRef = useRef(null);
 
   const [view, setView] = useState("list"); // list or detail
   const isCompact = mode === "launcher";
@@ -101,6 +103,16 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     if (!showNewChat) return;
     fetchDirectory(directorySearch);
   }, [directorySearch, fetchDirectory, showNewChat]);
+
+  useEffect(() => {
+    return () => clearTimeout(toastTimeoutRef.current);
+  }, []);
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(""), 3000);
+  };
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
@@ -145,7 +157,9 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   const startGroupConversation = async () => {
     try {
       if (!groupName.trim()) {
-        setErrorMessage("Group name is required");
+        const message = "Please enter group name";
+        setErrorMessage(message);
+        showToast(message);
         return;
       }
       if (selectedGroupUserIds.length < 1) {
@@ -203,6 +217,12 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
               <button type="button" className={newChatMode === "direct" ? "is-active" : ""} onClick={() => setNewChatMode("direct")}>Direct</button>
               <button type="button" className={newChatMode === "group" ? "is-active" : ""} onClick={() => setNewChatMode("group")}>Group</button>
             </div>
+            {toastMessage && (
+              <div className="chat-toast" role="alert" aria-live="assertive">
+                <AlertCircle size={15} />
+                <span>{toastMessage}</span>
+              </div>
+            )}
             {newChatMode === "group" && (
               <input
                 className="chat-group-name-input"
