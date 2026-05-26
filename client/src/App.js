@@ -77,6 +77,8 @@ const StorageAdminPage         = lazy(() => import("./features/Documents/admin/S
 const ManagementHub            = lazy(() => import("./features/Management/ManagementHub"));
 const PasswordManager          = lazy(() => import("./features/PasswordManager/PasswordManager"));
 const OnboardingPage           = lazy(() => import("./features/Onboarding/OnboardingPage"));
+const MailPage                 = lazy(() => import("./features/Mail/MailPage"));
+const ZohoSettingsPanel        = lazy(() => import("./features/Mail/ZohoSettingsPanel"));
 
 /* ========== Protected Wrapper ========== */
 function ProtectedApp() {
@@ -184,6 +186,7 @@ const App = () => {
                   </div>
                 }
               />
+              <Route path="/mail" element={<MailPage />} />
               <Route path="/tickets" element={<RoleRoute roles={ACCESS_GROUPS.tickets}><TicketsPage /></RoleRoute>} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               
@@ -315,6 +318,11 @@ const App = () => {
                 <Route path="/password-manager" element={
                   <RoleRoute roles="super_user">
                     <PasswordManager />
+                  </RoleRoute>
+                } />
+                <Route path="/settings/zoho" element={
+                  <RoleRoute roles="super_user">
+                    <ZohoSettingsPanel />
                   </RoleRoute>
                 } />
               </Route>
