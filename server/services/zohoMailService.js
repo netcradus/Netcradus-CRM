@@ -90,6 +90,48 @@ function normalizeArray(value) {
   return [value];
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isEmailLike(value) {
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(String(value || "").trim());
+}
+
+function collectEmails(value, emails = new Set()) {
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    if (isEmailLike(trimmedValue)) {
+      emails.add(normalizeEmail(trimmedValue));
+    }
+    return emails;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectEmails(entry, emails));
+    return emails;
+  }
+
+  if (value && typeof value === "object") {
+    Object.values(value).forEach((entry) => collectEmails(entry, emails));
+  }
+
+  return emails;
+}
+
+function getAccountId(account = {}) {
+  return account.accountId || account.accountID || account.account_id || account.id || account.mailAccountId;
+}
+
+function normalizeAccountsResponse(data) {
+  const payload = data?.data || data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.accounts)) return payload.accounts;
+  if (Array.isArray(payload?.mailAccounts)) return payload.mailAccounts;
+  if (payload && typeof payload === "object") return Object.values(payload).filter((entry) => entry && typeof entry === "object");
+  return [];
+}
+
 function normalizeMessage(message = {}) {
   return {
     messageId: String(message.messageId || message.msgId || message.messageid || ""),
@@ -116,37 +158,39 @@ function normalizeMessage(message = {}) {
 
 async function getAccountIdForEmail(zohoEmail) {
   const accounts = await listAccounts();
-  const normalizedEmail = String(zohoEmail || "").trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(zohoEmail);
 
   const matchedAccount = accounts.find((account) => {
-    const primaryEmail = String(account.primaryEmailAddress || account.mailboxAddress || "").toLowerCase();
-    const mailboxEmail = String(account.incomingUserName || "").toLowerCase();
-    const aliasMatch = normalizeArray(account.emailAddress).some(
-      (entry) => String(entry?.mailId || "").toLowerCase() === normalizedEmail
-    );
-
-    return primaryEmail === normalizedEmail || mailboxEmail === normalizedEmail || aliasMatch;
+    const accountEmails = collectEmails(account);
+    return accountEmails.has(normalizedEmail);
   });
 
-  if (!matchedAccount?.accountId) {
+  const accountId = matchedAccount ? getAccountId(matchedAccount) : null;
+  if (!accountId) {
     const error = new Error("Zoho mailbox not found.");
     error.code = "ZOHO_ACCOUNT_NOT_FOUND";
+    error.availableEmails = accounts
+      .flatMap((account) => [...collectEmails(account)])
+      .filter(Boolean)
+      .slice(0, 10);
     throw error;
   }
 
+  const matchedEmails = [...collectEmails(matchedAccount)];
   return {
-    zohoAccountId: String(matchedAccount.accountId),
+    zohoAccountId: String(accountId),
     displayName: matchedAccount.displayName || matchedAccount.accountDisplayName || matchedAccount.mailboxAddress,
     zohoEmail:
-      matchedAccount.primaryEmailAddress ||
-      matchedAccount.mailboxAddress ||
+      normalizeEmail(matchedAccount.primaryEmailAddress) ||
+      normalizeEmail(matchedAccount.mailboxAddress) ||
+      matchedEmails[0] ||
       normalizedEmail,
   };
 }
 
 async function listAccounts() {
   const response = await request({ method: "GET", url: "/accounts" });
-  return response.data?.data || [];
+  return normalizeAccountsResponse(response.data);
 }
 
 async function getFolders(zohoAccountId) {

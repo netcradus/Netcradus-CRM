@@ -54,8 +54,16 @@ export function useZohoAdmin() {
 
   const linkAccount = useCallback(
     async (userId, zohoEmail) => {
-      await axios.post(apiUrl("/api/zoho/accounts/link"), { userId, zohoEmail }, authHeaders(token));
-      await loadLinkedAccounts();
+      try {
+        await axios.post(apiUrl("/api/zoho/accounts/link"), { userId, zohoEmail }, authHeaders(token));
+        await loadLinkedAccounts();
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          message: error.response?.data?.message || "Failed to link this Zoho mailbox.",
+        };
+      }
     },
     [loadLinkedAccounts, token]
   );

@@ -66,7 +66,11 @@ function ZohoSettingsPanel() {
             className="mail-settings-form"
             onSubmit={async (event) => {
               event.preventDefault();
-              await linkAccount(form.userId, form.zohoEmail);
+              const result = await linkAccount(form.userId, form.zohoEmail);
+              if (!result.success) {
+                setFeedback(result.message);
+                return;
+              }
               setForm({ userId: "", zohoEmail: "" });
               setFeedback("Mailbox linked successfully.");
             }}
