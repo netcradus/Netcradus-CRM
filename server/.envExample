@@ -4,6 +4,11 @@ JWT_SECRET=
 SUPER_USER_SEED_KEY=
 SUPER_USER_SEED_USERNAME=
 SUPER_USER_SEED_PASSWORD=
+ZOHO_CLIENT_ID=
+ZOHO_CLIENT_SECRET=
+ZOHO_REDIRECT_URI=https://yourcrm.com/api/zoho/callback
+ZOHO_ORG_ID=
+ZOHO_TOKEN_ENCRYPTION_KEY=
 
 
 # SMTP
@@ -14,6 +19,13 @@ BREVO_API_KEY=
 ONBOARDING_FROM_EMAIL=hr-noreply@netcradus.com
 ONBOARDING_FROM_NAME=Netcradus HR
 HR_EMAIL=hr@netcradus.com
+
+# Zoho Mail
+# ZOHO_CLIENT_ID: Client ID from your Zoho server-based OAuth application in the EU data center.
+# ZOHO_CLIENT_SECRET: Client secret from the same Zoho OAuth application.
+# ZOHO_REDIRECT_URI: OAuth redirect URI configured in Zoho, typically https://yourcrm.com/api/zoho/callback.
+# ZOHO_ORG_ID: Zoho organization ID for your Mail tenant.
+# ZOHO_TOKEN_ENCRYPTION_KEY: 32-byte hex string used to AES-256-GCM encrypt stored Zoho tokens.
 
 
 CLIENT_ORIGIN=
