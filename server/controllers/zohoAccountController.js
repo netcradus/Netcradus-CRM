@@ -62,9 +62,13 @@ async function linkUserZohoAccount(req, res) {
     });
   } catch (error) {
     if (error.code === "ZOHO_ACCOUNT_NOT_FOUND") {
+      const availableMessage = error.availableEmails?.length
+        ? ` Available Zoho mailbox emails seen by this OAuth connection: ${error.availableEmails.join(", ")}.`
+        : "";
+
       return res.status(404).json({
         success: false,
-        message: "No Zoho mailbox found for this email address. Ensure the account exists in your Zoho organization.",
+        message: `No Zoho mailbox found for this email address. Ensure the account exists in your Zoho organization.${availableMessage}`,
       });
     }
 
