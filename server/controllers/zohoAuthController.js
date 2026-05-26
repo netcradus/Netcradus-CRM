@@ -117,15 +117,14 @@ async function getConnectionStatus(req, res) {
 }
 
 async function initiateOAuth(req, res) {
-  const state = crypto.randomBytes(24).toString("hex");
-  const cookieValue = createSignedStateCookie({
-    state,
+  const stateToken = createSignedStateCookie({
+    nonce: crypto.randomBytes(24).toString("hex"),
     connectedBy: req.user.id,
     frontendOrigin: getRequestFrontendOrigin(req),
     expiresAt: Date.now() + COOKIE_TTL_MS,
   });
 
-  res.cookie(COOKIE_NAME, cookieValue, {
+  res.cookie(COOKIE_NAME, stateToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: String(process.env.NODE_ENV).toLowerCase() === "production",
@@ -133,33 +132,35 @@ async function initiateOAuth(req, res) {
     path: "/api/zoho",
   });
 
-  return res.json({ authUrl: zohoAuthService.getAuthorizationUrl(state) });
+  return res.json({ authUrl: zohoAuthService.getAuthorizationUrl(stateToken) });
 }
 
 async function handleCallback(req, res) {
   const { code, state } = req.query;
-  const stateCookie = parseCookieValue(getCookie(req, COOKIE_NAME));
+  const queryState = parseCookieValue(state);
+  const cookieState = parseCookieValue(getCookie(req, COOKIE_NAME));
+  const statePayload = queryState || cookieState;
   res.clearCookie(COOKIE_NAME, { path: "/api/zoho" });
 
   if (!code) {
-    return res.redirect(getFrontendRedirectUrl("error=auth_failed", stateCookie));
+    return res.redirect(getFrontendRedirectUrl("error=auth_failed", statePayload));
   }
 
   if (
-    !stateCookie ||
-    stateCookie.expiresAt < Date.now() ||
-    stateCookie.state !== state ||
-    !stateCookie.connectedBy
+    !statePayload ||
+    statePayload.expiresAt < Date.now() ||
+    !statePayload.connectedBy ||
+    (!queryState && cookieState?.state && cookieState.state !== state)
   ) {
-    return res.redirect(getFrontendRedirectUrl("error=invalid_state", stateCookie));
+    return res.redirect(getFrontendRedirectUrl("error=invalid_state", statePayload));
   }
 
   try {
-    await zohoAuthService.exchangeCodeForTokens(code, stateCookie.connectedBy);
-    return res.redirect(getFrontendRedirectUrl("connected=true", stateCookie));
+    await zohoAuthService.exchangeCodeForTokens(code, statePayload.connectedBy);
+    return res.redirect(getFrontendRedirectUrl("connected=true", statePayload));
   } catch (error) {
     console.error("[Zoho Mail] OAuth callback failed:", error.code || error.message);
-    return res.redirect(getFrontendRedirectUrl("error=auth_failed", stateCookie));
+    return res.redirect(getFrontendRedirectUrl("error=auth_failed", statePayload));
   }
 }
 
