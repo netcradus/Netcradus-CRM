@@ -76,3 +76,38 @@ The CRM now enforces a first-login onboarding flow for every role except `super_
 ### Agreement version management
 1. The onboarding record stores `agreementVersion`, currently set to `v1.0`.
 2. When the agreement or NDA text changes, update the shared onboarding content, bump the default `agreementVersion`, and keep the previous version available if historical records must be reproduced later.
+
+## Zoho Mail Integration
+
+### Zoho OAuth app setup
+1. Sign in to the Zoho API Console for the Europe data center and create a `Server-based Application`.
+2. Add your production callback URL as `https://yourcrm.com/api/zoho/callback`.
+3. Copy the client ID and client secret into `server/.env`.
+4. Set `ZOHO_ORG_ID` to your Zoho Mail organization ID.
+5. Generate a token encryption key with:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+6. Store that value in `ZOHO_TOKEN_ENCRYPTION_KEY`.
+
+### Required scopes
+1. `ZohoMail.messages.ALL`
+2. `ZohoMail.folders.ALL`
+3. `ZohoMail.accounts.ALL`
+4. `ZohoMail.attachments.ALL`
+
+### First-time organization connection flow
+1. A `super_user` opens `/settings/zoho`.
+2. Click `Connect Zoho Organization` to fetch the Zoho OAuth URL.
+3. Complete the consent flow in Zoho.
+4. Zoho redirects back to `/api/zoho/callback`, which stores the encrypted organization refresh token and access token.
+
+### Linking individual users
+1. After the organization is connected, stay on `/settings/zoho`.
+2. Choose a CRM user and enter the mailbox email address that exists inside your Zoho organization.
+3. The CRM resolves the Zoho `accountId`, stores the user-to-mailbox mapping, and marks that user as Zoho-connected.
+
+### Polling behavior
+1. Socket delivery is the primary in-app notification path for new mail.
+2. The backend also polls Zoho inboxes every 2 minutes as a fallback to catch anything missed.
+3. Polling starts only when the organization-level Zoho connection is active.

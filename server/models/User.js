@@ -85,6 +85,24 @@ const userSchema = new mongoose.Schema({
   storageProvisioned: {
     type: Boolean,
     default: false
+  },
+  zohoEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: null
+  },
+  zohoAccountId: {
+    type: String,
+    default: null
+  },
+  zohoConnected: {
+    type: Boolean,
+    default: false
+  },
+  zohoConnectedAt: {
+    type: Date,
+    default: null
   }
 
 }, { timestamps: true });
