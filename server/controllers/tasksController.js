@@ -73,6 +73,19 @@ function canAccessTask(user, task) {
     .some((id) => String(id) === String(user._id));
 }
 
+async function canReviewSelfTask(user, task) {
+  if (await isUserSuperiorTo(user._id, task.createdBy)) {
+    return true;
+  }
+
+  if (!isReviewer(user)) {
+    return false;
+  }
+
+  const creatorSuperiors = await getSuperiorsForUser(task.createdBy);
+  return creatorSuperiors.length === 0;
+}
+
 async function writeTaskAudit({ action, performedBy, taskId, note = "", details = {} }) {
   return AuditLog.create({
     action,
@@ -393,7 +406,7 @@ async function approveSelfTask(req, res) {
     if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
       return res.status(400).json({ success: false, message: "This self task is not pending approval" });
     }
-    if (!(await isUserSuperiorTo(req.user._id, task.createdBy))) {
+    if (!(await canReviewSelfTask(req.user, task))) {
       return res.status(403).json({ success: false, message: "You are not authorised to approve this task." });
     }
 
@@ -461,7 +474,7 @@ async function rejectSelfTask(req, res) {
     if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
       return res.status(400).json({ success: false, message: "This self task is not pending approval" });
     }
-    if (!(await isUserSuperiorTo(req.user._id, task.createdBy))) {
+    if (!(await canReviewSelfTask(req.user, task))) {
       return res.status(403).json({ success: false, message: "You are not authorised to approve this task." });
     }
 
@@ -519,11 +532,44 @@ async function rejectSelfTask(req, res) {
 async function getPendingApprovals(req, res) {
   try {
     const subordinateUserIds = await getSubordinatesForUser(req.user._id);
-    const tasks = subordinateUserIds.length
+    const visibleCreatorIds = new Set(subordinateUserIds.map(String));
+
+    if (isReviewer(req.user)) {
+      const reviewerFallbackTasks = await Task.find({
+        taskType: "self",
+        selfTaskStatus: "pending_approval",
+      })
+        .select("_id createdBy")
+        .lean();
+
+      const creatorIdsToCheck = [
+        ...new Set(
+          reviewerFallbackTasks
+            .map((task) => task.createdBy)
+            .filter(Boolean)
+            .map(String)
+        ),
+      ];
+
+      const superiorChains = await Promise.all(
+        creatorIdsToCheck.map(async (creatorId) => ({
+          creatorId,
+          superiors: await getSuperiorsForUser(creatorId),
+        }))
+      );
+
+      superiorChains.forEach(({ creatorId, superiors }) => {
+        if (!superiors.length) {
+          visibleCreatorIds.add(String(creatorId));
+        }
+      });
+    }
+
+    const tasks = visibleCreatorIds.size
       ? await Task.find({
           taskType: "self",
           selfTaskStatus: "pending_approval",
-          createdBy: { $in: subordinateUserIds },
+          createdBy: { $in: [...visibleCreatorIds] },
         })
           .populate(TASK_POPULATE)
           .sort({ submittedForApprovalAt: 1 })

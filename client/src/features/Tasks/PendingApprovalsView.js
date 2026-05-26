@@ -37,6 +37,7 @@ export default function PendingApprovalsView({ tasks, loading, onApprove, onReje
   const [activeTaskId, setActiveTaskId] = useState("");
   const [mode, setMode] = useState("");
   const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const openAction = (taskId, nextMode) => {
     setActiveTaskId(taskId);
@@ -48,6 +49,7 @@ export default function PendingApprovalsView({ tasks, loading, onApprove, onReje
     setActiveTaskId("");
     setMode("");
     setNote("");
+    setSubmitting(false);
   };
 
   if (loading) {
@@ -150,16 +152,21 @@ export default function PendingApprovalsView({ tasks, loading, onApprove, onReje
                   <button
                     type="button"
                     className="btn btn-primary"
-                    disabled={rejectDisabled}
+                    disabled={submitting || rejectDisabled}
                     onClick={async () => {
-                      if (mode === "approve") await onApprove(task, note);
-                      if (mode === "reject") await onReject(task, note);
-                      closeAction();
+                      try {
+                        setSubmitting(true);
+                        if (mode === "approve") await onApprove(task, note);
+                        if (mode === "reject") await onReject(task, note);
+                        closeAction();
+                      } catch {
+                        setSubmitting(false);
+                      }
                     }}
                   >
-                    {mode === "approve" ? "Approve Task" : "Reject Task"}
+                    {submitting ? "Saving..." : mode === "approve" ? "Approve Task" : "Reject Task"}
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={closeAction}>
+                  <button type="button" className="btn btn-ghost" onClick={closeAction} disabled={submitting}>
                     Cancel
                   </button>
                 </div>
