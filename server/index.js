@@ -8,7 +8,6 @@ const connectDB = require("./config/db");
 const { initializeSocket } = require("./socket");
 const { registerCronJobs, getCronLastRun } = require("./cron");
 const { isDriveEnabled } = require("./utils/featureFlags");
-const zohoSyncService = require("./services/zohoSyncService");
 
 dotenv.config();
 
@@ -64,7 +63,6 @@ app.get("/api/health/cron", (req, res) => {
 
 const healthRoutes = require("./routes/healthRoutes");
 app.use("/api/health", healthRoutes);
-app.use("/api", require("./routes/zohoRoutes"));
 
 const authMiddleware = require("./middleware/authMiddleware");
 app.use("/api", authMiddleware);
@@ -134,7 +132,6 @@ const startServer = async () => {
   }
 
   initializeSocket(server);
-  await zohoSyncService.startPolling();
 
   server.listen(PORT, "0.0.0.0", async () => {
     console.log(`Server is running on port ${PORT}`);
@@ -152,14 +149,5 @@ const startServer = async () => {
     }
   });
 };
-
-const shutdown = (signal) => {
-  console.log(`[Server] Received ${signal}. Shutting down.`);
-  zohoSyncService.stopPolling();
-  server.close(() => process.exit(0));
-};
-
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 startServer();
