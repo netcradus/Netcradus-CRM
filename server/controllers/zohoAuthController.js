@@ -8,6 +8,40 @@ const zohoMailService = require("../services/zohoMailService");
 const COOKIE_NAME = "zoho_oauth_state";
 const COOKIE_TTL_MS = 10 * 60 * 1000;
 
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function getRequestFrontendOrigin(req) {
+  const origin = req.get("origin");
+  if (origin && isValidHttpUrl(origin)) {
+    return origin;
+  }
+
+  const referer = req.get("referer");
+  if (!referer || !isValidHttpUrl(referer)) {
+    return null;
+  }
+
+  const refererUrl = new URL(referer);
+  return refererUrl.origin;
+}
+
+function getFrontendRedirectUrl(query, stateCookie = null) {
+  const frontendBaseUrl =
+    stateCookie?.frontendOrigin ||
+    process.env.FRONTEND_URL ||
+    process.env.CLIENT_ORIGIN ||
+    "http://localhost:3000";
+
+  return `${frontendBaseUrl.replace(/\/+$/, "")}/settings/zoho?${query}`;
+}
+
 function createSignedStateCookie(payload) {
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
@@ -87,6 +121,7 @@ async function initiateOAuth(req, res) {
   const cookieValue = createSignedStateCookie({
     state,
     connectedBy: req.user.id,
+    frontendOrigin: getRequestFrontendOrigin(req),
     expiresAt: Date.now() + COOKIE_TTL_MS,
   });
 
@@ -107,7 +142,7 @@ async function handleCallback(req, res) {
   res.clearCookie(COOKIE_NAME, { path: "/api/zoho" });
 
   if (!code) {
-    return res.redirect("/settings/zoho?error=auth_failed");
+    return res.redirect(getFrontendRedirectUrl("error=auth_failed", stateCookie));
   }
 
   if (
@@ -116,49 +151,49 @@ async function handleCallback(req, res) {
     stateCookie.state !== state ||
     !stateCookie.connectedBy
   ) {
-    return res.redirect("/settings/zoho?error=invalid_state");
+    return res.redirect(getFrontendRedirectUrl("error=invalid_state", stateCookie));
   }
 
   try {
     await zohoAuthService.exchangeCodeForTokens(code, stateCookie.connectedBy);
-    return res.redirect("/settings/zoho?connected=true");
+    return res.redirect(getFrontendRedirectUrl("connected=true", stateCookie));
   } catch (error) {
-    return res.redirect("/settings/zoho?error=auth_failed");
+    console.error("[Zoho Mail] OAuth callback failed:", error.code || error.message);
+    return res.redirect(getFrontendRedirectUrl("error=auth_failed", stateCookie));
   }
 }
 
 async function disconnectZoho(req, res) {
   try {
     await zohoAuthService.revokeConnection();
-    await Promise.all([
-      User.updateMany(
-        {},
-        {
-          $set: {
-            zohoConnected: false,
-            zohoAccountId: null,
-            zohoEmail: null,
-            zohoConnectedAt: null,
-          },
-        }
-      ),
-      ZohoAccount.updateMany(
-        {},
-        {
-          $set: {
-            isActive: false,
-          },
-        }
-      ),
-    ]);
-
-    return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to disconnect Zoho Mail.",
-    });
+    console.warn("[Zoho Mail] Local token revoke failed, continuing disconnect cleanup:", error.message);
   }
+
+  await Promise.all([
+    OrgZohoToken.updateMany({}, { $set: { isActive: false } }, { runValidators: false }),
+    User.updateMany(
+      {},
+      {
+        $set: {
+          zohoConnected: false,
+          zohoAccountId: null,
+          zohoEmail: null,
+          zohoConnectedAt: null,
+        },
+      }
+    ),
+    ZohoAccount.updateMany(
+      {},
+      {
+        $set: {
+          isActive: false,
+        },
+      }
+    ),
+  ]);
+
+  return res.json({ success: true });
 }
 
 async function getZohoHealth(req, res) {

@@ -12,6 +12,41 @@ const OAUTH_SCOPES = [
   "ZohoMail.attachments.ALL",
 ];
 
+function createReconnectRequiredError(message = "Zoho Mail must be reconnected.") {
+  const error = new Error(message);
+  error.code = "ZOHO_RECONNECT_REQUIRED";
+  return error;
+}
+
+function assertEncryptedTokenFields(tokenDoc, tokenType) {
+  const fields =
+    tokenType === "access"
+      ? [tokenDoc.accessToken, tokenDoc.encryptionIv, tokenDoc.accessAuthTag]
+      : [tokenDoc.refreshToken, tokenDoc.refreshEncryptionIv, tokenDoc.refreshAuthTag];
+
+  if (fields.some((value) => !value)) {
+    throw createReconnectRequiredError("Zoho token metadata is incomplete. Reconnect Zoho Mail.");
+  }
+}
+
+function decryptAccessToken(tokenDoc) {
+  assertEncryptedTokenFields(tokenDoc, "access");
+  try {
+    return decrypt(tokenDoc.accessToken, tokenDoc.encryptionIv, tokenDoc.accessAuthTag);
+  } catch (error) {
+    throw createReconnectRequiredError("Zoho access token could not be decrypted. Reconnect Zoho Mail.");
+  }
+}
+
+function decryptRefreshToken(tokenDoc) {
+  assertEncryptedTokenFields(tokenDoc, "refresh");
+  try {
+    return decrypt(tokenDoc.refreshToken, tokenDoc.refreshEncryptionIv, tokenDoc.refreshAuthTag);
+  } catch (error) {
+    throw createReconnectRequiredError("Zoho refresh token could not be decrypted. Reconnect Zoho Mail.");
+  }
+}
+
 function getAuthorizationUrl(state) {
   const params = new URLSearchParams({
     response_type: "code",
@@ -43,29 +78,45 @@ async function exchangeCodeForTokens(code, connectedBy) {
     timeout: REQUEST_TIMEOUT_MS,
   });
 
+  if (!data.access_token) {
+    const error = new Error("Zoho did not return an access token.");
+    error.code = "ZOHO_OAUTH_FAILED";
+    throw error;
+  }
+
+  const existingTokenDoc = await OrgZohoToken.findOne({});
+  if (!data.refresh_token && !existingTokenDoc?.refreshToken) {
+    const error = new Error("Zoho did not return a refresh token. Revoke the app in Zoho and connect again.");
+    error.code = "ZOHO_REFRESH_TOKEN_MISSING";
+    throw error;
+  }
+
   const encryptedAccess = encrypt(data.access_token);
-  const encryptedRefresh = encrypt(data.refresh_token);
+  const encryptedRefresh = data.refresh_token ? encrypt(data.refresh_token) : null;
   const expiresInSeconds = Number(data.expires_in_sec || data.expires_in || 3600);
   const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
 
+  const update = {
+    accessToken: encryptedAccess.encrypted,
+    encryptionIv: encryptedAccess.iv,
+    accessAuthTag: encryptedAccess.authTag,
+    expiresAt,
+    scope: data.scope || OAUTH_SCOPES.join(","),
+    connectedBy,
+    connectedAt: new Date(),
+    lastRefreshedAt: new Date(),
+    isActive: true,
+  };
+
+  if (encryptedRefresh) {
+    update.refreshToken = encryptedRefresh.encrypted;
+    update.refreshEncryptionIv = encryptedRefresh.iv;
+    update.refreshAuthTag = encryptedRefresh.authTag;
+  }
+
   return OrgZohoToken.findOneAndUpdate(
     {},
-    {
-      $set: {
-        accessToken: encryptedAccess.encrypted,
-        refreshToken: encryptedRefresh.encrypted,
-        encryptionIv: encryptedAccess.iv,
-        refreshEncryptionIv: encryptedRefresh.iv,
-        accessAuthTag: encryptedAccess.authTag,
-        refreshAuthTag: encryptedRefresh.authTag,
-        expiresAt,
-        scope: data.scope || OAUTH_SCOPES.join(","),
-        connectedBy,
-        connectedAt: new Date(),
-        lastRefreshedAt: new Date(),
-        isActive: true,
-      },
-    },
+    { $set: update },
     {
       upsert: true,
       new: true,
@@ -82,11 +133,7 @@ async function refreshAccessToken() {
     throw error;
   }
 
-  const refreshToken = decrypt(
-    tokenDoc.refreshToken,
-    tokenDoc.refreshEncryptionIv,
-    tokenDoc.refreshAuthTag
-  );
+  const refreshToken = decryptRefreshToken(tokenDoc);
 
   const params = new URLSearchParams({
     grant_type: "refresh_token",
@@ -128,7 +175,7 @@ async function getValidAccessToken() {
     return refreshAccessToken();
   }
 
-  return decrypt(tokenDoc.accessToken, tokenDoc.encryptionIv, tokenDoc.accessAuthTag);
+  return decryptAccessToken(tokenDoc);
 }
 
 async function isConnected() {
@@ -143,11 +190,7 @@ async function revokeConnection() {
   }
 
   try {
-    const refreshToken = decrypt(
-      tokenDoc.refreshToken,
-      tokenDoc.refreshEncryptionIv,
-      tokenDoc.refreshAuthTag
-    );
+    const refreshToken = decryptRefreshToken(tokenDoc);
 
     const params = new URLSearchParams({ token: refreshToken });
     await axios.post(`${ZOHO_ACCOUNTS_BASE}/oauth/v2/token/revoke?${params.toString()}`, null, {
@@ -156,8 +199,11 @@ async function revokeConnection() {
   } catch (error) {
     console.warn("[Zoho Mail] Revoke call failed, marking connection inactive locally.");
   } finally {
-    tokenDoc.isActive = false;
-    await tokenDoc.save();
+    await OrgZohoToken.updateOne(
+      { _id: tokenDoc._id },
+      { $set: { isActive: false } },
+      { runValidators: false }
+    );
   }
 
   return true;

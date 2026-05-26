@@ -8,6 +8,14 @@ const mailClient = axios.create({
 });
 
 function buildZohoError(error) {
+  if (error?.code === "ZOHO_RECONNECT_REQUIRED") {
+    throw error;
+  }
+
+  if (error?.code === "ZOHO_NOT_CONNECTED") {
+    throw error;
+  }
+
   if (error?.code === "ECONNABORTED") {
     const timeoutError = new Error("Zoho Mail request timed out.");
     timeoutError.code = "ZOHO_TIMEOUT";

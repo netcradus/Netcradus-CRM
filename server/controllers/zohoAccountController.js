@@ -68,7 +68,35 @@ async function linkUserZohoAccount(req, res) {
       });
     }
 
-    throw error;
+    if (error.code === "ZOHO_RECONNECT_REQUIRED") {
+      return res.status(503).json({
+        success: false,
+        message: "Zoho Mail connection needs to be reconnected by an administrator.",
+        code: "ZOHO_RECONNECT_REQUIRED",
+      });
+    }
+
+    if (error.code === "ZOHO_AUTH_EXPIRED") {
+      return res.status(503).json({
+        success: false,
+        message: "Mail service authentication expired. Contact administrator.",
+        code: "ZOHO_AUTH_EXPIRED",
+      });
+    }
+
+    if (error.code === "ZOHO_RATE_LIMITED") {
+      return res.status(429).json({
+        success: false,
+        message: "Too many requests to mail service. Please wait and try again.",
+        code: "ZOHO_RATE_LIMITED",
+      });
+    }
+
+    return res.status(502).json({
+      success: false,
+      message: "Mail service error while checking this Zoho mailbox.",
+      code: error.code || "ZOHO_API_ERROR",
+    });
   }
 }
 

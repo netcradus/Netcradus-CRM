@@ -40,6 +40,14 @@ function mapMailError(error, res) {
     });
   }
 
+  if (error?.code === "ZOHO_RECONNECT_REQUIRED") {
+    return res.status(503).json({
+      success: false,
+      message: "Zoho Mail connection needs to be reconnected by an administrator.",
+      code: "ZOHO_RECONNECT_REQUIRED",
+    });
+  }
+
   if (error?.code === "ZOHO_RATE_LIMITED") {
     if (error.retryAfter) {
       res.setHeader("Retry-After", error.retryAfter);
