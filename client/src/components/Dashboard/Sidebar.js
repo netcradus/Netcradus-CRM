@@ -5,18 +5,22 @@ import {
   Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3,
   Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box,
   BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare,
-  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
 import useOnboarding from "../../features/Onboarding/useOnboarding";
+import { getAppSocket } from "../../services/socket";
+import { MAIL_UNREAD_EVENT } from "../../hooks/useMail";
 
 const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, onHoverExpanded, onHoverCollapsed, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
   useOnboarding();
   const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
+  const token = localStorage.getItem("token");
   const [openSubmenu, setOpenSubmenu] = useState(null);
+  const [mailUnreadCount, setMailUnreadCount] = useState(0);
 
   const role = userRole || "user";
   const isDesktopCollapsed = !isExpanded && !isMobileOpen;
@@ -185,6 +189,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       roles: ACCESS_GROUPS.personal,
       submenu: [
         { label: "Messages", path: "/messages", icon: <MessageSquare size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "Mail", path: "/mail", icon: <Mail size={18} />, roles: ACCESS_GROUPS.personal, badge: mailUnreadCount },
         { label: "My Drive", path: "/documents", icon: <HardDrive size={18} />, roles: ACCESS_GROUPS.personal },
       ]
     });
@@ -197,6 +202,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       submenu: [
         { label: "Device Security", path: "/admin/devices", icon: <Smartphone size={18} />, roles: ACCESS_GROUPS.security },
         { label: "Storage Admin", path: "/admin/storage", icon: <Database size={18} />, roles: ACCESS_GROUPS.security },
+        { label: "Zoho Mail", path: "/settings/zoho", icon: <Mail size={18} />, roles: ACCESS_GROUPS.security },
       ]
     });
 
@@ -205,7 +211,29 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
     }
 
     return items;
-  }, [role]);
+  }, [mailUnreadCount, role]);
+
+  useEffect(() => {
+    const handleUnread = (event) => {
+      setMailUnreadCount(Number(event.detail?.unreadCount || 0));
+    };
+
+    window.addEventListener(MAIL_UNREAD_EVENT, handleUnread);
+    return () => window.removeEventListener(MAIL_UNREAD_EVENT, handleUnread);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const socket = getAppSocket(token);
+    if (!socket) return undefined;
+
+    const handleNewMail = () => {
+      setMailUnreadCount((current) => current + 1);
+    };
+
+    socket.on("new_mail", handleNewMail);
+    return () => socket.off("new_mail", handleNewMail);
+  }, [token]);
 
   useEffect(() => {
     const activeParent = menuItems.find((item) =>
@@ -270,6 +298,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
                       >
                         <div className="sidebar-submenu-icon">{sub.icon}</div>
                         <span className="sidebar-submenu-text">{sub.label}</span>
+                        {sub.badge ? <span className="bell-dot">{sub.badge}</span> : null}
                       </NavLink>
                     ))}
                   </div>
