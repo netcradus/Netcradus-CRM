@@ -4,7 +4,6 @@ import axios from "axios";
 import { ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 
 import { apiUrl } from "../../config/api";
-
 const STATUS_OPTIONS = [
   { value: "not_interested", label: "Not Interested" },
   { value: "call_back", label: "Call Back" },
@@ -15,6 +14,18 @@ const MEETING_TYPE_OPTIONS = [
   { value: "in_person", label: "In Person" },
   { value: "video_call", label: "Video Call" },
   { value: "phone_call", label: "Phone Call" },
+];
+
+const CSV_IMPORT_FIELDS = [
+  { value: "name", label: "Name", required: true },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "company", label: "Company" },
+  { value: "status", label: "Status" },
+  { value: "note", label: "Note" },
+  { value: "meetingScheduledAt", label: "Meeting Date & Time" },
+  { value: "meetingLocation", label: "Meeting Location" },
+  { value: "meetingType", label: "Meeting Type" },
 ];
 
 const CALL_OUTCOME_OPTIONS = [
@@ -98,6 +109,58 @@ const toInputDateTime = (value) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const normalizeCsvHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const parseCsvLine = (line) => {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+
+    if (character === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (character === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+      continue;
+    }
+
+    current += character;
+  }
+
+  values.push(current);
+  return values.map((value) => value.trim());
+};
+
+const readCsvHeaders = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const firstLine = String(reader.result || "").split(/\r?\n/).find((line) => line.trim());
+      resolve(firstLine ? parseCsvLine(firstLine) : []);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file.slice(0, 4096));
+  });
+
+const buildDefaultCsvMapping = (headers) =>
+  headers.reduce((mapping, header) => {
+    const normalizedHeader = normalizeCsvHeader(header);
+    const matchedField = CSV_IMPORT_FIELDS.find((field) => normalizeCsvHeader(field.value) === normalizedHeader || normalizeCsvHeader(field.label) === normalizedHeader);
+    mapping[header] = matchedField?.value || "";
+    return mapping;
+  }, {});
+
 function Leads() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
@@ -115,6 +178,8 @@ function Leads() {
   const [salesStatusForm, setSalesStatusForm] = useState(emptySalesStatusForm);
   const [salesNote, setSalesNote] = useState("");
   const [salesCallForm, setSalesCallForm] = useState(emptySalesCallForm);
+  const [importMappingModal, setImportMappingModal] = useState(null);
+  const [deleteFilterModal, setDeleteFilterModal] = useState(null);
   const fileInputRef = useRef(null);
 
   const userRole = normalizeRole(localStorage.getItem("userRole"));
@@ -255,6 +320,53 @@ function Leads() {
     }
   };
 
+  const openDeleteFilteredModal = () => {
+    const params = Object.fromEntries(searchParams.entries());
+    const filterLabels = {
+      status: params.status ? `Status: ${getStatusLabel(params.status)}` : "",
+      search: params.search ? `Search: ${params.search}` : "",
+      startDate: params.startDate ? `From: ${params.startDate}` : "",
+      endDate: params.endDate ? `To: ${params.endDate}` : "",
+    };
+    const activeFilters = Object.entries(filterLabels)
+      .filter(([, value]) => Boolean(value))
+      .map(([key, label]) => ({ key, label }));
+
+    setDeleteFilterModal({
+      filters: params,
+      activeFilters,
+      count: pagination.totalLeads,
+    });
+  };
+
+  const handleDeleteFilteredLeads = async () => {
+    if (!deleteFilterModal) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+      const params = { ...deleteFilterModal.filters };
+      if (!deleteFilterModal.activeFilters.length) {
+        params.confirmDeleteAll = "true";
+      }
+
+      const response = await axios.delete(apiUrl("/api/leads/all"), {
+        ...getAuthConfig(),
+        params,
+      });
+
+      setSuccess(response.data?.message || "Filtered leads deleted successfully.");
+      setDeleteFilterModal(null);
+      setSelectedLeadId(null);
+      setSelectedLead(null);
+      await fetchLeads();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to delete filtered leads.");
+    }
+  };
+
   const handleExport = async () => {
     try {
       const response = await axios.get(apiUrl("/api/leads/export"), {
@@ -275,23 +387,39 @@ function Leads() {
     }
   };
 
+  const uploadLeadFile = async (file, fieldMapping) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (fieldMapping) {
+      formData.append("fieldMapping", JSON.stringify(fieldMapping));
+    }
+
+    await axios.post(apiUrl("/api/leads/import"), formData, {
+      ...getAuthConfig(),
+      headers: {
+        ...getAuthConfig().headers,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  };
+
   const handleImport = async (event) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      await axios.post(apiUrl("/api/leads/import"), formData, {
-        ...getAuthConfig(),
-        headers: {
-          ...getAuthConfig().headers,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const headers = await readCsvHeaders(file);
+      const defaultMapping = buildDefaultCsvMapping(headers);
+      const mappedFields = Object.values(defaultMapping).filter(Boolean);
+
+      if (!defaultMapping.name || mappedFields.length < Math.min(headers.length, 2)) {
+        setImportMappingModal({ file, headers, mapping: defaultMapping });
+        return;
+      }
+
+      await uploadLeadFile(file);
 
       setSuccess("Leads imported successfully.");
       await fetchLeads();
@@ -299,6 +427,35 @@ function Leads() {
       setError(requestError.response?.data?.message || "Failed to import leads.");
     } finally {
       event.target.value = "";
+    }
+  };
+
+  const handleMappedImport = async () => {
+    if (!importMappingModal) {
+      return;
+    }
+
+    const mappingEntries = Object.entries(importMappingModal.mapping).filter(([, value]) => Boolean(value));
+    const hasNameMapping = mappingEntries.some(([, value]) => value === "name");
+    if (!hasNameMapping) {
+      setError("Please map one CSV column to Name before importing.");
+      return;
+    }
+
+    const fieldMapping = mappingEntries.reduce((mapping, [sourceHeader, leadField]) => {
+      mapping[sourceHeader] = leadField;
+      return mapping;
+    }, {});
+
+    try {
+      setError("");
+      setSuccess("");
+      await uploadLeadFile(importMappingModal.file, fieldMapping);
+      setImportMappingModal(null);
+      setSuccess("Leads imported successfully.");
+      await fetchLeads();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to import leads.");
     }
   };
 
@@ -441,6 +598,32 @@ function Leads() {
               ))}
             </select>
           </div>
+          <div className="form-field" style={{ width: "150px", marginBottom: 0 }}>
+            <label className="form-label">From</label>
+            <input className="form-input" type="date" value={searchParams.get("startDate") || ""} onChange={(event) => updateFilter("startDate", event.target.value)} />
+          </div>
+          <div className="form-field" style={{ width: "150px", marginBottom: 0 }}>
+            <label className="form-label">To</label>
+            <input className="form-input" type="date" value={searchParams.get("endDate") || ""} onChange={(event) => updateFilter("endDate", event.target.value)} />
+          </div>
+          <div className="form-field" style={{ width: "170px", marginBottom: 0 }}>
+            <label className="form-label">Sort By</label>
+            <select className="form-select" value={searchParams.get("sortBy") || "createdAt"} onChange={(event) => updateFilter("sortBy", event.target.value)}>
+              <option value="createdAt">Created Date</option>
+              <option value="updatedAt">Updated Date</option>
+              <option value="name">Name</option>
+              <option value="company">Company</option>
+              <option value="status">Status</option>
+              <option value="meetingScheduledAt">Meeting Date</option>
+            </select>
+          </div>
+          <div className="form-field" style={{ width: "140px", marginBottom: 0 }}>
+            <label className="form-label">Order</label>
+            <select className="form-select" value={searchParams.get("order") || "desc"} onChange={(event) => updateFilter("order", event.target.value)}>
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
           <div className="form-field" style={{ width: "120px", marginBottom: 0 }}>
             <label className="form-label">Limit</label>
             <select className="form-select" value={searchParams.get("limit") || "10"} onChange={(event) => updateFilter("limit", event.target.value)}>
@@ -450,6 +633,11 @@ function Leads() {
             </select>
           </div>
           <button className="btn btn-ghost" onClick={() => { setSearchInput(""); setSearchParams({}); }}>Clear</button>
+          {isSuperUser ? (
+            <button className="btn btn-ghost" style={{ color: "var(--color-error)" }} onClick={openDeleteFilteredModal}>
+              <Trash2 size={16} /> Delete by Filters
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -464,13 +652,14 @@ function Leads() {
                 <th>Status</th>
                 <th>Last Note</th>
                 <th>Last Call</th>
+                <th>Created</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
                 </tr>
               ) : leads.length ? (
                 leads.map((lead) => (
@@ -490,6 +679,7 @@ function Leads() {
                     </td>
                     <td>{getLastNote(lead)?.text || "--"}</td>
                     <td>{formatDateTime(getLastCall(lead)?.calledAt)}</td>
+                    <td>{formatDateTime(lead.createdAt)}</td>
                     <td>
                       <div style={{ display: "flex", gap: "var(--space-2)" }}>
                         <button className="btn btn-ghost" onClick={() => openSuperUserModal(lead)}>
@@ -504,7 +694,7 @@ function Leads() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
                 </tr>
               )}
             </tbody>
@@ -520,13 +710,14 @@ function Leads() {
                 <th>Status</th>
                 <th>Last Note</th>
                 <th>Last Call</th>
+                <th>Created</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
                 </tr>
               ) : salesLeadRows.length ? (
                 salesLeadRows.map((lead) => (
@@ -543,6 +734,7 @@ function Leads() {
                     </td>
                     <td>{getLastNote(lead)?.text ? `${getLastNote(lead).text.slice(0, 50)}${getLastNote(lead).text.length > 50 ? "..." : ""}` : "--"}</td>
                     <td>{formatDateTime(getLastCall(lead)?.calledAt)}</td>
+                    <td>{formatDateTime(lead.createdAt)}</td>
                     <td>
                       <div style={{ display: "flex", gap: "var(--space-2)" }}>
                         <button className="btn btn-ghost" onClick={() => setSelectedLeadId(lead._id)}>Log Call</button>
@@ -553,7 +745,7 @@ function Leads() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
                 </tr>
               )}
             </tbody>
@@ -644,6 +836,86 @@ function Leads() {
                 <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {importMappingModal ? (
+        <div className="nc-modal-overlay" onClick={() => setImportMappingModal(null)}>
+          <div className="nc-modal-content" onClick={(event) => event.stopPropagation()} style={{ width: "620px" }}>
+            <div className="nc-modal-header">
+              <h3>Map CSV Fields</h3>
+              <button className="btn btn-ghost" onClick={() => setImportMappingModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+              Match each CSV column to a lead field before importing.
+            </p>
+            <div style={{ display: "grid", gap: "var(--space-3)", maxHeight: "420px", overflowY: "auto" }}>
+              {importMappingModal.headers.map((header) => (
+                <div key={header} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)", alignItems: "center" }}>
+                  <div style={{ fontWeight: "var(--font-semibold)" }}>{header || "Unnamed Column"}</div>
+                  <select
+                    className="form-select"
+                    value={importMappingModal.mapping[header] || ""}
+                    onChange={(event) =>
+                      setImportMappingModal((current) => ({
+                        ...current,
+                        mapping: {
+                          ...current.mapping,
+                          [header]: event.target.value,
+                        },
+                      }))
+                    }
+                  >
+                    <option value="">Do not import</option>
+                    {CSV_IMPORT_FIELDS.map((field) => (
+                      <option key={field.value} value={field.value}>
+                        {field.label}{field.required ? " *" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-6)" }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleMappedImport}>Import Leads</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setImportMappingModal(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteFilterModal ? (
+        <div className="nc-modal-overlay" onClick={() => setDeleteFilterModal(null)}>
+          <div className="nc-modal-content" onClick={(event) => event.stopPropagation()} style={{ width: "520px" }}>
+            <div className="nc-modal-header">
+              <h3>Delete Filtered Leads</h3>
+              <button className="btn btn-ghost" onClick={() => setDeleteFilterModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
+              This will delete {deleteFilterModal.count} lead(s) matching the current filters.
+            </p>
+            <div className="nc-card" style={{ marginBottom: "var(--space-4)" }}>
+              {deleteFilterModal.activeFilters.length ? (
+                <div style={{ display: "grid", gap: "var(--space-2)" }}>
+                  {deleteFilterModal.activeFilters.map((filter) => (
+                    <span key={filter.key}>{filter.label}</span>
+                  ))}
+                </div>
+              ) : (
+                <span>No filters selected. This will delete all visible open leads.</span>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: "var(--space-3)" }}>
+              <button className="btn btn-primary" style={{ flex: 1, background: "var(--color-error)" }} onClick={handleDeleteFilteredLeads}>
+                Delete Leads
+              </button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteFilterModal(null)}>Cancel</button>
+            </div>
           </div>
         </div>
       ) : null}

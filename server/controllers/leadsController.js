@@ -16,10 +16,44 @@ const SALES_UPDATE_FIELDS = new Set([
   "meetingLocation",
   "meetingType",
 ]);
+const IMPORTABLE_LEAD_FIELDS = new Set([
+  "name",
+  "email",
+  "phone",
+  "company",
+  "status",
+  "note",
+  "meetingScheduledAt",
+  "meetingLocation",
+  "meetingType",
+]);
+const IMPORT_FIELD_BY_HEADER = {
+  name: "name",
+  fullname: "name",
+  leadname: "name",
+  email: "email",
+  emailaddress: "email",
+  phone: "phone",
+  phonenumber: "phone",
+  mobile: "phone",
+  company: "company",
+  companyname: "company",
+  status: "status",
+  note: "note",
+  notes: "note",
+  meetingscheduledat: "meetingScheduledAt",
+  meetingdate: "meetingScheduledAt",
+  meetingdatetime: "meetingScheduledAt",
+  meetinglocation: "meetingLocation",
+  location: "meetingLocation",
+  meetingtype: "meetingType",
+};
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const isSuperUser = (user) => normalizeRole(user?.role) === "super_user";
 const isSalesUser = (user) => normalizeRole(user?.role) === "sales";
+const normalizeImportHeader = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalizeImportFieldName = (value) => (IMPORTABLE_LEAD_FIELDS.has(value) ? value : "");
 
 const ensureLeadAccess = (req, res) => {
   if (isSuperUser(req.user) || isSalesUser(req.user)) {
@@ -550,7 +584,7 @@ const deleteAllLeads = async (req, res) => {
 
   try {
     const query = buildLeadQuery(req);
-    const hasFilters = Object.keys(query).some((key) => key !== "status") || req.query.includeCallBack === "true";
+    const hasFilters = ["status", "search", "startDate", "endDate"].some((key) => Boolean(req.query[key]));
     const confirmed = req.query.confirmDeleteAll === "true";
 
     if (!hasFilters && !confirmed) {
@@ -623,13 +657,44 @@ const importLeads = async (req, res) => {
     }
 
     const [headerLine, ...rows] = rawContent.split(/\r?\n/).filter(Boolean);
-    const headers = parseCsvLine(headerLine).map((value) => value.toLowerCase());
+    const rawHeaders = parseCsvLine(headerLine);
+    const headers = rawHeaders.map((value) => normalizeImportHeader(value));
+    const headerLookup = rawHeaders.reduce((lookup, header, index) => {
+      lookup[header] = headers[index];
+      return lookup;
+    }, {});
+    let fieldMapping = {};
+
+    if (req.body.fieldMapping) {
+      try {
+        fieldMapping = JSON.parse(req.body.fieldMapping);
+      } catch (parseError) {
+        return res.status(400).json({ success: false, message: "Invalid field mapping format." });
+      }
+    }
+
+    const normalizedMapping = Object.entries(fieldMapping).reduce((mapping, [sourceHeader, leadField]) => {
+      const normalizedSource = headerLookup[sourceHeader] || normalizeImportHeader(sourceHeader);
+      const normalizedField = normalizeImportFieldName(leadField);
+      if (normalizedSource && headers.includes(normalizedSource) && normalizedField) {
+        mapping[normalizedSource] = normalizedField;
+      }
+      return mapping;
+    }, {});
     const createdLeads = [];
 
     for (const row of rows) {
       const values = parseCsvLine(row);
-      const record = headers.reduce((accumulator, header, index) => {
+      const rawRecord = headers.reduce((accumulator, header, index) => {
         accumulator[header] = values[index] || "";
+        return accumulator;
+      }, {});
+      const record = headers.reduce((accumulator, header) => {
+        const leadField = normalizedMapping[header] || IMPORT_FIELD_BY_HEADER[header];
+        if (leadField) {
+          accumulator[leadField] = rawRecord[header];
+        }
+        accumulator[header] = rawRecord[header];
         return accumulator;
       }, {});
 
@@ -648,9 +713,9 @@ const importLeads = async (req, res) => {
         const alignmentResult = await applyMeetingAlignment(
           lead,
           {
-            meetingScheduledAt: record.meetingscheduledat || record.meetingdate || record.meeting_date,
-            meetingLocation: record.meetinglocation || record.location,
-            meetingType: record.meetingtype || record.meeting_type,
+            meetingScheduledAt: record.meetingScheduledAt || record.meetingscheduledat || record.meetingdate || record.meetingdatetime,
+            meetingLocation: record.meetingLocation || record.meetinglocation || record.location,
+            meetingType: record.meetingType || record.meetingtype,
           },
           req.user._id
         );
