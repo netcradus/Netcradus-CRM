@@ -65,10 +65,17 @@ async function linkUserZohoAccount(req, res) {
       const availableMessage = error.availableEmails?.length
         ? ` Available Zoho mailbox emails seen by this OAuth connection: ${error.availableEmails.join(", ")}.`
         : "";
+      const sourceMessage =
+        typeof error.personalAccountCount === "number" || typeof error.organizationAccountCount === "number"
+          ? ` Personal accounts visible: ${error.personalAccountCount || 0}. Organization accounts visible: ${error.organizationAccountCount || 0}.`
+          : "";
+      const organizationLookupMessage = error.organizationLookupError
+        ? ` Organization account lookup failed: ${error.organizationLookupError}.`
+        : "";
 
       return res.status(404).json({
         success: false,
-        message: `No Zoho mailbox found for this email address. Ensure the account exists in your Zoho organization.${availableMessage}`,
+        message: `No Zoho mailbox found for this email address. Ensure the account exists in your Zoho organization.${sourceMessage}${organizationLookupMessage}${availableMessage}`,
       });
     }
 
