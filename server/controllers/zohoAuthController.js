@@ -208,10 +208,16 @@ async function getZohoHealth(req, res) {
   }
 
   try {
+    const personalAccounts = await zohoMailService.listAccounts().catch(() => []);
+    const organizationAccounts = await zohoMailService.listOrganizationAccounts().catch(() => []);
+    const availableAccounts = await zohoMailService.listAvailableAccounts();
+
     return res.json({
       connected: true,
       lastRefreshedAt: connection.lastRefreshedAt,
-      accountCount: (await zohoMailService.listAccounts()).length,
+      accountCount: availableAccounts.length,
+      personalAccountCount: personalAccounts.length,
+      organizationAccountCount: organizationAccounts.length,
     });
   } catch (error) {
     if (error.code === "ZOHO_API_ERROR" || error.code === "ZOHO_TIMEOUT" || error.code === "ZOHO_AUTH_EXPIRED") {

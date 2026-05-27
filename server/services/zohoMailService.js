@@ -132,6 +132,44 @@ function normalizeAccountsResponse(data) {
   return [];
 }
 
+function getAccountDedupKey(account = {}) {
+  const accountId = getAccountId(account);
+  if (accountId) {
+    return `id:${String(accountId)}`;
+  }
+
+  const emails = [...collectEmails(account)].sort();
+  if (emails.length) {
+    return `emails:${emails.join("|")}`;
+  }
+
+  return null;
+}
+
+function mergeAccounts(...accountGroups) {
+  const mergedAccounts = [];
+  const seenKeys = new Set();
+
+  accountGroups.flat().forEach((account) => {
+    if (!account || typeof account !== "object") {
+      return;
+    }
+
+    const dedupKey = getAccountDedupKey(account);
+    if (dedupKey && seenKeys.has(dedupKey)) {
+      return;
+    }
+
+    if (dedupKey) {
+      seenKeys.add(dedupKey);
+    }
+
+    mergedAccounts.push(account);
+  });
+
+  return mergedAccounts;
+}
+
 function normalizeMessage(message = {}) {
   return {
     messageId: String(message.messageId || message.msgId || message.messageid || ""),
@@ -157,7 +195,7 @@ function normalizeMessage(message = {}) {
 }
 
 async function getAccountIdForEmail(zohoEmail) {
-  const accounts = await listAccounts();
+  const accounts = await listAvailableAccounts();
   const normalizedEmail = normalizeEmail(zohoEmail);
 
   const matchedAccount = accounts.find((account) => {
@@ -191,6 +229,35 @@ async function getAccountIdForEmail(zohoEmail) {
 async function listAccounts() {
   const response = await request({ method: "GET", url: "/accounts" });
   return normalizeAccountsResponse(response.data);
+}
+
+async function listOrganizationAccounts() {
+  if (!process.env.ZOHO_ORG_ID) {
+    return [];
+  }
+
+  const response = await request({
+    method: "GET",
+    url: `/organization/${process.env.ZOHO_ORG_ID}/accounts`,
+  });
+
+  return normalizeAccountsResponse(response.data);
+}
+
+async function listAvailableAccounts() {
+  const [personalResult, organizationResult] = await Promise.allSettled([
+    listAccounts(),
+    listOrganizationAccounts(),
+  ]);
+
+  const personalAccounts = personalResult.status === "fulfilled" ? personalResult.value : [];
+  const organizationAccounts = organizationResult.status === "fulfilled" ? organizationResult.value : [];
+
+  if (personalResult.status === "rejected" && organizationResult.status === "rejected") {
+    throw organizationResult.reason || personalResult.reason;
+  }
+
+  return mergeAccounts(personalAccounts, organizationAccounts);
 }
 
 async function getFolders(zohoAccountId) {
@@ -232,10 +299,23 @@ async function getMessages(zohoAccountId, folderId, options = {}) {
 }
 
 async function getAttachmentInfo(zohoAccountId, folderId, messageId) {
-  const response = await request({
-    method: "GET",
-    url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/attachmentinfo`,
-  });
+  let response;
+
+  try {
+    response = await request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/messages/${messageId}/attachmentinfo`,
+    });
+  } catch (error) {
+    if (!folderId) {
+      throw error;
+    }
+
+    response = await request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/attachmentinfo`,
+    });
+  }
 
   return normalizeArray(response.data?.data).map((attachment) => ({
     attachmentId: String(attachment.attachmentId || attachment.attachId || ""),
@@ -247,15 +327,10 @@ async function getAttachmentInfo(zohoAccountId, folderId, messageId) {
 
 async function getMessage(zohoAccountId, messageId, folderId) {
   const [contentResponse, headerResponse, attachments] = await Promise.all([
-    request({
-      method: "GET",
-      url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/content`,
+    requestMessageResource(zohoAccountId, messageId, folderId, "content", {
       params: { includeBlockContent: true },
     }),
-    request({
-      method: "GET",
-      url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/header`,
-    }),
+    requestMessageResource(zohoAccountId, messageId, folderId, "header"),
     getAttachmentInfo(zohoAccountId, folderId, messageId).catch(() => []),
   ]);
 
@@ -384,12 +459,45 @@ async function uploadAttachment(zohoAccountId, file) {
 }
 
 async function downloadAttachment(zohoAccountId, folderId, messageId, attachmentId) {
-  return request({
-    method: "GET",
-    url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/attachments/${attachmentId}`,
-    responseType: "stream",
-    headers: { Accept: "application/octet-stream" },
-  });
+  try {
+    return await request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/messages/${messageId}/attachments/${attachmentId}`,
+      responseType: "stream",
+      headers: { Accept: "application/octet-stream" },
+    });
+  } catch (error) {
+    if (!folderId) {
+      throw error;
+    }
+
+    return request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/attachments/${attachmentId}`,
+      responseType: "stream",
+      headers: { Accept: "application/octet-stream" },
+    });
+  }
+}
+
+async function requestMessageResource(zohoAccountId, messageId, folderId, resource, config = {}) {
+  try {
+    return await request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/messages/${messageId}/${resource}`,
+      ...config,
+    });
+  } catch (error) {
+    if (!folderId) {
+      throw error;
+    }
+
+    return request({
+      method: "GET",
+      url: `/accounts/${zohoAccountId}/folders/${folderId}/messages/${messageId}/${resource}`,
+      ...config,
+    });
+  }
 }
 
 async function markAsRead(zohoAccountId, messageId) {
@@ -429,6 +537,8 @@ module.exports = {
   getMessage,
   getMessages,
   listAccounts,
+  listAvailableAccounts,
+  listOrganizationAccounts,
   markAsRead,
   moveToFolder,
   deleteMessage,

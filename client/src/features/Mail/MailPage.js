@@ -36,7 +36,7 @@ function MailPage() {
     if (selectedFolderId && !mail.searchQuery) {
       mail.fetchMessages(selectedFolderId, { start: 0, limit: 20 });
     }
-  }, [mail, mail.searchQuery, selectedFolderId]);
+  }, [mail.fetchMessages, mail.searchQuery, selectedFolderId]);
 
   if (mail.notConnected) {
     return <NotZohoConnected />;
@@ -47,7 +47,7 @@ function MailPage() {
       <div className="mail-page__topbar">
         <div>
           <h1 className="mail-page__title">Mail</h1>
-          <p className="mail-page__subtitle">Zoho Mail inbox, search, replies, and CRM linking in one workspace.</p>
+          <p className="mail-page__subtitle">Zoho Mail inbox</p>
         </div>
         <div className="mail-page__actions">
           <SearchBar onSearch={mail.search} onClear={mail.clearSearch} searching={mail.searching} />
@@ -79,6 +79,7 @@ function MailPage() {
         <MessageList
           folderLabel={selectedFolderLabel}
           loading={mail.loadingMessages || mail.searching}
+          loadingMore={mail.loadingMore}
           messages={activeMessages}
           selectedMessageId={mail.selectedMessageId}
           hasMore={!mail.searchQuery && mail.hasMore}

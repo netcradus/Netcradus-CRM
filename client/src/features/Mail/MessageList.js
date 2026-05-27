@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link2, Paperclip, RefreshCw } from "lucide-react";
 
 function formatMessageTime(value) {
@@ -10,7 +10,42 @@ function formatMessageTime(value) {
     : date.toLocaleDateString([], { day: "2-digit", month: "short" });
 }
 
-function MessageList({ folderLabel, loading, messages, selectedMessageId, hasMore, onRefresh, onLoadMore, onSelectMessage }) {
+function MessageList({
+  folderLabel,
+  loading,
+  loadingMore,
+  messages,
+  selectedMessageId,
+  hasMore,
+  onRefresh,
+  onLoadMore,
+  onSelectMessage,
+}) {
+  const listRef = useRef(null);
+  const loadMoreRef = useRef(null);
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore || !loadMoreRef.current || !listRef.current) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          onLoadMore();
+        }
+      },
+      {
+        root: listRef.current,
+        rootMargin: "0px 0px 160px 0px",
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, onLoadMore]);
+
   return (
     <div className="mail-panel mail-panel--list">
       <div className="mail-panel__header mail-panel__header--between">
@@ -24,7 +59,7 @@ function MessageList({ folderLabel, loading, messages, selectedMessageId, hasMor
         </button>
       </div>
 
-      <div className="mail-message-list">
+      <div ref={listRef} className="mail-message-list">
         {loading && !messages.length ? <div className="mail-empty">Loading messages...</div> : null}
         {!loading && !messages.length ? <div className="mail-empty">No messages found.</div> : null}
         {messages.map((message) => (
@@ -51,15 +86,9 @@ function MessageList({ folderLabel, loading, messages, selectedMessageId, hasMor
             </div>
           </button>
         ))}
+        {hasMore ? <div ref={loadMoreRef} className="mail-list__sentinel" aria-hidden="true" /> : null}
+        {loadingMore ? <div className="mail-list__footer">Loading more messages...</div> : null}
       </div>
-
-      {hasMore ? (
-        <div className="mail-list__footer">
-          <button type="button" className="mail-button mail-button--ghost" onClick={onLoadMore}>
-            Load more
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

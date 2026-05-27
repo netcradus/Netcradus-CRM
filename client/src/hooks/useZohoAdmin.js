@@ -4,7 +4,7 @@ import { apiUrl } from "../config/api";
 
 const authHeaders = (token) => ({
   headers: { Authorization: `Bearer ${token}` },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 export function useZohoAdmin() {
@@ -20,6 +20,12 @@ export function useZohoAdmin() {
     try {
       const { data } = await axios.get(apiUrl("/api/zoho/status"), authHeaders(token));
       setConnectionStatus(data);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to load Zoho connection status.",
+      };
     } finally {
       setLoadingStatus(false);
     }
@@ -27,9 +33,17 @@ export function useZohoAdmin() {
 
   const loadLinkedAccounts = useCallback(async () => {
     if (!token) return;
-    const { data } = await axios.get(apiUrl("/api/zoho/accounts"), authHeaders(token));
-    setLinkedAccounts(Array.isArray(data.linkedAccounts) ? data.linkedAccounts : []);
-    setUsers(Array.isArray(data.users) ? data.users : []);
+    try {
+      const { data } = await axios.get(apiUrl("/api/zoho/accounts"), authHeaders(token));
+      setLinkedAccounts(Array.isArray(data.linkedAccounts) ? data.linkedAccounts : []);
+      setUsers(Array.isArray(data.users) ? data.users : []);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to load Zoho linked accounts.",
+      };
+    }
   }, [token]);
 
   const initiateConnect = useCallback(async () => {
@@ -70,8 +84,16 @@ export function useZohoAdmin() {
 
   const unlinkAccount = useCallback(
     async (userId) => {
-      await axios.delete(apiUrl(`/api/zoho/accounts/${userId}/unlink`), authHeaders(token));
-      await loadLinkedAccounts();
+      try {
+        await axios.delete(apiUrl(`/api/zoho/accounts/${userId}/unlink`), authHeaders(token));
+        await loadLinkedAccounts();
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          message: error.response?.data?.message || "Failed to unlink this Zoho mailbox.",
+        };
+      }
     },
     [loadLinkedAccounts, token]
   );
