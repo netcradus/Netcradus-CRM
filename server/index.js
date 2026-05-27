@@ -121,6 +121,7 @@ app.use("/api/visits", require("./routes/visitRoutes"));
 app.use("/api/tickets", require("./routes/ticketRoutes"));
 app.use("/api/management", require("./routes/managementRoutes"));
 app.use("/api/password-manager", require("./routes/passwordManagerRoutes"));
+app.use("/api/workspace", require("./routes/workspaceRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
