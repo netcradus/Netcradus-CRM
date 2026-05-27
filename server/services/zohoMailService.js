@@ -505,7 +505,7 @@ async function markAsRead(zohoAccountId, messageId) {
     method: "PUT",
     url: `/accounts/${zohoAccountId}/updatemessage`,
     data: {
-      mode: "read",
+      mode: "markAsRead",
       messageId: [String(messageId)],
     },
   });
