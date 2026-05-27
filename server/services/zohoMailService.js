@@ -195,7 +195,13 @@ function normalizeMessage(message = {}) {
 }
 
 async function getAccountIdForEmail(zohoEmail) {
-  const accounts = await listAvailableAccounts();
+  const {
+    accounts,
+    personalAccounts,
+    organizationAccounts,
+    personalError,
+    organizationError,
+  } = await listAvailableAccountsDetailed();
   const normalizedEmail = normalizeEmail(zohoEmail);
 
   const matchedAccount = accounts.find((account) => {
@@ -211,6 +217,10 @@ async function getAccountIdForEmail(zohoEmail) {
       .flatMap((account) => [...collectEmails(account)])
       .filter(Boolean)
       .slice(0, 10);
+    error.personalAccountCount = personalAccounts.length;
+    error.organizationAccountCount = organizationAccounts.length;
+    error.personalLookupError = personalError?.message || null;
+    error.organizationLookupError = organizationError?.message || null;
     throw error;
   }
 
@@ -258,6 +268,28 @@ async function listAvailableAccounts() {
   }
 
   return mergeAccounts(personalAccounts, organizationAccounts);
+}
+
+async function listAvailableAccountsDetailed() {
+  const [personalResult, organizationResult] = await Promise.allSettled([
+    listAccounts(),
+    listOrganizationAccounts(),
+  ]);
+
+  const personalAccounts = personalResult.status === "fulfilled" ? personalResult.value : [];
+  const organizationAccounts = organizationResult.status === "fulfilled" ? organizationResult.value : [];
+
+  if (personalResult.status === "rejected" && organizationResult.status === "rejected") {
+    throw organizationResult.reason || personalResult.reason;
+  }
+
+  return {
+    accounts: mergeAccounts(personalAccounts, organizationAccounts),
+    personalAccounts,
+    organizationAccounts,
+    personalError: personalResult.status === "rejected" ? personalResult.reason : null,
+    organizationError: organizationResult.status === "rejected" ? organizationResult.reason : null,
+  };
 }
 
 async function getFolders(zohoAccountId) {
@@ -538,6 +570,7 @@ module.exports = {
   getMessages,
   listAccounts,
   listAvailableAccounts,
+  listAvailableAccountsDetailed,
   listOrganizationAccounts,
   markAsRead,
   moveToFolder,
