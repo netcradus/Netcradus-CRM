@@ -17,18 +17,6 @@ const MEETING_TYPE_OPTIONS = [
   { value: "phone_call", label: "Phone Call" },
 ];
 
-const CSV_IMPORT_FIELDS = [
-  { value: "name", label: "Full Name", required: true },
-  { value: "email", label: "Email" },
-  { value: "phone", label: "Phone" },
-  { value: "company", label: "Company" },
-  { value: "status", label: "Status" },
-  { value: "note", label: "Note" },
-  { value: "meetingScheduledAt", label: "Meeting Date & Time" },
-  { value: "meetingLocation", label: "Meeting Location" },
-  { value: "meetingType", label: "Meeting Type" },
-];
-
 const CALL_OUTCOME_OPTIONS = [
   { value: "no_answer", label: "No Answer" },
   { value: "call_back", label: "Call Back" },
@@ -65,7 +53,6 @@ const emptySalesCallForm = {
 };
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
-const normalizeCsvHeader = (value) => String(value || "").trim().toLowerCase();
 const getAuthConfig = () => ({
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -111,58 +98,6 @@ const toInputDateTime = (value) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-const parseCsvLine = (line) => {
-  const values = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index];
-
-    if (character === '"') {
-      if (inQuotes && line[index + 1] === '"') {
-        current += '"';
-        index += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (character === "," && !inQuotes) {
-      values.push(current);
-      current = "";
-      continue;
-    }
-
-    current += character;
-  }
-
-  values.push(current);
-  return values.map((value) => value.trim());
-};
-
-const readCsvHeaders = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = String(reader.result || "");
-      const headerLine = content.split(/\r?\n/).find((line) => line.trim());
-      resolve(headerLine ? parseCsvLine(headerLine) : []);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
-  });
-
-const buildDefaultCsvMapping = (headers) => {
-  const normalizedHeaders = headers.map(normalizeCsvHeader);
-  return CSV_IMPORT_FIELDS.reduce((mapping, field) => {
-    const exactIndex = normalizedHeaders.indexOf(normalizeCsvHeader(field.value));
-    mapping[field.value] = exactIndex >= 0 ? headers[exactIndex] : "";
-    return mapping;
-  }, {});
-};
-
 function Leads() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
@@ -180,8 +115,6 @@ function Leads() {
   const [salesStatusForm, setSalesStatusForm] = useState(emptySalesStatusForm);
   const [salesNote, setSalesNote] = useState("");
   const [salesCallForm, setSalesCallForm] = useState(emptySalesCallForm);
-  const [importMappingModal, setImportMappingModal] = useState(null);
-  const [deleteFilterModal, setDeleteFilterModal] = useState(null);
   const fileInputRef = useRef(null);
 
   const userRole = normalizeRole(localStorage.getItem("userRole"));
@@ -322,41 +255,6 @@ function Leads() {
     }
   };
 
-  const openDeleteFilteredModal = () => {
-    const filters = Object.fromEntries(searchParams.entries());
-    const activeFilters = ["status", "search", "startDate", "endDate"].filter((key) => filters[key]);
-    const filterSummary = activeFilters.length
-      ? activeFilters.map((key) => `${key}: ${filters[key]}`).join(", ")
-      : "no filters";
-
-    setDeleteFilterModal({ filters, activeFilters, filterSummary });
-  };
-
-  const handleDeleteFilteredLeads = async () => {
-    if (!deleteFilterModal) {
-      return;
-    }
-
-    try {
-      setError("");
-      setSuccess("");
-      const response = await axios.delete(apiUrl("/api/leads/all"), {
-        ...getAuthConfig(),
-        params: {
-          ...deleteFilterModal.filters,
-          confirmDeleteAll: deleteFilterModal.activeFilters.length ? undefined : "true",
-        },
-      });
-      setSuccess(response.data?.message || "Filtered leads deleted successfully.");
-      setDeleteFilterModal(null);
-      setSelectedLeadId(null);
-      setSelectedLead(null);
-      await fetchLeads();
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "Failed to delete filtered leads.");
-    }
-  };
-
   const handleExport = async () => {
     try {
       const response = await axios.get(apiUrl("/api/leads/export"), {
@@ -377,42 +275,23 @@ function Leads() {
     }
   };
 
-  const uploadLeadFile = async (file, fieldMapping = null) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    if (fieldMapping) {
-      formData.append("fieldMapping", JSON.stringify(fieldMapping));
-    }
-
-    await axios.post(apiUrl("/api/leads/import"), formData, {
-      ...getAuthConfig(),
-      headers: {
-        ...getAuthConfig().headers,
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  };
-
   const handleImport = async (event) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-      setError("");
-      setSuccess("");
-      const headers = await readCsvHeaders(file);
-      const defaultMapping = buildDefaultCsvMapping(headers);
-      const recognizedHeaders = Object.values(defaultMapping).filter(Boolean).length;
-      const shouldAskForMapping = !defaultMapping.name || recognizedHeaders < Math.min(headers.length, 2);
-
-      if (shouldAskForMapping) {
-        setImportMappingModal({ file, headers, mapping: defaultMapping });
-        return;
-      }
-
-      await uploadLeadFile(file);
+      await axios.post(apiUrl("/api/leads/import"), formData, {
+        ...getAuthConfig(),
+        headers: {
+          ...getAuthConfig().headers,
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       setSuccess("Leads imported successfully.");
       await fetchLeads();
@@ -420,32 +299,6 @@ function Leads() {
       setError(requestError.response?.data?.message || "Failed to import leads.");
     } finally {
       event.target.value = "";
-    }
-  };
-
-  const handleMappedImport = async () => {
-    if (!importMappingModal?.file) {
-      return;
-    }
-
-    if (!importMappingModal.mapping.name) {
-      setError("Please map the Full Name field before importing.");
-      return;
-    }
-
-    try {
-      setError("");
-      setSuccess("");
-      await uploadLeadFile(importMappingModal.file, importMappingModal.mapping);
-      setImportMappingModal(null);
-      setSuccess("Leads imported successfully.");
-      await fetchLeads();
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || "Failed to import leads.");
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
@@ -588,31 +441,6 @@ function Leads() {
               ))}
             </select>
           </div>
-          <div className="form-field" style={{ width: "170px", marginBottom: 0 }}>
-            <label className="form-label">Date From</label>
-            <input className="form-input" type="date" value={searchParams.get("startDate") || ""} onChange={(event) => updateFilter("startDate", event.target.value)} />
-          </div>
-          <div className="form-field" style={{ width: "170px", marginBottom: 0 }}>
-            <label className="form-label">Date To</label>
-            <input className="form-input" type="date" value={searchParams.get("endDate") || ""} onChange={(event) => updateFilter("endDate", event.target.value)} />
-          </div>
-          <div className="form-field" style={{ width: "170px", marginBottom: 0 }}>
-            <label className="form-label">Sort By</label>
-            <select className="form-select" value={searchParams.get("sortBy") || "createdAt"} onChange={(event) => updateFilter("sortBy", event.target.value)}>
-              <option value="createdAt">Created Date</option>
-              <option value="updatedAt">Updated Date</option>
-              <option value="name">Name</option>
-              <option value="company">Company</option>
-              <option value="status">Status</option>
-            </select>
-          </div>
-          <div className="form-field" style={{ width: "140px", marginBottom: 0 }}>
-            <label className="form-label">Order</label>
-            <select className="form-select" value={searchParams.get("order") || "desc"} onChange={(event) => updateFilter("order", event.target.value)}>
-              <option value="desc">Newest First</option>
-              <option value="asc">Oldest First</option>
-            </select>
-          </div>
           <div className="form-field" style={{ width: "120px", marginBottom: 0 }}>
             <label className="form-label">Limit</label>
             <select className="form-select" value={searchParams.get("limit") || "10"} onChange={(event) => updateFilter("limit", event.target.value)}>
@@ -622,11 +450,6 @@ function Leads() {
             </select>
           </div>
           <button className="btn btn-ghost" onClick={() => { setSearchInput(""); setSearchParams({}); }}>Clear</button>
-          {isSuperUser ? (
-            <button className="btn btn-ghost" style={{ color: "var(--color-error)" }} onClick={openDeleteFilteredModal}>
-              <Trash2 size={16} /> Delete by Filters
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -639,7 +462,6 @@ function Leads() {
                 <th>Company</th>
                 <th>Email / Phone</th>
                 <th>Status</th>
-                <th>Created</th>
                 <th>Last Note</th>
                 <th>Last Call</th>
                 <th>Actions</th>
@@ -648,7 +470,7 @@ function Leads() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
                 </tr>
               ) : leads.length ? (
                 leads.map((lead) => (
@@ -666,7 +488,6 @@ function Leads() {
                         {getStatusLabel(lead.status)}
                       </span>
                     </td>
-                    <td>{formatDateTime(lead.createdAt)}</td>
                     <td>{getLastNote(lead)?.text || "--"}</td>
                     <td>{formatDateTime(getLastCall(lead)?.calledAt)}</td>
                     <td>
@@ -683,7 +504,7 @@ function Leads() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
                 </tr>
               )}
             </tbody>
@@ -697,7 +518,6 @@ function Leads() {
                 <th>Name</th>
                 <th>Phone</th>
                 <th>Status</th>
-                <th>Created</th>
                 <th>Last Note</th>
                 <th>Last Call</th>
                 <th>Actions</th>
@@ -706,7 +526,7 @@ function Leads() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading leads...</td>
                 </tr>
               ) : salesLeadRows.length ? (
                 salesLeadRows.map((lead) => (
@@ -721,7 +541,6 @@ function Leads() {
                         {getStatusLabel(lead.status)}
                       </span>
                     </td>
-                    <td>{formatDateTime(lead.createdAt)}</td>
                     <td>{getLastNote(lead)?.text ? `${getLastNote(lead).text.slice(0, 50)}${getLastNote(lead).text.length > 50 ? "..." : ""}` : "--"}</td>
                     <td>{formatDateTime(getLastCall(lead)?.calledAt)}</td>
                     <td>
@@ -734,7 +553,7 @@ function Leads() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No leads found.</td>
                 </tr>
               )}
             </tbody>
@@ -825,88 +644,6 @@ function Leads() {
                 <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
               </div>
             </form>
-          </div>
-        </div>
-      ) : null}
-
-      {importMappingModal ? (
-        <div className="nc-modal-overlay" onClick={() => setImportMappingModal(null)}>
-          <div className="nc-modal-content" onClick={(event) => event.stopPropagation()} style={{ width: "640px" }}>
-            <div className="nc-modal-header">
-              <h3>Map CSV Fields</h3>
-            </div>
-            <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-4)" }}>
-              Some CSV headers do not match lead fields. Select where each CSV column should be imported.
-            </p>
-            <div style={{ display: "grid", gap: "var(--space-3)" }}>
-              {CSV_IMPORT_FIELDS.map((field) => (
-                <div key={field.value} className="form-field" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{field.label}{field.required ? " *" : ""}</label>
-                  <select
-                    className="form-select"
-                    value={importMappingModal.mapping[field.value] || ""}
-                    onChange={(event) => setImportMappingModal((previous) => ({
-                      ...previous,
-                      mapping: {
-                        ...previous.mapping,
-                        [field.value]: event.target.value,
-                      },
-                    }))}
-                  >
-                    <option value="">Do not import</option>
-                    {importMappingModal.headers.map((header) => (
-                      <option key={`${field.value}-${header}`} value={header}>{header}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-6)" }}>
-              <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={handleMappedImport}>Import Leads</button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                style={{ flex: 1 }}
-                onClick={() => {
-                  setImportMappingModal(null);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                  }
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {deleteFilterModal ? (
-        <div className="nc-modal-overlay" onClick={() => setDeleteFilterModal(null)}>
-          <div className="nc-modal-content" onClick={(event) => event.stopPropagation()} style={{ width: "520px" }}>
-            <div className="nc-modal-header">
-              <h3>Delete Filtered Leads</h3>
-            </div>
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "var(--space-3)" }}>
-              This will delete all leads matching the current filters.
-            </p>
-            <div className="nc-card" style={{ marginBottom: "var(--space-4)", padding: "var(--space-4)" }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
-                Current filters
-              </div>
-              <div style={{ fontWeight: "var(--font-semibold)" }}>{deleteFilterModal.filterSummary}</div>
-            </div>
-            <p style={{ color: "var(--color-error)", marginBottom: "var(--space-5)" }}>
-              This action cannot be undone.
-            </p>
-            <div style={{ display: "flex", gap: "var(--space-3)" }}>
-              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteFilterModal(null)}>
-                Cancel
-              </button>
-              <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={handleDeleteFilteredLeads}>
-                Delete Leads
-              </button>
-            </div>
           </div>
         </div>
       ) : null}

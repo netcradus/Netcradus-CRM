@@ -25,19 +25,6 @@ const normalizeToken = (value) => {
 
 const getConversationRoom = (conversationId) => `conversation:${conversationId}`;
 
-function buildUnreadMessageQuery(conversationId, currentUserId) {
-  return {
-    conversationId,
-    senderId: { $ne: currentUserId },
-    isDeleted: false,
-    $or: [
-      { readBy: { $ne: currentUserId } },
-      { readBy: { $exists: false }, isRead: false },
-      { readBy: { $size: 0 }, isRead: false },
-    ],
-  };
-}
-
 function getPresenceForUsers(userIds = []) {
   const uniqueIds = [...new Set(userIds.filter(Boolean).map(String))];
   return uniqueIds.reduce((accumulator, userId) => {
@@ -99,7 +86,10 @@ async function loadConversationSummary(conversationId, currentUserId) {
   if (!conversation) return null;
 
   const unreadCount = await Message.countDocuments({
-    ...buildUnreadMessageQuery(conversationId, currentUserId),
+    conversationId,
+    senderId: { $ne: currentUserId },
+    isRead: false,
+    isDeleted: false,
   });
 
   const userIds = conversation.participants.map((participant) => String(participant._id));
@@ -198,7 +188,6 @@ function initializeSocket(server) {
           conversationId: conversation._id,
           senderId: socket.user._id,
           messageText,
-          readBy: [socket.user._id],
         });
 
         conversation.hiddenFor = [];
@@ -210,16 +199,13 @@ function initializeSocket(server) {
           .populate("senderId", "_id name email")
           .lean();
         const normalizedMessage = normalizeMessage(populatedMessage);
-        await Promise.all(
-          conversation.participants.map(async (participantId) => {
-            const conversationSummary = await loadConversationSummary(conversation._id, participantId);
-            emitToUsers([participantId], "new_message", {
-              conversationId: String(conversation._id),
-              message: normalizedMessage,
-              conversation: conversationSummary,
-            });
-          })
-        );
+        const conversationSummary = await loadConversationSummary(conversation._id, socket.user._id);
+
+        emitToUsers(conversation.participants.map(String), "new_message", {
+          conversationId: String(conversation._id),
+          message: normalizedMessage,
+          conversation: conversationSummary,
+        });
 
         const recipientIds = conversation.participants
           .map(String)
@@ -229,12 +215,10 @@ function initializeSocket(server) {
           const { createNotifications } = require("./services/taskNotificationService");
           await createNotifications({
             userIds: recipientIds,
-            message: `${conversation.isGroup && conversation.groupName ? `${conversation.groupName} - ` : ""}${socket.user.name}: ${messageText.slice(0, 80)}`,
+            message: `${socket.user.name}: ${messageText.slice(0, 80)}`,
             targetPath: "/messages",
           });
         }
-
-        const conversationSummary = await loadConversationSummary(conversation._id, socket.user._id);
 
         callback({
           success: true,
@@ -315,7 +299,12 @@ function initializeSocket(server) {
         }
 
         const readAt = new Date();
-        const unreadMessages = await Message.find(buildUnreadMessageQuery(conversationId, socket.user._id)).select("_id");
+        const unreadMessages = await Message.find({
+          conversationId,
+          senderId: { $ne: socket.user._id },
+          isRead: false,
+          isDeleted: false,
+        }).select("_id");
 
         if (unreadMessages.length) {
           await Message.updateMany(
@@ -324,7 +313,6 @@ function initializeSocket(server) {
             },
             {
               $set: { isRead: true, readAt },
-              $addToSet: { readBy: socket.user._id },
             }
           );
         }

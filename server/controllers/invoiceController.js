@@ -1,7 +1,5 @@
 const Invoice = require("../models/Invoice");
 const Expense = require("../models/Expense");
-const Project = require("../models/Project");
-const { notifyPartnerInvoiceGenerated } = require("../services/partnerNotificationService");
 
 const normalizeExpenseTitle = (value = "") => String(value || "").trim().toLowerCase();
 const sendSuccess = (res, statusCode, data, message) =>
@@ -20,14 +18,9 @@ exports.getInvoices = async (req, res) => {
 // Create new invoice
 exports.createInvoice = async (req, res) => {
   try {
-    const { customer, amount, dueDate, status, projectId } = req.body;
-    const project = projectId ? await Project.findById(projectId) : null;
-    // Partner-linked invoices notify the partner while ordinary invoices keep their existing flow.
-    const invoice = new Invoice({ customer, amount, dueDate, status, sourceType: "manual", projectId: project?._id || null, partnerId: project?.partnerId || null });
+    const { customer, amount, dueDate, status } = req.body;
+    const invoice = new Invoice({ customer, amount, dueDate, status, sourceType: "manual" });
     const savedInvoice = await invoice.save();
-    if (project?.partnerId) {
-      await notifyPartnerInvoiceGenerated(project);
-    }
     sendSuccess(res, 201, savedInvoice, "Invoice created successfully");
   } catch (err) {
     res.status(400).json({ message: err.message });

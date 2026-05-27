@@ -8,34 +8,6 @@ const MeetingTimeline = require("../models/MeetingTimeline");
 const LEAD_STATUSES = ["not_interested", "call_back", "meeting_aligned"];
 const CALL_OUTCOMES = ["no_answer", "call_back", "not_interested", "meeting_aligned", "other"];
 const MEETING_TYPES = ["in_person", "video_call", "phone_call"];
-const IMPORTABLE_LEAD_FIELDS = new Set([
-  "name",
-  "email",
-  "phone",
-  "company",
-  "status",
-  "note",
-  "notes",
-  "meetingScheduledAt",
-  "meetingLocation",
-  "meetingType",
-]);
-const IMPORT_FIELD_BY_HEADER = {
-  name: "name",
-  email: "email",
-  phone: "phone",
-  company: "company",
-  status: "status",
-  note: "note",
-  notes: "notes",
-  meetingscheduledat: "meetingScheduledAt",
-  meetingdate: "meetingScheduledAt",
-  meeting_date: "meetingScheduledAt",
-  meetinglocation: "meetingLocation",
-  location: "meetingLocation",
-  meetingtype: "meetingType",
-  meeting_type: "meetingType",
-};
 const SALES_UPDATE_FIELDS = new Set([
   "status",
   "note",
@@ -136,13 +108,6 @@ const normalizeLeadStatus = (status) => {
 
   const normalized = String(status).trim().toLowerCase();
   return LEAD_STATUSES.includes(normalized) ? normalized : null;
-};
-
-const normalizeImportHeader = (value) => String(value || "").trim().toLowerCase();
-
-const normalizeImportFieldName = (value) => {
-  const normalized = String(value || "").trim();
-  return IMPORTABLE_LEAD_FIELDS.has(normalized) ? normalized : "";
 };
 
 const normalizeCallLogEntry = (entry, userId) => {
@@ -585,7 +550,7 @@ const deleteAllLeads = async (req, res) => {
 
   try {
     const query = buildLeadQuery(req);
-    const hasFilters = ["status", "search", "startDate", "endDate"].some((key) => Boolean(req.query[key]));
+    const hasFilters = Object.keys(query).some((key) => key !== "status") || req.query.includeCallBack === "true";
     const confirmed = req.query.confirmDeleteAll === "true";
 
     if (!hasFilters && !confirmed) {
@@ -658,50 +623,15 @@ const importLeads = async (req, res) => {
     }
 
     const [headerLine, ...rows] = rawContent.split(/\r?\n/).filter(Boolean);
-    const headers = parseCsvLine(headerLine).map(normalizeImportHeader);
-    let fieldMapping = {};
-
-    if (req.body.fieldMapping) {
-      try {
-        const parsedMapping = typeof req.body.fieldMapping === "string"
-          ? JSON.parse(req.body.fieldMapping)
-          : req.body.fieldMapping;
-
-        if (parsedMapping && typeof parsedMapping === "object") {
-          fieldMapping = Object.entries(parsedMapping).reduce((accumulator, [targetField, sourceHeader]) => {
-            const normalizedTarget = normalizeImportFieldName(targetField);
-            const normalizedSource = normalizeImportHeader(sourceHeader);
-            if (normalizedTarget && normalizedSource && headers.includes(normalizedSource)) {
-              accumulator[normalizedTarget] = normalizedSource;
-            }
-            return accumulator;
-          }, {});
-        }
-      } catch (mappingError) {
-        return res.status(400).json({ success: false, message: "Invalid CSV field mapping." });
-      }
-    }
-
+    const headers = parseCsvLine(headerLine).map((value) => value.toLowerCase());
     const createdLeads = [];
 
     for (const row of rows) {
       const values = parseCsvLine(row);
-      const rawRecord = headers.reduce((accumulator, header, index) => {
+      const record = headers.reduce((accumulator, header, index) => {
         accumulator[header] = values[index] || "";
         return accumulator;
       }, {});
-      const record = {};
-
-      headers.forEach((header) => {
-        const targetField = IMPORT_FIELD_BY_HEADER[header] || (IMPORTABLE_LEAD_FIELDS.has(header) ? header : "");
-        if (targetField) {
-          record[targetField] = rawRecord[header];
-        }
-      });
-
-      Object.entries(fieldMapping).forEach(([targetField, sourceHeader]) => {
-        record[targetField] = rawRecord[sourceHeader] || "";
-      });
 
       const lead = new Lead({
         name: record.name,
@@ -718,9 +648,9 @@ const importLeads = async (req, res) => {
         const alignmentResult = await applyMeetingAlignment(
           lead,
           {
-            meetingScheduledAt: record.meetingScheduledAt || record.meetingscheduledat || record.meetingdate || record.meeting_date,
-            meetingLocation: record.meetingLocation || record.meetinglocation || record.location,
-            meetingType: record.meetingType || record.meetingtype || record.meeting_type,
+            meetingScheduledAt: record.meetingscheduledat || record.meetingdate || record.meeting_date,
+            meetingLocation: record.meetinglocation || record.location,
+            meetingType: record.meetingtype || record.meeting_type,
           },
           req.user._id
         );

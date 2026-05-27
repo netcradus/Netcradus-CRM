@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Store, Plus, Search, ChevronRight, Trash2, Edit, ShieldCheck, ShieldOff } from "lucide-react";
+import { Store, Plus, Search, ChevronRight, Trash2, Edit } from "lucide-react";
 import { apiUrl } from "../../config/api";
 
 const emptyVendor = { name: "", email: "", category: "Supplier", status: "Active", lastInteraction: "" };
@@ -57,13 +57,6 @@ function Vendors() {
     }
   };
 
-  const handleToggleStatus = async (vendor) => {
-    // Internal vendor status action is reversible so Active can return after being set Inactive.
-    const nextStatus = vendor.status === "Active" ? "Inactive" : "Active";
-    await axios.put(apiUrl(`/api/vendors/${vendor._id}`), { ...vendor, status: nextStatus });
-    fetchVendors();
-  };
-
   return (
     <div className="dashboard-container" style={{ padding: "var(--space-6)" }}>
       <div className="page-header">
@@ -107,14 +100,6 @@ function Vendors() {
                 <td>
                   <div style={{ display: "flex", gap: "var(--space-2)" }}>
                     <button className="btn btn-ghost" style={{ padding: "var(--space-1)" }} onClick={() => { setEditingId(vendor._id); setForm({ ...vendor, lastInteraction: vendor.lastInteraction?.substring(0, 10) || "" }); setShowModal(true); }}><Edit size={14} /></button>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: "var(--space-1)" }}
-                      title={vendor.status === "Active" ? "Deactivate" : "Activate"}
-                      onClick={() => handleToggleStatus(vendor)}
-                    >
-                      {vendor.status === "Active" ? <ShieldOff size={14} /> : <ShieldCheck size={14} />}
-                    </button>
                     <button className="btn btn-ghost" style={{ padding: "var(--space-1)", color: "var(--color-error)" }} onClick={() => handleDelete(vendor._id)}><Trash2 size={14} /></button>
                   </div>
                 </td>

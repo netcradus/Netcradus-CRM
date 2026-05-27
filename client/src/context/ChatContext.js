@@ -12,10 +12,6 @@ const getAuthConfig = () => ({
   timeout: CHAT_REQUEST_TIMEOUT_MS,
 });
 
-function getErrorMessage(error, fallback = "Request failed") {
-  return error?.response?.data?.message || error?.message || fallback;
-}
-
 function normalizeDirectoryUsers(items = [], currentUserId) {
   const seen = new Set();
 
@@ -57,36 +53,12 @@ function upsertMessage(list, message) {
 }
 
 function applyPresence(conversation, onlineMap) {
-  if (!conversation) return conversation;
-  const participants = (conversation.participants || []).map((participant) => {
-    const status = onlineMap[participant._id];
-    if (!status) return participant;
-
-    return {
-      ...participant,
-      isOnline: status.isOnline,
-      lastSeenAt: status.lastSeen || participant.lastSeenAt || null,
-    };
-  });
-
-  if (!conversation.counterpart) {
-    return {
-      ...conversation,
-      participants,
-    };
-  }
-
+  if (!conversation?.counterpart) return conversation;
   const status = onlineMap[conversation.counterpart._id];
-  if (!status) {
-    return {
-      ...conversation,
-      participants,
-    };
-  }
+  if (!status) return conversation;
 
   return {
     ...conversation,
-    participants,
     counterpart: {
       ...conversation.counterpart,
       isOnline: status.isOnline,
@@ -252,41 +224,18 @@ export function ChatProvider({ children }) {
   }, [currentUserId, emitWithAck, socketReady]);
 
   const createConversation = useCallback(async (participantId, options = {}) => {
-    try {
-      const { data } = await axios.post(
-        apiUrl("/api/conversations"),
-        { participantId },
-        getAuthConfig()
-      );
-      const conversation = data.data;
-      setConversations((current) => upsertConversation(current, conversation));
-      setSelectedConversationId(conversation._id);
-      if (options.openLauncher) {
-        setLauncherOpen(true);
-      }
-      return conversation;
-    } catch (error) {
-      throw new Error(getErrorMessage(error, "Failed to create conversation"));
+    const { data } = await axios.post(
+      apiUrl("/api/conversations"),
+      { participantId },
+      getAuthConfig()
+    );
+    const conversation = data.data;
+    setConversations((current) => upsertConversation(current, conversation));
+    setSelectedConversationId(conversation._id);
+    if (options.openLauncher) {
+      setLauncherOpen(true);
     }
-  }, []);
-
-  const createGroupConversation = useCallback(async ({ groupName, participantIds }, options = {}) => {
-    try {
-      const { data } = await axios.post(
-        apiUrl("/api/conversations"),
-        { isGroup: true, groupName, participantIds },
-        getAuthConfig()
-      );
-      const conversation = data.data;
-      setConversations((current) => upsertConversation(current, conversation));
-      setSelectedConversationId(conversation._id);
-      if (options.openLauncher) {
-        setLauncherOpen(true);
-      }
-      return conversation;
-    } catch (error) {
-      throw new Error(getErrorMessage(error, "Failed to create group"));
-    }
+    return conversation;
   }, []);
 
   const sendMessage = useCallback(async (conversationId, messageText) => {
@@ -411,11 +360,6 @@ export function ChatProvider({ children }) {
       }
     };
 
-    const handleConversationCreated = ({ conversation }) => {
-      if (!conversation?._id) return;
-      setConversations((current) => upsertConversation(current, conversation));
-    };
-
     const handleMessageUpdated = ({ conversationId, message }) => {
       setMessagesByConversation((current) => ({
         ...current,
@@ -477,19 +421,14 @@ export function ChatProvider({ children }) {
       }));
       setConversations((current) =>
         current.map((conversation) =>
-          conversation.counterpart?._id === userId || conversation.participants?.some((participant) => participant._id === userId)
+          conversation.counterpart?._id === userId
             ? {
                 ...conversation,
-                participants: (conversation.participants || []).map((participant) =>
-                  participant._id === userId ? { ...participant, isOnline, lastSeenAt: lastSeen || participant.lastSeenAt || null } : participant
-                ),
-                counterpart: conversation.counterpart
-                  ? {
-                      ...conversation.counterpart,
-                      isOnline,
-                      lastSeenAt: lastSeen || conversation.counterpart.lastSeenAt || null,
-                    }
-                  : conversation.counterpart,
+                counterpart: {
+                  ...conversation.counterpart,
+                  isOnline,
+                  lastSeenAt: lastSeen || conversation.counterpart.lastSeenAt || null,
+                },
               }
             : conversation
         )
@@ -504,7 +443,6 @@ export function ChatProvider({ children }) {
     socket.on("socket:ready", handleReady);
     socket.on("connect", handleReady);
     socket.on("disconnect", handleDisconnect);
-    socket.on("conversation_created", handleConversationCreated);
     socket.on("new_message", handleNewMessage);
     socket.on("message_updated", handleMessageUpdated);
     socket.on("message_deleted", handleMessageDeleted);
@@ -517,7 +455,6 @@ export function ChatProvider({ children }) {
 
       socket.off("connect", handleReady);
       socket.off("disconnect", handleDisconnect);
-      socket.off("conversation_created", handleConversationCreated);
       socket.off("new_message", handleNewMessage);
       socket.off("message_updated", handleMessageUpdated);
       socket.off("message_deleted", handleMessageDeleted);
@@ -533,7 +470,6 @@ export function ChatProvider({ children }) {
   const value = useMemo(() => ({
     conversations,
     createConversation,
-    createGroupConversation,
     bootstrapChat,
     directory,
     fetchDirectory,
@@ -561,7 +497,6 @@ export function ChatProvider({ children }) {
   }), [
     conversations,
     createConversation,
-    createGroupConversation,
     bootstrapChat,
     directory,
     fetchDirectory,

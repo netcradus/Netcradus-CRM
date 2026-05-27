@@ -61,8 +61,7 @@ const createUserByAdmin = async (req, res) => {
   try {
     const { email, password, role, department: manualDept, designation: manualDesignation, name } = req.body;
     const normalizedRole = String(role || "").trim().toLowerCase();
-    // Partner is selectable by super users but remains outside employee/admin role groups.
-    const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media", "partner"];
+    const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media"];
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -113,9 +112,7 @@ const createUserByAdmin = async (req, res) => {
 
     await user.save();
 
-    // Partners are external collaborators, so they should not be mirrored as employee contacts.
-    if (normalizedRole !== "partner") {
-      await Contact.findOneAndUpdate(
+    await Contact.findOneAndUpdate(
       { linkedUser: user._id },
       {
         $setOnInsert: {
@@ -130,11 +127,9 @@ const createUserByAdmin = async (req, res) => {
         },
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    }
+    );
 
     // ── Provision Google Drive storage for the new user ──────────────────────
-    // Storage provisioning is safe for partners; onboarding emails/files are skipped separately.
     try {
       await storageService.provisionUserStorage(user._id, user.name || firstName, user.role);
       user.storageProvisioned = true;
@@ -598,24 +593,19 @@ const updateUserByAdmin = async (req, res) => {
 
     await user.save();
 
-    // Partner accounts are external, so editing one should not create employee contact data.
-    if (user.role === "partner") {
-      await Contact.deleteOne({ $or: [{ linkedUser: user._id }, { email: previousEmail }] });
-    } else {
-      await Contact.findOneAndUpdate(
-        { $or: [{ linkedUser: user._id }, { email: previousEmail }] },
-        {
-          $set: {
-            linkedUser: user._id,
-            name: user.name,
-            email: user.email,
-            department: user.department,
-            designation: user.designation || formatRoleLabel(user.role || "employee"),
-          },
+    await Contact.findOneAndUpdate(
+      { $or: [{ linkedUser: user._id }, { email: previousEmail }] },
+      {
+        $set: {
+          linkedUser: user._id,
+          name: user.name,
+          email: user.email,
+          department: user.department,
+          designation: user.designation || formatRoleLabel(user.role || "employee"),
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.json({
       message: `User ${user.name} updated successfully`,

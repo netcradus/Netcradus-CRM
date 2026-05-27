@@ -341,8 +341,7 @@ exports.getTodaySnapshot = async (req, res) => {
     const isHldy = isHoliday(shiftDate, holidays);
 
     // Fetch tracked users. Super users can manage attendance but do not punch in.
-    // Partner accounts are excluded because attendance applies only to employee/staff users.
-    const users = await User.find({ isActive: { $ne: false }, role: { $nin: ['super_user', 'partner'] } })
+    const users = await User.find({ isActive: { $ne: false }, role: { $ne: 'super_user' } })
       .select('name email role department')
       .lean();
 

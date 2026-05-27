@@ -21,7 +21,6 @@ function normalizeMessage(messageDoc) {
     rawMessageText: messageDoc.messageText,
     isRead: Boolean(messageDoc.isRead),
     readAt: messageDoc.readAt,
-    readBy: Array.isArray(messageDoc.readBy) ? messageDoc.readBy.map(String) : [],
     editedAt: messageDoc.editedAt,
     isDeleted: Boolean(messageDoc.isDeleted),
     deletedAt: messageDoc.deletedAt,
@@ -32,7 +31,6 @@ function normalizeMessage(messageDoc) {
 
 function buildConversationSummary(conversationDoc, currentUserId, unreadCount, presenceMap) {
   const participants = Array.isArray(conversationDoc.participants) ? conversationDoc.participants : [];
-  const isGroup = Boolean(conversationDoc.isGroup);
   const otherParticipants = participants.filter(
     (participant) => String(participant._id) !== String(currentUserId)
   );
@@ -46,11 +44,6 @@ function buildConversationSummary(conversationDoc, currentUserId, unreadCount, p
 
   return {
     _id: String(conversationDoc._id),
-    isGroup,
-    groupName: conversationDoc.groupName || "",
-    displayName: isGroup
-      ? conversationDoc.groupName || otherParticipants.map((participant) => participant.name || participant.email || "User").join(", ")
-      : primaryParticipant?.name || primaryParticipant?.email || "User",
     participants: participants.map((participant) => ({
       _id: String(participant._id),
       name: participant.name || participant.email || "User",
@@ -58,9 +51,8 @@ function buildConversationSummary(conversationDoc, currentUserId, unreadCount, p
       role: participant.role || "",
       department: participant.department || "",
       lastSeenAt: participant.lastSeenAt || null,
-      isOnline: Boolean(presenceMap[String(participant._id)]?.isOnline),
     })),
-    counterpart: !isGroup && primaryParticipant
+    counterpart: primaryParticipant
       ? {
           _id: primaryId,
           name: primaryParticipant.name || primaryParticipant.email || "User",

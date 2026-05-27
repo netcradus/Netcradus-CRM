@@ -7,7 +7,6 @@ import SupportDashboard from "./SupportDashboard.js";
 import HRDashboard from "./HRDashboard.js";
 import TechDashboard from "./TechDashboard.js";
 import DigitalMediaDashboard from "./DigitalMediaDashboard.js";
-import PartnerDashboard from "../../features/Partner/PartnerDashboard.js";
 import { normalizeRole } from "../../config/access";
 
 function Dashboard() {
@@ -23,7 +22,6 @@ function Dashboard() {
       case "hr": return <HRDashboard />;
       case "it": return <TechDashboard />;
       case "digital_media": return <DigitalMediaDashboard />;
-      case "partner": return <PartnerDashboard />;
       default:
         return (
           <div className="role-fallback">
