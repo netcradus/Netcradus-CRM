@@ -36,6 +36,16 @@ const punchLimiter = rateLimit({
   validate: { keyGeneratorIpFallback: false },
 });
 
+// Partners are external accounts, so attendance endpoints reject them before any attendance logic runs.
+const rejectPartnerAttendance = (req, res, next) => {
+  if (req.user?.role === 'partner') {
+    return res.status(403).json({ success: false, message: 'Attendance not applicable for Partners' });
+  }
+  next();
+};
+
+router.use(rejectPartnerAttendance);
+
 // Punch In / Out
 router.post('/punch-in', punchLimiter, punchIn);
 router.post('/punch-out', punchLimiter, punchOut);

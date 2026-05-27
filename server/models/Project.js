@@ -17,7 +17,8 @@ const projectSchema = new mongoose.Schema({
   showcaseDescription: { type: String, maxlength: 500 },
   status: {
     type: String,
-    enum: ["completed", "ongoing", "maintenance"],
+    // Partner statuses are additive; existing portfolio statuses remain valid.
+    enum: ["completed", "ongoing", "maintenance", "new", "under_review", "approved", "in_progress", "testing", "on_hold", "cancelled"],
     default: "completed",
   },
   startDate: Date,
@@ -55,6 +56,17 @@ const projectSchema = new mongoose.Schema({
 
   documents: [documentSchema],
 
+  // Partner project fields let external partners submit work without becoming employees.
+  partnerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor", default: null, index: true },
+  serviceType: { type: String, trim: true, default: "" },
+  priority: { type: String, enum: ["Low", "Medium", "High", "Critical", ""], default: "" },
+  expectedBudget: { type: Number, default: 0 },
+  deadline: Date,
+  partnerNotes: { type: String, trim: true, default: "" },
+  internalNotes: { type: String, trim: true, default: "" },
+  assignedEngineer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -68,6 +80,7 @@ projectSchema.index({ isDeleted: 1, isVisibleInShowcase: 1 });
 projectSchema.index({ isFeatured: -1, createdAt: -1 });
 projectSchema.index({ isDeleted: 1, createdBy: 1, createdAt: -1 });
 projectSchema.index({ isDeleted: 1, createdAt: -1 });
+projectSchema.index({ isDeleted: 1, partnerId: 1, createdAt: -1 });
 
 projectSchema.pre("save", function setUpdatedAt(next) {
   this.updatedAt = Date.now();

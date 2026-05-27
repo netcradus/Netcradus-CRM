@@ -34,6 +34,8 @@ const emptyForm = {
   environment: "production",
   createdBy: "",
   collaborators: [],
+  partnerId: "",
+  assignedEngineer: "",
 };
 
 const toInputDate = (date) => date ? new Date(date).toISOString().slice(0, 10) : "";
@@ -84,6 +86,8 @@ export default function ProjectFormPage() {
     const load = async () => {
       const { data } = await projectApi.get(id);
       const createdById = data.project.createdBy?._id || data.project.createdBy || "";
+      const partnerId = data.project.partnerId?._id || data.project.partnerId || "";
+      const assignedEngineer = data.project.assignedEngineer?._id || data.project.assignedEngineer || "";
       setForm({
         ...emptyForm,
         ...data.project,
@@ -92,6 +96,8 @@ export default function ProjectFormPage() {
         techStack: data.project.techStack || [],
         screenshots: data.project.screenshots || [],
         createdBy: createdById,
+        partnerId,
+        assignedEngineer,
         collaborators: (data.project.collaborators || []).map((user) => user._id || user).filter(Boolean),
       });
     };
@@ -177,6 +183,16 @@ export default function ProjectFormPage() {
     userOptions.find((user) => user.id === form.createdBy)?.label || currentUserName || "Current user";
 
   const collaboratorOptions = userOptions.filter((user) => user.id !== form.createdBy);
+  // Admins can link an internal project record to a partner without changing project ownership.
+  const partnerOptions = users.filter((user) => user.role === "partner").map((user) => ({
+    id: user._id,
+    label: user.name || user.email,
+    meta: user.email,
+  }));
+  const engineerOptions = users.filter((user) => user.role !== "partner").map((user) => ({
+    id: user._id,
+    label: user.name || user.email,
+  }));
   const collaboratorEntries = form.collaborators
     .map((userId) => collaboratorOptions.find((user) => user.id === userId) || userOptions.find((user) => user.id === userId))
     .filter(Boolean);
@@ -218,7 +234,7 @@ export default function ProjectFormPage() {
             <TextField label="Name" name="name" value={form.name} onChange={setValue} maxLength={100} required />
             <TextField label="Tagline" name="tagline" value={form.tagline} onChange={setValue} maxLength={200} />
             <TextField label="Industry" name="industry" value={form.industry} onChange={setValue} />
-            <label className="portfolio-form-field">Status<select name="status" value={form.status} onChange={setValue}><option value="completed">Completed</option><option value="ongoing">Ongoing</option><option value="maintenance">Maintenance</option></select></label>
+            <label className="portfolio-form-field">Status<select name="status" value={form.status} onChange={setValue}><option value="completed">Completed</option><option value="ongoing">Ongoing</option><option value="maintenance">Maintenance</option><option value="new">New</option><option value="under_review">Under Review</option><option value="approved">Approved</option><option value="in_progress">In Progress</option><option value="testing">Testing</option><option value="on_hold">On Hold</option><option value="cancelled">Cancelled</option></select></label>
             <TextField label="Start Date" name="startDate" value={form.startDate} onChange={setValue} type="date" />
             <TextField label="End Date" name="endDate" value={form.endDate} onChange={setValue} type="date" />
           </div>
@@ -235,6 +251,24 @@ export default function ProjectFormPage() {
               ) : (
                 <input value={createdByLabel} readOnly />
               )}
+            </label>
+            <label className="portfolio-form-field">
+              Partner
+              <select name="partnerId" value={form.partnerId || ""} onChange={setValue}>
+                <option value="">No partner linked</option>
+                {partnerOptions.map((partner) => (
+                  <option key={partner.id} value={partner.id}>{partner.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="portfolio-form-field">
+              Assigned Engineer
+              <select name="assignedEngineer" value={form.assignedEngineer || ""} onChange={setValue}>
+                <option value="">Pending</option>
+                {engineerOptions.map((engineer) => (
+                  <option key={engineer.id} value={engineer.id}>{engineer.label}</option>
+                ))}
+              </select>
             </label>
             <label className="portfolio-form-field">
               Collaborators
