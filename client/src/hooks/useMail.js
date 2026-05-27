@@ -9,12 +9,29 @@ const MAIL_UNREAD_EVENT = "mail:unread-count";
 
 const authHeaders = (token) => ({
   headers: { Authorization: `Bearer ${token}` },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 function dispatchUnreadCount(unreadCount) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(MAIL_UNREAD_EVENT, { detail: { unreadCount } }));
+}
+
+function mergeUniqueMessages(existingMessages, incomingMessages, { prepend = false } = {}) {
+  const merged = prepend
+    ? [...incomingMessages, ...existingMessages]
+    : [...existingMessages, ...incomingMessages];
+
+  const seenMessageIds = new Set();
+  return merged.filter((message) => {
+    const messageId = String(message?.messageId || "");
+    if (!messageId || seenMessageIds.has(messageId)) {
+      return false;
+    }
+
+    seenMessageIds.add(messageId);
+    return true;
+  });
 }
 
 export function useMail() {
@@ -23,6 +40,7 @@ export function useMail() {
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [selectedMessageId, setSelectedMessageId] = useState(null);
@@ -35,6 +53,7 @@ export function useMail() {
   const [notConnected, setNotConnected] = useState(false);
   const [mailNotice, setMailNotice] = useState(null);
   const socketRef = useRef(null);
+  const loadingMoreRef = useRef(false);
 
   const inboxFolder = useMemo(
     () => folders.find((folder) => String(folder.name || "").toLowerCase().includes("inbox")),
@@ -74,18 +93,29 @@ export function useMail() {
       if (!token || !folderId) return;
 
       try {
-        setLoadingMessages(true);
         const start = Number(options.start || 0);
         const limit = Number(options.limit || 20);
+        const isLoadingMore = start > 0;
+
+        setLoadingMessages(!isLoadingMore);
+        setLoadingMore(isLoadingMore);
+        loadingMoreRef.current = isLoadingMore;
+
         const { data } = await axios.get(apiUrl("/api/mail/messages"), {
           ...authHeaders(token),
           params: { folderId, start, limit },
         });
         const nextMessages = Array.isArray(data.messages) ? data.messages : [];
-        setMessages((current) => (start > 0 ? [...current, ...nextMessages] : nextMessages));
+        setMessages((current) =>
+          start > 0 ? mergeUniqueMessages(current, nextMessages) : mergeUniqueMessages([], nextMessages)
+        );
         setHasMore(nextMessages.length >= limit);
+      } catch (error) {
+        setHasMore(false);
       } finally {
         setLoadingMessages(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
     },
     [token]
@@ -93,9 +123,12 @@ export function useMail() {
 
   const loadMore = useCallback(
     async (folderId) => {
+      if (!folderId || loadingMessages || loadingMoreRef.current || !hasMore || searchQuery) {
+        return;
+      }
       await fetchMessages(folderId, { start: messages.length, limit: 20 });
     },
-    [fetchMessages, messages.length]
+    [fetchMessages, hasMore, loadingMessages, messages.length, searchQuery]
   );
 
   const fetchMessage = useCallback(
@@ -111,6 +144,8 @@ export function useMail() {
         setSelectedMessage(data.message || null);
         setSelectedMessageId(messageId);
         return data.message || null;
+      } catch (error) {
+        return null;
       } finally {
         setLoadingMessage(false);
       }
@@ -157,6 +192,8 @@ export function useMail() {
         });
         setSearchQuery(query.trim());
         setSearchResults(Array.isArray(data.messages) ? data.messages : []);
+      } catch (error) {
+        setSearchResults([]);
       } finally {
         setSearching(false);
       }
@@ -308,21 +345,24 @@ export function useMail() {
 
       setMessages((current) => {
         if (!inboxFolder) return current;
-        return [
-          {
-            messageId: payload.messageId,
-            subject: payload.subject,
-            fromAddress: payload.fromAddress,
-            summary: payload.snippet,
-            receivedTime: payload.receivedAt,
-            hasAttachment: payload.hasAttachments,
-            isRead: false,
-            linkedEntityType: null,
-            linkedEntityId: null,
-            isLinked: false,
-          },
-          ...current,
-        ];
+        return mergeUniqueMessages(
+          current,
+          [
+            {
+              messageId: payload.messageId,
+              subject: payload.subject,
+              fromAddress: payload.fromAddress,
+              summary: payload.snippet,
+              receivedTime: payload.receivedAt,
+              hasAttachment: payload.hasAttachments,
+              isRead: false,
+              linkedEntityType: null,
+              linkedEntityId: null,
+              isLinked: false,
+            },
+          ],
+          { prepend: true }
+        );
       });
     };
 
@@ -345,6 +385,7 @@ export function useMail() {
     loadingFolders,
     loadingMessage,
     loadingMessages,
+    loadingMore,
     mailNotice,
     messages,
     notConnected,

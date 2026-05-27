@@ -121,6 +121,40 @@ function validateEmailAddress(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function shouldRetryMessageLookup(error) {
+  return error?.code === "ZOHO_NOT_FOUND" || error?.code === "ZOHO_API_ERROR";
+}
+
+async function getMessageWithFolderFallback(zohoAccountId, messageId, preferredFolderIds = []) {
+  const allFolders = await zohoMailService.getFolders(zohoAccountId);
+  const candidateFolderIds = [
+    ...preferredFolderIds.filter(Boolean).map((folderId) => String(folderId)),
+    ...allFolders.map((folder) => String(folder.folderId || "")).filter(Boolean),
+  ].filter((folderId, index, array) => array.indexOf(folderId) === index);
+
+  let lastError = null;
+
+  for (const folderId of candidateFolderIds) {
+    try {
+      const message = await zohoMailService.getMessage(zohoAccountId, messageId, folderId);
+      return { message, folderId };
+    } catch (error) {
+      lastError = error;
+      if (!shouldRetryMessageLookup(error)) {
+        throw error;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  const error = new Error("Email not found.");
+  error.code = "ZOHO_NOT_FOUND";
+  throw error;
+}
+
 async function ensureThreadMetadata(req, messageId, folderId, folderName) {
   return EmailThread.findOneAndUpdate(
     { zohoMessageId: String(messageId) },
@@ -205,10 +239,10 @@ async function getMessage(req, res) {
       return res.status(404).json({ success: false, message: "Email not found." });
     }
 
-    const message = await zohoMailService.getMessage(
+    const { message, folderId: resolvedFolderId } = await getMessageWithFolderFallback(
       req.zohoAccount.zohoAccountId,
       messageId,
-      requestedFolderId || thread?.zohoFolderId
+      [requestedFolderId, thread?.zohoFolderId]
     );
     await zohoMailService.markAsRead(req.zohoAccount.zohoAccountId, messageId);
 
@@ -218,7 +252,7 @@ async function getMessage(req, res) {
         $set: {
           zohoAccountId: req.zohoAccount.zohoAccountId,
           ownerUserId: req.user.id,
-          zohoFolderId: requestedFolderId || thread?.zohoFolderId || null,
+          zohoFolderId: resolvedFolderId || requestedFolderId || thread?.zohoFolderId || null,
           subject: message.subject,
           fromAddress: message.fromAddress,
           toAddresses: message.toAddresses,
@@ -234,6 +268,7 @@ async function getMessage(req, res) {
       success: true,
       message: {
         ...message,
+        folderId: resolvedFolderId || requestedFolderId || thread?.zohoFolderId || null,
         isLinked: Boolean(thread?.linkedEntityType && thread?.linkedEntityId),
         linkedEntityType: thread?.linkedEntityType || null,
         linkedEntityId: thread?.linkedEntityId || null,
@@ -241,6 +276,13 @@ async function getMessage(req, res) {
       },
     });
   } catch (error) {
+    console.warn("[Zoho Mail] Failed to open message", {
+      code: error?.code,
+      message: error?.message,
+      zohoMessageId: req.params?.messageId,
+      requestedFolderId: req.query?.folderId || null,
+      userId: req.user?.id || null,
+    });
     return mapMailError(error, res) || res.status(500).json({ success: false, message: "Failed to fetch message." });
   }
 }

@@ -10,6 +10,7 @@ const OAUTH_SCOPES = [
   "ZohoMail.folders.ALL",
   "ZohoMail.accounts.ALL",
   "ZohoMail.attachments.ALL",
+  "ZohoMail.organization.accounts.READ",
 ];
 
 function createReconnectRequiredError(message = "Zoho Mail must be reconnected.") {
