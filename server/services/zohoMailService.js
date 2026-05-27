@@ -74,8 +74,16 @@ async function request(config, allowRetry = true) {
           },
         });
       } catch (retryError) {
-        const authError = new Error("Zoho authentication expired.");
+        const retryMessage =
+          retryError?.response?.data?.data?.moreInfo ||
+          retryError?.response?.data?.status?.description ||
+          retryError?.response?.data?.message ||
+          retryError?.message ||
+          "Zoho authentication expired.";
+        const authError = new Error(retryMessage);
         authError.code = "ZOHO_AUTH_EXPIRED";
+        authError.status = retryError?.response?.status || error?.response?.status || null;
+        authError.response = retryError?.response || error?.response || null;
         throw authError;
       }
     }
@@ -246,10 +254,29 @@ async function listOrganizationAccounts() {
     return [];
   }
 
-  const response = await request({
-    method: "GET",
-    url: `/organization/${process.env.ZOHO_ORG_ID}/accounts`,
-  });
+  let response;
+
+  try {
+    response = await request({
+      method: "GET",
+      url: `/organization/${process.env.ZOHO_ORG_ID}/accounts`,
+    });
+  } catch (error) {
+    console.warn("[Zoho Mail] Organization account lookup failed", {
+      zohoOrgId: process.env.ZOHO_ORG_ID,
+      code: error?.code || null,
+      status: error?.response?.status || error?.status || null,
+      message: error?.message || null,
+      response:
+        error?.response?.data?.data?.moreInfo ||
+        error?.response?.data?.status?.description ||
+        error?.response?.data?.message ||
+        error?.response?.data?.data ||
+        error?.response?.data ||
+        null,
+    });
+    throw error;
+  }
 
   return normalizeAccountsResponse(response.data);
 }
