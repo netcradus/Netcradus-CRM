@@ -79,6 +79,12 @@ const PasswordManager          = lazy(() => import("./features/PasswordManager/P
 const OnboardingPage           = lazy(() => import("./features/Onboarding/OnboardingPage"));
 const MailPage                 = lazy(() => import("./features/Mail/MailPage"));
 const ZohoSettingsPanel        = lazy(() => import("./features/Mail/ZohoSettingsPanel"));
+const PartnerDashboard         = lazy(() => import("./features/Partner/PartnerDashboard"));
+const PartnerVendors           = lazy(() => import("./features/Partner/PartnerVendors"));
+const PartnerProjects          = lazy(() => import("./features/Partner/PartnerProjects"));
+const PartnerProjectDetail     = lazy(() => import("./features/Partner/PartnerProjectDetail"));
+const AdminPartners            = lazy(() => import("./features/Partner/AdminPartners"));
+const AdminPartnerDetail       = lazy(() => import("./features/Partner/AdminPartnerDetail"));
 
 /* ========== Protected Wrapper ========== */
 function ProtectedApp() {
@@ -119,7 +125,9 @@ function RoleRoute({ roles, children, redirectTo = "/dashboard" }) {
   
   const allowed = canAccess(role, normalizedRoles);
   if (!allowed) {
-    return <Navigate to={redirectTo} replace />;
+    // Partners attempting employee/internal routes are returned to the partner dashboard.
+    const partnerRedirect = role === "partner" ? "/partner/dashboard" : redirectTo;
+    return <Navigate to={partnerRedirect} replace state={{ message: "This section is not available for Partner accounts." }} />;
   }
   return children;
 }
@@ -149,10 +157,18 @@ const App = () => {
 
             {/* ================= PROTECTED ================= */}
             <Route element={<ProtectedApp />}>
-              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/onboarding" element={<RoleRoute roles={ACCESS_GROUPS.personal}><OnboardingPage /></RoleRoute>} />
               <Route element={<ProtectedLayout />}>
-                <Route path="/welcome" element={<WelcomeAnimation />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/welcome" element={<WelcomeAnimation />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+
+              {/* Partner panel routes are isolated from employee modules but available to admin/super admin for support. */}
+              <Route path="/partner/dashboard" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerDashboard /></RoleRoute>} />
+              <Route path="/partner/vendors" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerVendors /></RoleRoute>} />
+              <Route path="/partner/projects" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerProjects /></RoleRoute>} />
+              <Route path="/partner/projects/:id" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerProjectDetail /></RoleRoute>} />
+              <Route path="/admin/partners" element={<RoleRoute roles={ACCESS_GROUPS.admin}><AdminPartners /></RoleRoute>} />
+              <Route path="/admin/partners/:id" element={<RoleRoute roles={ACCESS_GROUPS.admin}><AdminPartnerDetail /></RoleRoute>} />
               
               <Route path="/user-management" element={
                 <RoleRoute roles="super_user">
@@ -305,7 +321,7 @@ const App = () => {
                   <AdminAttendanceDashboard />
                 </RoleRoute>
               } />
-              <Route path="/leave" element={<LeavePage />} />
+              <Route path="/leave" element={<RoleRoute roles={ACCESS_GROUPS.personal}><LeavePage /></RoleRoute>} />
               <Route path="/holidays" element={<RoleRoute roles={ACCESS_GROUPS.peopleOps}><HolidaysPage /></RoleRoute>} />
               <Route path="/attendance-reports" element={<RoleRoute roles={ACCESS_GROUPS.attendanceAdmin}><AttendanceReportsPage /></RoleRoute>} />
 

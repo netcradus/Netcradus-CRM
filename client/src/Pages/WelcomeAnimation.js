@@ -22,7 +22,8 @@ const WelcomeAnimation = () => {
         }
 
         const timer = setTimeout(() => {
-            navigate("/dashboard", { replace: true });
+            // Partner accounts land on the external partner panel instead of employee dashboards.
+            navigate(userRole === "partner" ? "/partner/dashboard" : "/dashboard", { replace: true });
         }, 3000);
 
         return () => clearTimeout(timer);
