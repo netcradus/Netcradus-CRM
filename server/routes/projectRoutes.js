@@ -6,6 +6,14 @@ const { verifyPasswordLimiter, projectRouteLimiter } = require("../middleware/ra
 
 router.use(projectRouteLimiter);
 
+// Partner accounts use /api/partner/projects so internal project APIs stay employee/admin scoped.
+router.use((req, res, next) => {
+  if (req.user?.role === "partner") {
+    return res.status(403).json({ success: false, message: "This section is not available for Partner accounts." });
+  }
+  next();
+});
+
 router.get("/users", projectController.getProjectUsers);
 router.get("/showcase", rbac(["super_user"]), projectController.getShowcaseProjects);
 router.post("/", projectController.createProject);

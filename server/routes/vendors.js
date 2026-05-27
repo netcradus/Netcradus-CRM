@@ -8,7 +8,7 @@ const vendorsController = require('../controllers/vendorsController');
 router.get('/', vendorsController.getVendors);
 
 // Get a single vendor by ID
-router.get('/:id', vendorsController.getVendor);
+router.get('/:id', vendorsController.getVendorById);
 
 // Create a new vendor
 router.post('/', vendorsController.createVendor);

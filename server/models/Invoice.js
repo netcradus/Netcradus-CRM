@@ -18,6 +18,9 @@ const invoiceSchema = new mongoose.Schema(
     sourceKey: { type: String, trim: true },
     sourceTitle: { type: String, trim: true },
     quantity: { type: Number, default: 0 },
+    // Optional partner project link powers partner invoice notifications without changing existing invoices.
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project", default: null },
+    partnerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }
 );
