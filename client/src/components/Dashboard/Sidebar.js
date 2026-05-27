@@ -5,7 +5,7 @@ import {
   Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3,
   Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box,
   BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare,
-  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail, Settings
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
@@ -75,22 +75,10 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
   const menuItems = useMemo(() => {
     const items = [];
-    // Partner navigation is intentionally isolated from employee/admin modules like attendance and HR.
-    if (role === "partner") {
-      return [
-        { label: "Dashboard", icon: <Home size={20} />, path: "/partner/dashboard", roles: ACCESS_GROUPS.partner },
-        { label: "My Vendors", icon: <Truck size={20} />, path: "/partner/vendors", roles: ACCESS_GROUPS.partner },
-        { label: "My Projects", icon: <Layout size={20} />, path: "/partner/projects", roles: ACCESS_GROUPS.partner },
-        { label: "Profile / Settings", icon: <Settings size={20} />, path: "/my-profile", roles: ACCESS_GROUPS.partner },
-      ];
-    }
-
     items.push({ label: "Home", icon: <Home size={20} />, path: "/dashboard", roles: ACCESS_GROUPS.all });
 
     if (canAccess(role, ACCESS_GROUPS.userAdmin)) {
       items.push({ label: "User Management", icon: <Users size={20} />, path: "/user-management", roles: ACCESS_GROUPS.userAdmin });
-      // Super users get a dedicated partner overview without mixing partners into employee tables.
-      items.push({ label: "Partners", icon: <Briefcase size={20} />, path: "/admin/partners", roles: ACCESS_GROUPS.userAdmin });
       items.push({ label: "Employee Hierarchy", icon: <Network size={20} />, path: "/organization-chart", roles: ACCESS_GROUPS.userAdmin });
     }
 

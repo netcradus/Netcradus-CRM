@@ -7,7 +7,6 @@ export const ALL_ROLES = [
   "hr",
   "it",
   "digital_media",
-  "partner",
 ];
 
 export const ACCESS_GROUPS = {
@@ -38,13 +37,9 @@ export const ACCESS_GROUPS = {
   forecasts: ["super_user", "management", "sales"],
   marketing: ["super_user", "digital_media"],
   reports: ["super_user", "digital_media"],
-  // Partners are external accounts and must not see attendance/HR employee flows.
-  attendance: ALL_ROLES.filter((role) => role !== "partner"),
+  attendance: ALL_ROLES,
   attendanceAdmin: ["super_user", "admin", "hr"],
-  // Personal employee tools exclude partners; partner profile is routed explicitly.
-  personal: ALL_ROLES.filter((role) => role !== "partner"),
-  partner: ["partner", "admin", "super_user"],
-  admin: ["admin", "super_user"],
+  personal: ALL_ROLES,
 };
 
 export function normalizeRole(role) {

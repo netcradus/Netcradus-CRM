@@ -691,11 +691,6 @@ const UserManagement = () => {
                   <option value="digital_media">
                     Digital Media
                   </option>
-
-                  {/* Partner is an external role, selectable only from super-user management. */}
-                  <option value="partner">
-                    Partner
-                  </option>
                 </select>
               </div>
 
@@ -918,11 +913,6 @@ const UserManagement = () => {
 
                   <option value="digital_media">
                     Digital Media
-                  </option>
-
-                  {/* Partner is an external role, selectable only from super-user management. */}
-                  <option value="partner">
-                    Partner
                   </option>
                 </select>
               </div>

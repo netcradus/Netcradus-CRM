@@ -9,22 +9,6 @@ const conversationSchema = new mongoose.Schema(
         required: true,
       },
     ],
-    isGroup: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-    groupName: {
-      type: String,
-      trim: true,
-      maxlength: 120,
-      default: "",
-    },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
     lastMessageId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",

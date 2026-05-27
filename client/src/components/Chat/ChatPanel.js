@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, EllipsisVertical, Expand, MessageCircleMore, Plus, Search, Send, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, EllipsisVertical, Expand, MessageCircleMore, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { useChat } from "../../context/ChatContext";
 // import "./ChatPanel.css";
 
@@ -18,30 +18,9 @@ function getInitials(name = "User") {
   return String(name).split(" ").filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase() || "").join("");
 }
 
-function getConversationTitle(conversation) {
-  if (!conversation) return "Conversation";
-  return conversation.isGroup
-    ? conversation.displayName || conversation.groupName || "Group chat"
-    : conversation.counterpart?.name || "User";
-}
-
-function getConversationSubtitle(conversation) {
-  if (!conversation) return "";
-  if (conversation.isGroup) {
-    const count = conversation.participants?.length || 0;
-    const onlineCount = (conversation.participants || []).filter((participant) => participant.isOnline).length;
-    return `${count} member${count === 1 ? "" : "s"} - ${onlineCount} online`;
-  }
-  return conversation.counterpart?.isOnline ? "Online" : "Offline";
-}
-
-function getMemberStatus(user) {
-  return user?.isOnline ? "Online" : "Offline";
-}
-
 export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   const {
-    conversations, createConversation, createGroupConversation, directory, fetchDirectory, hideConversation,
+    conversations, createConversation, directory, fetchDirectory, hideConversation,
     loadMoreMessages, loadingConversations, messages,
     pagination, selectConversation, selectedConversation, sendMessage,
     sendTyping, typingLabel, updateMessage,
@@ -51,20 +30,14 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   const [composerValue, setComposerValue] = useState("");
   const [directorySearch, setDirectorySearch] = useState("");
   const [showNewChat, setShowNewChat] = useState(false);
-  const [newChatMode, setNewChatMode] = useState("direct");
-  const [groupName, setGroupName] = useState("");
-  const [selectedGroupUserIds, setSelectedGroupUserIds] = useState([]);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [toastMessage, setToastMessage] = useState("");
   const [showThreadMenu, setShowThreadMenu] = useState(false);
-  const [showGroupProfile, setShowGroupProfile] = useState(false);
   
   const currentUserId = localStorage.getItem("userId");
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const threadMenuRef = useRef(null);
-  const toastTimeoutRef = useRef(null);
 
   const [view, setView] = useState("list"); // list or detail
   const isCompact = mode === "launcher";
@@ -79,7 +52,6 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
   useEffect(() => {
     if (selectedConversation?._id) {
       setView("detail");
-      setShowGroupProfile(false);
     }
   }, [selectedConversation?._id]);
 
@@ -87,8 +59,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     const needle = searchTerm.trim().toLowerCase();
     if (!needle) return conversations;
     return conversations.filter(c => {
-      const participantNames = (c.participants || []).map((participant) => participant.name).join(" ");
-      const target = `${getConversationTitle(c)} ${participantNames} ${c.lastMessage?.messageText || ""}`.toLowerCase();
+      const target = `${c.counterpart?.name || ""} ${c.lastMessage?.messageText || ""}`.toLowerCase();
       return target.includes(needle);
     });
   }, [conversations, searchTerm]);
@@ -103,16 +74,6 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     if (!showNewChat) return;
     fetchDirectory(directorySearch);
   }, [directorySearch, fetchDirectory, showNewChat]);
-
-  useEffect(() => {
-    return () => clearTimeout(toastTimeoutRef.current);
-  }, []);
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => setToastMessage(""), 3000);
-  };
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
@@ -148,39 +109,6 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     } catch (err) { setErrorMessage(err.message); }
   };
 
-  const toggleGroupUser = (userId) => {
-    setSelectedGroupUserIds((current) =>
-      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]
-    );
-  };
-
-  const startGroupConversation = async () => {
-    try {
-      if (!groupName.trim()) {
-        const message = "Please enter group name";
-        setErrorMessage(message);
-        showToast(message);
-        return;
-      }
-      if (selectedGroupUserIds.length < 1) {
-        setErrorMessage("Select at least one person for a group");
-        return;
-      }
-
-      const conv = await createGroupConversation(
-        { groupName: groupName.trim(), participantIds: selectedGroupUserIds },
-        { openLauncher: isCompact }
-      );
-      await selectConversation(conv._id, { openLauncher: isCompact });
-      setShowNewChat(false);
-      setDirectorySearch("");
-      setGroupName("");
-      setSelectedGroupUserIds([]);
-      setNewChatMode("direct");
-      setView("detail");
-    } catch (err) { setErrorMessage(err.message); }
-  };
-
   const handleBack = () => {
     setView("list");
   };
@@ -210,59 +138,24 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
         {showNewChat && (
           <div className="chat-directory">
             <div className="chat-directory__head">
-              <span>{newChatMode === "group" ? "New Group" : "New Conversation"}</span>
+              <span>New Conversation</span>
               <button type="button" onClick={() => setShowNewChat(false)}><X size={14} /></button>
             </div>
-            <div className="chat-mode-tabs">
-              <button type="button" className={newChatMode === "direct" ? "is-active" : ""} onClick={() => setNewChatMode("direct")}>Direct</button>
-              <button type="button" className={newChatMode === "group" ? "is-active" : ""} onClick={() => setNewChatMode("group")}>Group</button>
-            </div>
-            {toastMessage && (
-              <div className="chat-toast" role="alert" aria-live="assertive">
-                <AlertCircle size={15} />
-                <span>{toastMessage}</span>
-              </div>
-            )}
-            {newChatMode === "group" && (
-              <input
-                className="chat-group-name-input"
-                value={groupName}
-                onChange={e => setGroupName(e.target.value)}
-                placeholder="Group name"
-                maxLength={120}
-              />
-            )}
             <div className="chat-search" style={{ height: '36px', marginBottom: 'var(--space-2)' }}>
               <input value={directorySearch} onChange={e => setDirectorySearch(e.target.value)} placeholder="Find user..." />
             </div>
             <div className="chat-directory__list">
-              {(newChatMode === "group" ? directory : availableDirectory(directory, conversations)).map(user => (
-                <button key={user._id} className={`chat-directory__item ${selectedGroupUserIds.includes(user._id) ? "is-selected" : ""}`} onClick={() => newChatMode === "group" ? toggleGroupUser(user._id) : startConversation(user._id)}>
+              {availableDirectory(directory, conversations).map(user => (
+                <button key={user._id} className="chat-directory__item" onClick={() => startConversation(user._id)}>
                   <div className="chat-avatar">{getInitials(user.name)}</div>
                   <div className="chat-directory__meta">
                     <strong>{user.name}</strong>
                     <small>{user.email}</small>
-                    {newChatMode === "group" && (
-                      <small className={user.isOnline ? "chat-member-status is-online" : "chat-member-status"}>
-                        {getMemberStatus(user)}
-                      </small>
-                    )}
                   </div>
-                  {newChatMode === "group"
-                    ? <span className="chat-select-mark">{selectedGroupUserIds.includes(user._id) && <Check size={14} />}</span>
-                    : <div className={`chat-status-dot ${user.isOnline ? "is-online" : ""}`} />}
+                  <div className={`chat-status-dot ${user.isOnline ? "is-online" : ""}`} />
                 </button>
               ))}
             </div>
-            {newChatMode === "group" && (
-              <div className="chat-create-group-footer">
-                <span>{selectedGroupUserIds.length} selected</span>
-                <button type="button" className="chat-create-group-btn" onClick={startGroupConversation}>
-                  <Users size={15} />
-                  Create Group
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -273,10 +166,10 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                   selectConversation(c._id, { openLauncher: isCompact });
                   setView("detail");
                 }}>
-                <div className="chat-avatar">{c.isGroup ? <Users size={17} /> : getInitials(c.counterpart?.name)}</div>
+                <div className="chat-avatar">{getInitials(c.counterpart?.name)}</div>
                 <div className="chat-conversation__body">
                   <div className="chat-conversation__top">
-                    <strong>{getConversationTitle(c)}</strong>
+                    <strong>{c.counterpart?.name}</strong>
                     <time>{formatConversationTime(c.lastMessageAt)}</time>
                   </div>
                   <p className="chat-conversation__preview">{c.lastMessage?.messageText || "No messages"}</p>
@@ -293,26 +186,14 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
         {selectedConversation ? (
           <>
             <div className="chat-thread__header">
-              <div
-                role={selectedConversation.isGroup ? "button" : undefined}
-                tabIndex={selectedConversation.isGroup ? 0 : undefined}
-                className={`chat-thread__identity ${selectedConversation.isGroup ? "is-clickable" : ""}`}
-                onClick={() => selectedConversation.isGroup && setShowGroupProfile((current) => !current)}
-                onKeyDown={(event) => {
-                  if (!selectedConversation.isGroup) return;
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setShowGroupProfile((current) => !current);
-                  }
-                }}
-              >
+              <div className="chat-thread__identity">
                 {(isMobile || isCompact) && <button className="chat-round-btn" onClick={handleBack} style={{ marginRight: 'var(--space-2)' }}><ArrowLeft size={20} /></button>}
-                <div className="chat-avatar">{selectedConversation.isGroup ? <Users size={18} /> : getInitials(selectedConversation.counterpart?.name)}</div>
+                <div className="chat-avatar">{getInitials(selectedConversation.counterpart?.name)}</div>
                 <div>
-                  <h3>{getConversationTitle(selectedConversation)}</h3>
+                  <h3>{selectedConversation.counterpart?.name}</h3>
                   <p>
-                    {!selectedConversation.isGroup && <span className={`chat-status-dot ${selectedConversation.counterpart?.isOnline ? "is-online" : ""}`} />}
-                    {getConversationSubtitle(selectedConversation)}
+                    <span className={`chat-status-dot ${selectedConversation.counterpart?.isOnline ? "is-online" : ""}`} />
+                    {selectedConversation.counterpart?.isOnline ? "Online" : "Offline"}
                   </p>
                 </div>
               </div>
@@ -331,32 +212,6 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                 {isCompact && !isMobile && <button type="button" className="chat-round-btn" onClick={onClose}><X size={18} /></button>}
               </div>
             </div>
-            {selectedConversation.isGroup && showGroupProfile && (
-              <div className="chat-group-profile">
-                <div className="chat-group-profile__head">
-                  <div>
-                    <h4>{getConversationTitle(selectedConversation)}</h4>
-                    <p>{getConversationSubtitle(selectedConversation)}</p>
-                  </div>
-                  <button type="button" className="chat-round-btn" onClick={() => setShowGroupProfile(false)}><X size={16} /></button>
-                </div>
-                <div className="chat-group-member-list">
-                  {(selectedConversation.participants || []).map((member) => (
-                    <div key={member._id} className="chat-group-member">
-                      <div className="chat-avatar chat-avatar--small">{getInitials(member.name)}</div>
-                      <div>
-                        <strong>{member._id === currentUserId ? `${member.name || "You"} (You)` : member.name || "User"}</strong>
-                        <small>{member.email || member.role || ""}</small>
-                      </div>
-                      <span className={member.isOnline ? "chat-member-status is-online" : "chat-member-status"}>
-                        <span className={`chat-status-dot ${member.isOnline ? "is-online" : ""}`} />
-                        {getMemberStatus(member)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="chat-thread__messages">
               {pagination.hasMore && <button className="chat-load-more" onClick={() => loadMoreMessages(selectedConversation._id)}>Load More</button>}
@@ -366,7 +221,6 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                   <article key={m._id} className={`chat-bubble ${isOwn ? "chat-bubble--own" : ""} ${m.isDeleted ? "is-deleted" : ""}`} data-deleted={m.isDeleted ? "true" : "false"}>
                     {!isOwn && <div className="chat-avatar chat-avatar--small">{getInitials(m.sender?.name)}</div>}
                     <div className="chat-bubble__body">
-                      {selectedConversation.isGroup && !isOwn && <strong className="chat-bubble__sender">{m.sender?.name || "User"}</strong>}
                       <p>{m.messageText}</p>
                       <footer>
                         <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>

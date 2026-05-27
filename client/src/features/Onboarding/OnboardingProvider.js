@@ -50,8 +50,7 @@ export function OnboardingProvider({ children }) {
   });
 
   const role = (localStorage.getItem("userRole") || "").trim().toLowerCase();
-  // Partner accounts skip employee onboarding entirely.
-  const isExempt = role === "super_user" || role === "partner";
+  const isExempt = role === "super_user";
 
   const refreshStatus = useCallback(async () => {
     if (isExempt) {

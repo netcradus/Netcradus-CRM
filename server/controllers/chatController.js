@@ -2,23 +2,10 @@ const mongoose = require("mongoose");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const User = require("../models/User");
-const { emitToUsers, getPresenceForUsers } = require("../socket");
+const { getPresenceForUsers } = require("../socket");
 const { buildConversationSummary, normalizeMessage } = require("../utils/chatSerializers");
 
 const MESSAGE_LIMIT_DEFAULT = 50;
-
-function buildUnreadMessageMatch(conversationIds, currentUserId) {
-  return {
-    conversationId: { $in: conversationIds },
-    senderId: { $ne: currentUserId },
-    isDeleted: false,
-    $or: [
-      { readBy: { $ne: currentUserId } },
-      { readBy: { $exists: false }, isRead: false },
-      { readBy: { $size: 0 }, isRead: false },
-    ],
-  };
-}
 
 async function ensureConversationMember(conversationId, userId) {
   if (!mongoose.Types.ObjectId.isValid(conversationId)) return null;
@@ -36,7 +23,7 @@ async function getConversations(req, res) {
       participants: currentUserId,
       hiddenFor: { $ne: currentUserId },
     })
-      .select("participants isGroup groupName createdBy hiddenFor lastMessageId lastMessageAt updatedAt")
+      .select("participants hiddenFor lastMessageId lastMessageAt updatedAt")
       .populate("participants", "_id name email role department lastSeenAt")
       .populate({
         path: "lastMessageId",
@@ -50,7 +37,12 @@ async function getConversations(req, res) {
     const unreadCounts = conversationIds.length
       ? await Message.aggregate([
           {
-            $match: buildUnreadMessageMatch(conversationIds, currentUserId),
+            $match: {
+              conversationId: { $in: conversationIds },
+              senderId: { $ne: currentUserId },
+              isRead: false,
+              isDeleted: false,
+            },
           },
           {
             $group: {
@@ -131,73 +123,7 @@ async function getConversationMessages(req, res) {
 async function createConversation(req, res) {
   try {
     const currentUserId = String(req.user._id);
-    const { participantId, participantIds, groupName, isGroup } = req.body;
-    const creatingGroup = Boolean(isGroup || Array.isArray(participantIds));
-
-    if (creatingGroup) {
-      const selectedParticipantIds = [...new Set((participantIds || []).map(String))]
-        .filter((id) => id !== currentUserId && mongoose.Types.ObjectId.isValid(id));
-      const trimmedGroupName = String(groupName || "").trim();
-
-      if (!trimmedGroupName) {
-        return res.status(400).json({ success: false, message: "Group name is required" });
-      }
-
-      if (selectedParticipantIds.length < 1) {
-        return res.status(400).json({ success: false, message: "Select at least one person for a group" });
-      }
-
-      const users = await User.find({
-        _id: { $in: selectedParticipantIds },
-        isDisabled: { $ne: true },
-      }).select("_id");
-
-      if (users.length !== selectedParticipantIds.length) {
-        return res.status(404).json({ success: false, message: "One or more selected users were not found" });
-      }
-
-      let conversation = await Conversation.create({
-        participants: [currentUserId, ...selectedParticipantIds],
-        isGroup: true,
-        groupName: trimmedGroupName,
-        createdBy: currentUserId,
-        lastMessageAt: new Date(),
-        hiddenFor: [],
-      });
-
-      conversation = await Conversation.findById(conversation._id)
-        .populate("participants", "_id name email role department lastSeenAt")
-        .populate({
-          path: "lastMessageId",
-          populate: { path: "senderId", select: "_id name email" },
-        });
-
-      const presenceMap = getPresenceForUsers(conversation.participants.map((participant) => String(participant._id)));
-      await Promise.all(
-        conversation.participants.map(async (participant) => {
-          const participantId = String(participant._id);
-          emitToUsers([participantId], "conversation_created", {
-            conversation: buildConversationSummary(conversation.toObject(), participantId, 0, presenceMap),
-          });
-        })
-      );
-
-      const notifyUserIds = selectedParticipantIds.filter((userId) => userId !== currentUserId);
-      if (notifyUserIds.length) {
-        const { createNotifications } = require("../services/taskNotificationService");
-        await createNotifications({
-          userIds: notifyUserIds,
-          message: `${req.user.name || "Someone"} added you to ${trimmedGroupName}`,
-          targetPath: "/messages",
-          type: "chat_group",
-        });
-      }
-
-      return res.status(201).json({
-        success: true,
-        data: buildConversationSummary(conversation.toObject(), currentUserId, 0, presenceMap),
-      });
-    }
+    const { participantId } = req.body;
 
     if (!participantId || !mongoose.Types.ObjectId.isValid(participantId)) {
       return res.status(400).json({ success: false, message: "A valid participant is required" });
@@ -218,7 +144,6 @@ async function createConversation(req, res) {
 
     let conversation = await Conversation.findOne({
       participants: { $all: [currentUserId, participantId] },
-      isGroup: { $ne: true },
       $expr: { $eq: [{ $size: "$participants" }, 2] },
     })
       .populate("participants", "_id name email role department lastSeenAt")
