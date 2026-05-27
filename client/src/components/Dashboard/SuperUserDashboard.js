@@ -44,6 +44,7 @@ const SuperUserDashboard = () => {
   const [users, setUsers] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedGraph, setSelectedGraph] = useState("liveAttendance");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const [error, setError] = useState("");
   const userName = localStorage.getItem("userName") || "Super User";
@@ -173,6 +174,103 @@ const SuperUserDashboard = () => {
     }
   };
 
+  const renderSelectedGraph = () => {
+    switch (selectedGraph) {
+      case "roleDistribution":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <PieChart>
+              <Pie
+                data={roleDistributionData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={90}
+                outerRadius={130}
+                paddingAngle={4}
+              >
+                {roleDistributionData.map((entry, index) => (
+                  <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+      case "registeredRoles":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <BarChart data={registeredRoleData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip />
+              <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      case "systemCoverage":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <LineChart data={systemHealthTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="var(--color-accent)"
+                strokeWidth={2}
+                dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        );
+      case "liveAttendance":
+      default:
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <BarChart data={liveAttendanceChartData}>
+              <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
+              <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+    }
+  };
+
+  const graphTabs = [
+    {
+      key: "liveAttendance",
+      label: "Live Attendance",
+      value: liveAttendanceChartData.reduce((total, item) => total + item.count, 0),
+      accent: "var(--color-accent)",
+    },
+    {
+      key: "roleDistribution",
+      label: "Role Distribution",
+      value: roleDistributionData.reduce((total, item) => total + item.value, 0),
+      accent: "var(--color-warning)",
+    },
+    {
+      key: "registeredRoles",
+      label: "Registered Roles",
+      value: registeredRoleData.reduce((total, item) => total + item.count, 0),
+      accent: "var(--color-info)",
+    },
+    {
+      key: "systemCoverage",
+      label: "System Coverage",
+      value: systemHealthTrendData.reduce((max, item) => Math.max(max, item.total), 0),
+      accent: "var(--color-success)",
+    },
+  ];
+
+  const selectedGraphMeta = graphTabs.find((graph) => graph.key === selectedGraph) || graphTabs[0];
+
   return (
     <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
       <div className="page-header">
@@ -235,38 +333,24 @@ const SuperUserDashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
-         <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Live System Attendance</h3>
-            <ResponsiveContainer width="100%" height={300}>
-               <BarChart data={liveAttendanceChartData}>
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
-                  <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                  <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
-                  <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
-               </BarChart>
-            </ResponsiveContainer>
-         </div>
-         <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Role Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-               <PieChart>
-                  <Pie
-                    data={roleDistributionData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {roleDistributionData.map((entry, index) => (
-                      <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-               </PieChart>
-            </ResponsiveContainer>
-         </div>
+      <div className="graph-tab-grid">
+        {graphTabs.map((graph) => (
+          <button
+            key={graph.key}
+            type="button"
+            className={`graph-tab-card ${selectedGraph === graph.key ? "is-active" : ""}`}
+            style={{ "--graph-accent": graph.accent }}
+            onClick={() => setSelectedGraph(graph.key)}
+          >
+            <span className="graph-tab-label">{graph.label}</span>
+            <span className="graph-tab-value">{graph.value}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="nc-card graph-expanded-card">
+        <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-lg)' }}>{selectedGraphMeta.label}</h3>
+        {renderSelectedGraph()}
       </div>
 
       {selectedRole && (
@@ -279,41 +363,6 @@ const SuperUserDashboard = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
-        <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Registered Users by Role</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={registeredRoleData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
-                <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-        </div>
-
-        <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>System Coverage Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={systemHealthTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
-                <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="var(--color-accent)"
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-        </div>
-      </div>
-      
       <div className="nc-card" style={{ marginTop: 'var(--space-6)' }}>
         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Team Attendance Live</h3>
         <AttendanceWidget />

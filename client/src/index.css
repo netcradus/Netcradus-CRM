@@ -974,6 +974,57 @@ ol {
   margin-top: 12px;
 }
 
+.graph-tab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.graph-tab-card {
+  min-height: 128px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-radius: 24px;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.015) 100%), var(--color-bg-surface);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base), box-shadow var(--transition-base);
+}
+
+.graph-tab-card:hover,
+.graph-tab-card.is-active {
+  transform: translateY(-1px);
+  border-color: var(--graph-accent, var(--color-accent));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.018) 100%), var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.graph-tab-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: var(--font-bold);
+  text-align: left;
+}
+
+.graph-tab-value {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: clamp(1.9rem, 2.5vw, 2.8rem);
+  line-height: 1;
+  color: var(--graph-accent, var(--color-accent));
+}
+
+.graph-expanded-card {
+  margin-bottom: var(--space-6);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
