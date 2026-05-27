@@ -4,6 +4,8 @@ const Project = require("../models/Project");
 const Document = require("../models/Document");
 const AuditLog = require("../models/AuditLog");
 const User = require("../models/User");
+const ProjectTimeline = require("../models/ProjectTimeline");
+const partnerNotifications = require("../services/partnerNotificationService");
 
 const catchAsync = (fn) => (req, res) =>
   Promise.resolve(fn(req, res)).catch((err) => {
@@ -44,6 +46,15 @@ const PROJECT_FIELDS = [
   "environment",
   "createdBy",
   "collaborators",
+  "partnerId",
+  "vendorId",
+  "assignedEngineer",
+  "serviceType",
+  "priority",
+  "expectedBudget",
+  "deadline",
+  "partnerNotes",
+  "internalNotes",
 ];
 
 const SHOWCASE_FIELDS = [
@@ -81,10 +92,16 @@ const PROJECT_LIST_FIELDS = [
   "updatedAt",
   "createdBy",
   "collaborators",
+  "partnerId",
+  "vendorId",
+  "serviceType",
+  "priority",
+  "deadline",
+  "assignedEngineer",
 ].join(" ");
 
 const URL_FIELDS = ["liveUrl", "stagingUrl", "clientWebsite", "githubUrl"];
-const STATUSES = ["completed", "ongoing", "maintenance"];
+const STATUSES = ["completed", "ongoing", "maintenance", "new", "under_review", "approved", "in_progress", "testing", "on_hold", "cancelled"];
 const ENVIRONMENTS = ["production", "staging", "both"];
 
 const trimString = (value) => (typeof value === "string" ? value.trim() : value);
@@ -146,11 +163,11 @@ const buildProjectPayload = (body, allowedFields = PROJECT_FIELDS) => {
       payload.collaborators = normalizeUserIds(value);
     } else if (field === "screenshots") {
       payload.screenshots = normalizeStrings(value, 10);
-    } else if (field === "createdBy") {
-      payload.createdBy = mongoose.Types.ObjectId.isValid(value) ? value : undefined;
+    } else if (["createdBy", "partnerId", "vendorId", "assignedEngineer"].includes(field)) {
+      payload[field] = mongoose.Types.ObjectId.isValid(value) ? value : field === "createdBy" ? undefined : null;
     } else if (field === "thumbnail") {
       payload.thumbnail = trimString(value) || null;
-    } else if (["startDate", "endDate"].includes(field)) {
+    } else if (["startDate", "endDate", "deadline"].includes(field)) {
       payload[field] = value ? new Date(value) : null;
     } else if (typeof value === "string") {
       payload[field] = trimString(value);
@@ -187,7 +204,9 @@ const findProjectWithUsers = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   return Project.findOne({ _id: id, isDeleted: false })
     .populate("createdBy", "name email role")
-    .populate("collaborators", "name email role");
+    .populate("collaborators", "name email role")
+    .populate("partnerId", "name email role")
+    .populate("assignedEngineer", "name email role");
 };
 
 const isSuperUser = (user) => String(user?.role || "").trim().toLowerCase() === "super_user";
@@ -255,8 +274,24 @@ exports.updateProject = catchAsync(async (req, res) => {
   const project = await findProject(req.params.id);
   if (!ensureProjectAccess(project, req, res)) return;
 
+  // Partner notifications are emitted only for partner-linked projects when admin/internal fields change.
+  const previousStatus = project.status;
+  const previousEngineer = String(project.assignedEngineer || "");
+  const previousInternalNotes = project.internalNotes || "";
+
   Object.assign(project, payload, { updatedBy: req.user.id, updatedAt: Date.now() });
   await project.save();
+
+  if (project.partnerId) {
+    await partnerNotifications.notifyPartnerStatusChange(project, previousStatus);
+    if (String(project.assignedEngineer || "") && String(project.assignedEngineer || "") !== previousEngineer) {
+      await ProjectTimeline.create({ projectId: project._id, eventText: "Assigned to Engineer", createdBy: req.user.id });
+      await partnerNotifications.notifyPartnerEngineerAssigned(project);
+    }
+    if (project.internalNotes && project.internalNotes !== previousInternalNotes) {
+      await partnerNotifications.notifyPartnerInternalNote(project);
+    }
+  }
 
   res.json({ success: true, project });
 });
@@ -424,6 +459,11 @@ exports.attachDocument = catchAsync(async (req, res) => {
     });
     project.updatedBy = req.user.id;
     await project.save();
+    if (project.partnerId) {
+      // Internal file/report uploads become partner notifications when the project is partner-linked.
+      await ProjectTimeline.create({ projectId: project._id, eventText: "Report Uploaded", createdBy: req.user.id });
+      await partnerNotifications.notifyPartnerFileUploaded(project, trimString(fileName) || document.originalName || document.safeName || "Project file");
+    }
   }
 
   res.json({ success: true, documents: project.documents });
