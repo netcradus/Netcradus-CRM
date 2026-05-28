@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import axios from "axios";
 // No longer needed: import "./AdminDashboard.css"; // Reuse existing styles
-
+ 
 import AdminDashboard from "./AdminDashboard";
 import SalesDashboard from "./SalesDashboard";
 import SupportDashboard from "./SupportDashboard";
@@ -25,19 +25,20 @@ import DigitalMediaDashboard from "./DigitalMediaDashboard";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ManagementDashboard from "./ManagementDashboard";
-
+import WorkspaceWidget from "./WorkspaceWidget";
+ 
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
-
+ 
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
-
+ 
 const formatRoleLabel = (role = "general") =>
   role === "admin"
     ? "Administrator"
     : role
         .replace(/_/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase());
-
+ 
 const SuperUserDashboard = () => {
   const previewRef = useRef(null);
   const [search, setSearch] = useState("");
@@ -49,7 +50,7 @@ const SuperUserDashboard = () => {
   const [error, setError] = useState("");
   const userName = localStorage.getItem("userName") || "Super User";
   const token = localStorage.getItem("token");
-
+ 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -64,7 +65,7 @@ const SuperUserDashboard = () => {
     };
     fetchUsers();
   }, [token]);
-
+ 
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
@@ -81,7 +82,7 @@ const SuperUserDashboard = () => {
     const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token]);
-
+ 
   const liveAttendanceChartData = useMemo(() => {
     if (!attendanceSnapshot) return [];
     return [
@@ -92,7 +93,7 @@ const SuperUserDashboard = () => {
       { label: "Absent", count: attendanceSnapshot.absentCount || 0 },
     ];
   }, [attendanceSnapshot]);
-
+ 
   const roleDistributionData = useMemo(() => {
     const employees = attendanceSnapshot?.employees || [];
     const groupedRoles = employees.reduce((acc, employee) => {
@@ -100,22 +101,22 @@ const SuperUserDashboard = () => {
       acc[roleLabel] = (acc[roleLabel] || 0) + 1;
       return acc;
     }, {});
-
+ 
     return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
   }, [attendanceSnapshot]);
-
+ 
   const registeredRoleData = useMemo(() => {
     const grouped = users.reduce((acc, user) => {
       const label = formatRoleLabel(user.role || "general");
       acc[label] = (acc[label] || 0) + 1;
       return acc;
     }, {});
-
+ 
     return Object.entries(grouped)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
   }, [users]);
-
+ 
   const systemHealthTrendData = useMemo(() => [
     { point: "Users", total: users.length },
     { point: "Tracked", total: attendanceSnapshot?.employees?.length || 0 },
@@ -123,7 +124,7 @@ const SuperUserDashboard = () => {
     { point: "Active", total: attendanceSnapshot?.clockedInCount || 0 },
     { point: "Leave", total: attendanceSnapshot?.onLeaveCount || 0 },
   ], [users, attendanceSnapshot]);
-
+ 
   useEffect(() => {
     if (selectedRole && previewRef.current) {
       previewRef.current.scrollIntoView({
@@ -132,24 +133,24 @@ const SuperUserDashboard = () => {
       });
     }
   }, [selectedRole, selectedUser]);
-
+ 
   const handleRoleChange = (e) => {
     const role = e.target.value;
     setSelectedRole(role);
     setSelectedUser(null);
   };
-
+ 
   const handleSearch = () => {
     const searchValue = search.toLowerCase().trim();
     if (!searchValue) return;
-
+ 
     const foundUser = users.find(
       (user) =>
         user.name?.toLowerCase().includes(searchValue) ||
         user.email?.toLowerCase().includes(searchValue) ||
         user.role?.toLowerCase().includes(searchValue)
     );
-
+ 
     if (foundUser) {
       setSelectedUser(foundUser);
       setSelectedRole(foundUser.role);
@@ -159,7 +160,7 @@ const SuperUserDashboard = () => {
       setTimeout(() => setError(""), 3000);
     }
   };
-
+ 
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
     switch (role) {
@@ -173,104 +174,7 @@ const SuperUserDashboard = () => {
       default: return null;
     }
   };
-
-  const renderSelectedGraph = () => {
-    switch (selectedGraph) {
-      case "roleDistribution":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <PieChart>
-              <Pie
-                data={roleDistributionData}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={90}
-                outerRadius={130}
-                paddingAngle={4}
-              >
-                {roleDistributionData.map((entry, index) => (
-                  <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      case "registeredRoles":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={registeredRoleData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case "systemCoverage":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <LineChart data={systemHealthTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="var(--color-accent)"
-                strokeWidth={2}
-                dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      case "liveAttendance":
-      default:
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={liveAttendanceChartData}>
-              <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
-              <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-    }
-  };
-
-  const graphTabs = [
-    {
-      key: "liveAttendance",
-      label: "Live Attendance",
-      value: liveAttendanceChartData.reduce((total, item) => total + item.count, 0),
-      accent: "var(--color-accent)",
-    },
-    {
-      key: "roleDistribution",
-      label: "Role Distribution",
-      value: roleDistributionData.reduce((total, item) => total + item.value, 0),
-      accent: "var(--color-warning)",
-    },
-    {
-      key: "registeredRoles",
-      label: "Registered Roles",
-      value: registeredRoleData.reduce((total, item) => total + item.count, 0),
-      accent: "var(--color-info)",
-    },
-    {
-      key: "systemCoverage",
-      label: "System Coverage",
-      value: systemHealthTrendData.reduce((max, item) => Math.max(max, item.total), 0),
-      accent: "var(--color-success)",
-    },
-  ];
-
-  const selectedGraphMeta = graphTabs.find((graph) => graph.key === selectedGraph) || graphTabs[0];
-
+ 
   return (
     <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
       <div className="page-header">
@@ -307,14 +211,14 @@ const SuperUserDashboard = () => {
           </select>
         </div>
       </div>
-
+ 
       {error && (
         <div className="badge badge-error" style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-2) var(--space-4)', width: '100%' }}>
           {error}
         </div>
       )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+ 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
         <div className="nc-stat-card">
           <span className="metric-label">Total Users</span>
           <span className="metric-value">{users.length}</span>
@@ -332,27 +236,45 @@ const SuperUserDashboard = () => {
           <span className="metric-value" style={{ color: 'var(--color-success)' }}>100%</span>
         </div>
       </div>
-
-      <div className="graph-tab-grid">
-        {graphTabs.map((graph) => (
-          <button
-            key={graph.key}
-            type="button"
-            className={`graph-tab-card ${selectedGraph === graph.key ? "is-active" : ""}`}
-            style={{ "--graph-accent": graph.accent }}
-            onClick={() => setSelectedGraph(graph.key)}
-          >
-            <span className="graph-tab-label">{graph.label}</span>
-            <span className="graph-tab-value">{graph.value}</span>
-          </button>
-        ))}
+ 
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <WorkspaceWidget />
       </div>
-
-      <div className="nc-card graph-expanded-card">
-        <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-lg)' }}>{selectedGraphMeta.label}</h3>
-        {renderSelectedGraph()}
+ 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+         <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Live System Attendance</h3>
+            <ResponsiveContainer width="100%" height={300}>
+               <BarChart data={liveAttendanceChartData}>
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
+                  <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                  <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
+                  <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+               </BarChart>
+            </ResponsiveContainer>
+         </div>
+         <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Role Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
+               <PieChart>
+                  <Pie
+                    data={roleDistributionData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={4}
+                  >
+                    {roleDistributionData.map((entry, index) => (
+                      <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+               </PieChart>
+            </ResponsiveContainer>
+         </div>
       </div>
-
+ 
       {selectedRole && (
         <div ref={previewRef} className="nc-card" style={{ marginTop: 'var(--space-6)', minHeight: '400px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-4)' }}>
@@ -362,7 +284,42 @@ const SuperUserDashboard = () => {
           {renderSelectedDashboard()}
         </div>
       )}
-
+ 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
+        <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Registered Users by Role</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={registeredRoleData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+        </div>
+ 
+        <div className="nc-card">
+            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>System Coverage Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={systemHealthTrendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="var(--color-accent)"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+        </div>
+      </div>
+     
       <div className="nc-card" style={{ marginTop: 'var(--space-6)' }}>
         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Team Attendance Live</h3>
         <AttendanceWidget />
@@ -370,5 +327,7 @@ const SuperUserDashboard = () => {
     </div>
   );
 };
-
+ 
 export default SuperUserDashboard;
+ 
+ 
