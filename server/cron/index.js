@@ -4,6 +4,7 @@ const markAbsent = require("./markAbsent");
 const monthlySummary = require("./monthlySummary");
 const leaveAccrual = require("./leaveAccrual");
 const taskDueReminder = require("./taskDueReminder");
+const meetingReminderNotifications = require("./meetingReminderNotifications");
 
 const cronLastRun = {};
 const runningJobs = new Set();
@@ -49,6 +50,10 @@ function registerCronJobs() {
 
   cron.schedule(process.env.CRON_TASK_DUE_REMINDER || "17 */2 * * *", async () => {
     await runJob("taskDueReminder", taskDueReminder);
+  }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
+
+  cron.schedule(process.env.CRON_MEETING_REMINDERS || "* * * * *", async () => {
+    await runJob("meetingReminderNotifications", meetingReminderNotifications);
   }, { timezone: process.env.COMPANY_TIMEZONE || "Asia/Kolkata" });
 
   console.log(`All cron jobs registered (TZ: ${process.env.COMPANY_TIMEZONE || "Asia/Kolkata"})`);

@@ -887,25 +887,27 @@ function Leads() {
             <div className="nc-modal-header">
               <h3>Delete Filtered Leads</h3>
             </div>
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "var(--space-3)" }}>
-              This will delete all leads matching the current filters.
-            </p>
-            <div className="nc-card" style={{ marginBottom: "var(--space-4)", padding: "var(--space-4)" }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
-                Current filters
+            <div className="nc-modal-body">
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: "var(--space-3)" }}>
+                This will delete all leads matching the current filters.
+              </p>
+              <div className="nc-card" style={{ marginBottom: "var(--space-4)", padding: "var(--space-4)" }}>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+                  Current filters
+                </div>
+                <div style={{ fontWeight: "var(--font-semibold)" }}>{deleteFilterModal.filterSummary}</div>
               </div>
-              <div style={{ fontWeight: "var(--font-semibold)" }}>{deleteFilterModal.filterSummary}</div>
-            </div>
-            <p style={{ color: "var(--color-error)", marginBottom: "var(--space-5)" }}>
-              This action cannot be undone.
-            </p>
-            <div style={{ display: "flex", gap: "var(--space-3)" }}>
-              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteFilterModal(null)}>
-                Cancel
-              </button>
-              <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={handleDeleteFilteredLeads}>
-                Delete Leads
-              </button>
+              <p style={{ color: "var(--color-error)", marginBottom: "var(--space-5)" }}>
+                This action cannot be undone.
+              </p>
+              <div style={{ display: "flex", gap: "var(--space-3)" }}>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteFilterModal(null)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={handleDeleteFilteredLeads}>
+                  Delete Leads
+                </button>
+              </div>
             </div>
           </div>
         </div>
