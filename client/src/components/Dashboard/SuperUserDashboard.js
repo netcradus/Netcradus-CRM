@@ -29,6 +29,13 @@ import WorkspaceWidget from "./WorkspaceWidget";
  
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
+const initialReminderForm = { title: "", meetingLink: "", meetingDate: "", meetingTime: "" };
+const GRAPH_TABS = [
+  { key: "liveAttendance", label: "Live Attendance" },
+  { key: "roleDistribution", label: "Role Distribution" },
+  { key: "registeredRoles", label: "Registered Roles" },
+  { key: "coverageTrend", label: "Coverage Trend" },
+];
  
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
  
@@ -41,6 +48,7 @@ const formatRoleLabel = (role = "general") =>
  
 const SuperUserDashboard = () => {
   const previewRef = useRef(null);
+  const graphRef = useRef(null);
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
@@ -48,6 +56,10 @@ const SuperUserDashboard = () => {
   const [selectedGraph, setSelectedGraph] = useState("liveAttendance");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const [error, setError] = useState("");
+  const [meetingReminders, setMeetingReminders] = useState([]);
+  const [reminderForm, setReminderForm] = useState(initialReminderForm);
+  const [reminderStatus, setReminderStatus] = useState("");
+  const [savingReminder, setSavingReminder] = useState(false);
   const userName = localStorage.getItem("userName") || "Super User";
   const token = localStorage.getItem("token");
  
@@ -81,6 +93,24 @@ const SuperUserDashboard = () => {
     fetchAttendance();
     const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
+  }, [token]);
+
+  const fetchMeetingReminders = async () => {
+    try {
+      const res = await axios.get(apiUrl("/api/meeting-reminders"), {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+      });
+      setMeetingReminders(res.data?.data || []);
+    } catch (err) {
+      console.error("Error fetching meeting reminders:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchMeetingReminders();
+    }
   }, [token]);
  
   const liveAttendanceChartData = useMemo(() => {
@@ -124,6 +154,13 @@ const SuperUserDashboard = () => {
     { point: "Active", total: attendanceSnapshot?.clockedInCount || 0 },
     { point: "Leave", total: attendanceSnapshot?.onLeaveCount || 0 },
   ], [users, attendanceSnapshot]);
+
+  const upcomingMeetingReminders = useMemo(() => {
+    const now = Date.now();
+    return meetingReminders
+      .filter((reminder) => new Date(reminder.meetingAt).getTime() >= now)
+      .slice(0, 5);
+  }, [meetingReminders]);
  
   useEffect(() => {
     if (selectedRole && previewRef.current) {
@@ -160,6 +197,59 @@ const SuperUserDashboard = () => {
       setTimeout(() => setError(""), 3000);
     }
   };
+
+  const handleReminderSubmit = async (e) => {
+    e.preventDefault();
+    setSavingReminder(true);
+    setReminderStatus("");
+
+    try {
+      const meetingAt = new Date(`${reminderForm.meetingDate}T${reminderForm.meetingTime}`);
+
+      await axios.post(
+        apiUrl("/api/meeting-reminders"),
+        {
+          title: reminderForm.title,
+          meetingLink: reminderForm.meetingLink,
+          meetingAt: meetingAt.toISOString(),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+        }
+      );
+      setReminderForm(initialReminderForm);
+      setReminderStatus("Reminder set successfully.");
+      fetchMeetingReminders();
+    } catch (err) {
+      const message = err.response?.data?.message || "Failed to set reminder.";
+      setReminderStatus(message);
+    } finally {
+      setSavingReminder(false);
+    }
+  };
+
+  const handleDeleteReminder = async (reminderId) => {
+    try {
+      await axios.delete(apiUrl(`/api/meeting-reminders/${reminderId}`), {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+      });
+      setMeetingReminders((current) => current.filter((reminder) => reminder._id !== reminderId));
+    } catch (err) {
+      setReminderStatus(err.response?.data?.message || "Failed to delete reminder.");
+    }
+  };
+
+  const handleGraphTabClick = (graphKey) => {
+    setSelectedGraph(graphKey);
+    setTimeout(() => {
+      graphRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
  
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
@@ -172,6 +262,74 @@ const SuperUserDashboard = () => {
       case "digital_media": return <DigitalMediaDashboard preview={!selectedUser} />;
       case "management": return <ManagementDashboard preview={!selectedUser} />;
       default: return null;
+    }
+  };
+
+  const renderSelectedGraph = () => {
+    switch (selectedGraph) {
+      case "roleDistribution":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+             <PieChart>
+                <Pie
+                  data={roleDistributionData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={90}
+                  outerRadius={130}
+                  paddingAngle={4}
+                >
+                  {roleDistributionData.map((entry, index) => (
+                    <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+             </PieChart>
+          </ResponsiveContainer>
+        );
+      case "registeredRoles":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <BarChart data={registeredRoleData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip />
+              <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      case "coverageTrend":
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+            <LineChart data={systemHealthTrendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
+              <YAxis axisLine={false} tickLine={false} fontSize={12} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="var(--color-accent)"
+                strokeWidth={2}
+                dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        );
+      case "liveAttendance":
+      default:
+        return (
+          <ResponsiveContainer width="100%" height={420}>
+             <BarChart data={liveAttendanceChartData}>
+                <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
+                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
+                <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+             </BarChart>
+          </ResponsiveContainer>
+        );
     }
   };
  
@@ -240,39 +398,123 @@ const SuperUserDashboard = () => {
       <div style={{ marginBottom: 'var(--space-8)' }}>
         <WorkspaceWidget />
       </div>
+
+      <div className="nc-card" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-4)', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+          <div>
+            <h3 style={{ marginBottom: 'var(--space-1)', fontSize: 'var(--text-base)' }}>Set Meeting Reminder</h3>
+            <p className="subtitle" style={{ margin: 0 }}>Bell notifications are sent 1 hour and 15 minutes before the meeting.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleReminderSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-3)', alignItems: 'end' }}>
+          <div className="form-field">
+            <label className="form-label">Meeting Title</label>
+            <input
+              className="form-input"
+              required
+              value={reminderForm.title}
+              onChange={(e) => setReminderForm({ ...reminderForm, title: e.target.value })}
+              placeholder="Client sync"
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Meeting Link</label>
+            <input
+              className="form-input"
+              required
+              type="url"
+              value={reminderForm.meetingLink}
+              onChange={(e) => setReminderForm({ ...reminderForm, meetingLink: e.target.value })}
+              placeholder="https://meet.google.com/..."
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Date</label>
+            <input
+              className="form-input"
+              required
+              type="date"
+              value={reminderForm.meetingDate}
+              onChange={(e) => setReminderForm({ ...reminderForm, meetingDate: e.target.value })}
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Time</label>
+            <input
+              className="form-input"
+              required
+              type="time"
+              value={reminderForm.meetingTime}
+              onChange={(e) => setReminderForm({ ...reminderForm, meetingTime: e.target.value })}
+            />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={savingReminder}>
+            {savingReminder ? "Saving..." : "Set Reminder"}
+          </button>
+        </form>
+
+        {reminderStatus && (
+          <div className="badge badge-warning" style={{ marginTop: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)' }}>
+            {reminderStatus}
+          </div>
+        )}
+
+        <div style={{ marginTop: 'var(--space-5)' }}>
+          <h4 style={{ marginBottom: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>Upcoming Reminders</h4>
+          {upcomingMeetingReminders.length === 0 ? (
+            <p className="subtitle" style={{ margin: 0 }}>No upcoming meeting reminders.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+              {upcomingMeetingReminders.map((reminder) => (
+                <div
+                  key={reminder._id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: 'var(--space-3)',
+                    alignItems: 'center',
+                    padding: 'var(--space-3)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-1)' }}>{reminder.title}</div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>
+                      {new Date(reminder.meetingAt).toLocaleString()} · {reminder.meetingLink}
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost" type="button" onClick={() => handleDeleteReminder(reminder._id)}>
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
  
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
-         <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Live System Attendance</h3>
-            <ResponsiveContainer width="100%" height={300}>
-               <BarChart data={liveAttendanceChartData}>
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
-                  <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                  <Tooltip cursor={{fill: 'var(--color-bg-hover)'}} />
-                  <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
-               </BarChart>
-            </ResponsiveContainer>
-         </div>
-         <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Role Distribution</h3>
-            <ResponsiveContainer width="100%" height={300}>
-               <PieChart>
-                  <Pie
-                    data={roleDistributionData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={4}
-                  >
-                    {roleDistributionData.map((entry, index) => (
-                      <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-               </PieChart>
-            </ResponsiveContainer>
-         </div>
+      <div ref={graphRef} className="nc-card" style={{ marginBottom: 'var(--space-6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-4)', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <h3 style={{ fontSize: 'var(--text-base)' }}>
+            {GRAPH_TABS.find((tab) => tab.key === selectedGraph)?.label || "Live Attendance"}
+          </h3>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+            {GRAPH_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`btn ${selectedGraph === tab.key ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => handleGraphTabClick(tab.key)}
+                style={{ height: '32px', fontSize: 'var(--text-xs)', padding: '0 var(--space-3)' }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {renderSelectedGraph()}
       </div>
  
       {selectedRole && (
@@ -285,41 +527,6 @@ const SuperUserDashboard = () => {
         </div>
       )}
  
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginTop: 'var(--space-6)' }}>
-        <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Registered Users by Role</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={registeredRoleData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
-                <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-        </div>
- 
-        <div className="nc-card">
-            <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>System Coverage Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={systemHealthTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
-                <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="var(--color-accent)"
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-        </div>
-      </div>
-     
       <div className="nc-card" style={{ marginTop: 'var(--space-6)' }}>
         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Team Attendance Live</h3>
         <AttendanceWidget />

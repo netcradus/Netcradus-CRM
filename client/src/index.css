@@ -1205,6 +1205,20 @@ textarea::placeholder {
   color: var(--color-text-faint);
 }
 
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color-scheme: dark !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1) brightness(2.5) contrast(1.2) !important;
+  opacity: 1 !important;
+}
+
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus,
@@ -1364,6 +1378,10 @@ td {
   font-size: var(--text-xl);
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
+}
+
+.nc-modal-body {
+  padding: 24px;
 }
 
 .user-management-toolbar {
@@ -2961,6 +2979,7 @@ td {
   }
 
   .nc-modal-header,
+  .nc-modal-body,
   .form,
   .nc-form {
     padding-left: 18px;
