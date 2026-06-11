@@ -1,4 +1,4 @@
-const LOGGER_URL = import.meta.env.VITE_LOGGER_URL;
+const LOGGER_URL = "https://netcradus-logger.onrender.com";
 
 export async function sendLog(path) {
   try {
