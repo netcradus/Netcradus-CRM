@@ -1,4 +1,7 @@
 import React, { lazy, Suspense } from "react";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { sendLog } from "./utils/logger";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
 
@@ -143,11 +146,22 @@ function UnauthorizedPage() {
   );
 }
 
+function RouteLogger() {
+  const location = useLocation();
+
+  useEffect(() => {
+    sendLog(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
+
 const App = () => {
   return (
     <ErrorBoundary>
       <Router>
         <Suspense fallback={<div className="loading-fallback">Loading...</div>}>
+           <RouteLogger />
           <Routes>
             {/* ================= PUBLIC ================= */}
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -217,6 +231,8 @@ const App = () => {
                   <InterviewsPage />
                 </RoleRoute>
               } />
+
+              
 
               {/* ---- Modules ---- */}
               <Route path="/leads" element={<RoleRoute roles={ACCESS_GROUPS.crmLeads}><Leads /></RoleRoute>} />
