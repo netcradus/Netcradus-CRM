@@ -1,5 +1,5 @@
 PORT=
-MONGO_URI=
+MONGO_URI=mongodb+srv://netcradus_db_user:gwQGRJs7Y4WFbHda@cluster0.zcdpx8c.mongodb.net/crm_db?retryWrites=truew=majority
 JWT_SECRET=
 SUPER_USER_SEED_KEY=
 SUPER_USER_SEED_USERNAME=
