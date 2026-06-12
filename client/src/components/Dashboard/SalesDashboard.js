@@ -987,8 +987,7 @@
 // export default SalesDashboard;
 
 
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Plus, Download, CheckCircle, XCircle,
   MessageSquare, Video, Bell, X,
@@ -1082,29 +1081,66 @@ const SalesDashboard = ({ preview }) => {
     meetingTime: "", meetingDiscussion: "", reminderDate: "", reminderNote: "",
   });
 
+  // keep a ref to selectedDeal so fetchDeals closure always has latest value
+  const selectedDealRef = useRef(selectedDeal);
+  useEffect(() => { selectedDealRef.current = selectedDeal; }, [selectedDeal]);
+
+  const getToken = () => localStorage.getItem("token") || "";
+
   const getHeaders = () => ({
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    Authorization: `Bearer ${getToken()}`,
   });
 
   const fetchDeals = async () => {
+    const token = getToken();
+    if (!token) return; // bail silently — retry logic below will re-attempt
+
     try {
-      const res    = await fetch(API, { headers: getHeaders() });
+      const res    = await fetch(API, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+      if (res.status === 401) return; // token expired or invalid, don't crash
       const result = await res.json();
       const list   = Array.isArray(result?.data) ? result.data : [];
       setDeals(list);
-      if (selectedDeal) {
-        const updated = list.find((d) => d._id === selectedDeal._id);
+      const current = selectedDealRef.current;
+      if (current) {
+        const updated = list.find((d) => d._id === current._id);
         if (updated) setSelectedDeal(updated);
       }
     } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
-    fetchDeals();
-    const id = setInterval(fetchDeals, 30000);
-    return () => clearInterval(id);
-  }, [selectedDeal?._id]);
+    // Production race fix: token may not be in localStorage the instant
+    // this component mounts (WelcomeAnimation delay). Poll until token is
+    // ready, then start the normal fetch + interval cycle.
+    let intervalId = null;
+
+    const start = () => {
+      fetchDeals();
+      intervalId = setInterval(fetchDeals, 30000);
+    };
+
+    const token = getToken();
+    if (token) {
+      start();
+    } else {
+      // retry every 200ms until token appears (max ~3s)
+      let attempts = 0;
+      const waitForToken = setInterval(() => {
+        attempts++;
+        if (getToken()) {
+          clearInterval(waitForToken);
+          start();
+        } else if (attempts >= 15) {
+          clearInterval(waitForToken); // give up after 3s
+        }
+      }, 200);
+      return () => { clearInterval(waitForToken); clearInterval(intervalId); };
+    }
+
+    return () => clearInterval(intervalId);
+  }, [selectedDeal?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openDeal  = (deal) => { setSelectedDeal(deal); setActiveTab("Overview"); };
   const closeDeal = ()     => setSelectedDeal(null);
