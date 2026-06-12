@@ -1,9 +1,11 @@
 const LOGGER_URL =
-  import.meta.env.VITE_LOGGER_URL ||
+  process.env.REACT_APP_LOGGER_URL ||
   "https://netcradus-logger.onrender.com";
 
 export async function sendLog(path) {
   try {
+    if (!LOGGER_URL) return;
+
     await fetch(`${LOGGER_URL}/log`, {
       method: "POST",
       headers: {
