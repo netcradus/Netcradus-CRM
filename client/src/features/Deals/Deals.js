@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { apiUrl } from "../../config/api";
 
 const API = apiUrl("/api/deals");
+const SUPER_API = apiUrl("/api/super-user/sales");
 const getAuthConfig = () => ({
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -26,6 +27,12 @@ function Deals() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+  const [overview, setOverview] = useState(null);
+  const [performance, setPerformance] = useState([]);
+const [leaderboard, setLeaderboard] = useState([]);
+const [unassignedDeals, setUnassignedDeals] = useState([]);
+const [followups, setFollowups] = useState([]);
+const [activities, setActivities] = useState([]);
 
   const fetchDeals = async () => {
     try {
@@ -40,9 +47,40 @@ function Deals() {
     }
   };
 
+
+  const fetchSuperUserData = async () => {
+  try {
+    const [
+      overviewRes,
+      performanceRes,
+      leaderboardRes,
+      unassignedRes,
+      followupsRes,
+      activityRes,
+    ] = await Promise.all([
+      axios.get(`${SUPER_API}/overview`, getAuthConfig()),
+      axios.get(`${SUPER_API}/performance`, getAuthConfig()),
+      axios.get(`${SUPER_API}/leaderboard`, getAuthConfig()),
+      axios.get(`${SUPER_API}/unassigned`, getAuthConfig()),
+      axios.get(`${SUPER_API}/followups`, getAuthConfig()),
+      axios.get(`${SUPER_API}/activity`, getAuthConfig()),
+    ]);
+
+    setOverview(overviewRes.data?.data || null);
+    setPerformance(performanceRes.data?.data || []);
+    setLeaderboard(leaderboardRes.data?.data || []);
+    setUnassignedDeals(unassignedRes.data?.data || []);
+    setFollowups(followupsRes.data?.data || []);
+    setActivities(activityRes.data?.data || []);
+  } catch (err) {
+    console.error("Super User Dashboard Error:", err);
+  }
+};
+
   useEffect(() => {
-    fetchDeals();
-  }, []);
+  fetchDeals();
+  fetchSuperUserData();
+}, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -81,7 +119,16 @@ function Deals() {
     }
   };
 
+
+  console.log("OVERVIEW", overview);
+console.log("PERFORMANCE", performance);
+console.log("LEADERBOARD", leaderboard);
+console.log("UNASSIGNED", unassignedDeals);
+console.log("FOLLOWUPS", followups);
+console.log("ACTIVITIES", activities);
+
   return (
+
     <div className="dashboard-container" style={{ padding: "var(--space-6)" }}>
       <div className="page-header">
         <div className="page-header-left">
@@ -150,7 +197,9 @@ function Deals() {
                     </span>
                   </td>
                   <td>Rs. {Number(deal.value || 0).toLocaleString("en-IN")}</td>
-                  <td>{deal.assignedTo || "Unassigned"}</td>
+                  <td>
+  {deal.assignedTo?.name || "Unassigned"}
+</td>
                   <td>{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "--"}</td>
                   <td>
                     <div style={{ display: "flex", gap: "var(--space-2)" }}>
@@ -162,7 +211,7 @@ function Deals() {
                             name: deal.name || "",
                             status: deal.status || "New",
                             value: deal.value || "",
-                            assignedTo: deal.assignedTo || "",
+                            assignedTo: deal.assignedTo?._id || "",
                             expectedCloseDate: deal.expectedCloseDate ? String(deal.expectedCloseDate).substring(0, 10) : "",
                           });
                           setShowModal(true);

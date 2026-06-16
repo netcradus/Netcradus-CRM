@@ -1008,9 +1008,7 @@ const populateLeadQuery = (query) =>
     .populate("callLog.calledBy", "name email");
 
 const buildLeadQuery = (req) => {
-  const query = {
-    status: { $ne: "meeting_aligned" },
-  };
+  const query = {};
   const { status, search, startDate, endDate } = req.query;
 
   if (status) {
@@ -1018,7 +1016,7 @@ const buildLeadQuery = (req) => {
       .split(",")
       .map((value) => normalizeLeadStatus(value))
       .filter(Boolean)
-      .filter((value) => value !== "meeting_aligned");
+      .filter(Boolean);
 
     if (statusArray.length > 0) {
       query.status = { $in: statusArray };
@@ -1146,16 +1144,47 @@ const getLeads = async (req, res) => {
       Lead.countDocuments(query),
     ]);
 
-    const normalizedLeads = leads.map((lead) => {
-      const nextLead = { ...lead };
-      if (!Array.isArray(nextLead.notes)) {
-        nextLead.notes = nextLead.notes
-          ? [{ text: String(nextLead.notes), addedBy: nextLead.createdBy, addedAt: nextLead.updatedAt || nextLead.createdAt }]
-          : [];
-      }
-      nextLead.callLog = Array.isArray(nextLead.callLog) ? nextLead.callLog : [];
-      return nextLead;
-    });
+    // const normalizedLeads = leads.map((lead) => {
+    //   const nextLead = { ...lead };
+    //   if (!Array.isArray(nextLead.notes)) {
+    //     nextLead.notes = nextLead.notes
+    //       ? [{ text: String(nextLead.notes), addedBy: nextLead.createdBy, addedAt: nextLead.updatedAt || nextLead.createdAt }]
+    //       : [];
+    //   }
+    //   nextLead.callLog = Array.isArray(nextLead.callLog) ? nextLead.callLog : [];
+    //   return nextLead;
+    // });
+
+    const normalizedLeads = await Promise.all(
+  leads.map(async (lead) => {
+    const nextLead = { ...lead };
+
+    if (!Array.isArray(nextLead.notes)) {
+      nextLead.notes = nextLead.notes
+        ? [{
+            text: String(nextLead.notes),
+            addedBy: nextLead.createdBy,
+            addedAt: nextLead.updatedAt || nextLead.createdAt,
+          }]
+        : [];
+    }
+
+    nextLead.callLog = Array.isArray(nextLead.callLog)
+      ? nextLead.callLog
+      : [];
+
+    const deal = await Deal.findOne({
+      sourceLead: lead._id,
+      status: { $in: ["Won", "Lost"] },
+    }).lean();
+
+    nextLead.dealStatus = deal?.status || null;
+    nextLead.dealValue = deal?.value || 0;
+    nextLead.closedDate = deal?.dealClosedAt || null;
+
+    return nextLead;
+  })
+);
 
     res.json({
       success: true,
