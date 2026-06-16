@@ -82,6 +82,10 @@ app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/calls", require("./routes/callsRoutes"));
 app.use("/api/contacts", require("./routes/contactRoutes"));
 app.use("/api/deals", require("./routes/dealsRoutes"));
+app.use(
+  "/api/super-user/sales",
+  require("./routes/superUserSalesRoutes")
+);
 app.use("/api/tasks", require("./routes/taskRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/meeting-reminders", require("./routes/meetingReminderRoutes"));
