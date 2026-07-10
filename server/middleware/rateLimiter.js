@@ -1,5 +1,7 @@
 const rateLimit = require("express-rate-limit");
 
+const shouldSkip = (req, res) => process.env.DISABLE_RATE_LIMIT === "true";
+
 // ─── Login limiter ────────────────────────────────────────────────────────────
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 mins
@@ -7,13 +9,16 @@ const loginLimiter = rateLimit({
     message: { message: "Too many login attempts from this IP, please try again after 15 minutes." },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: shouldSkip,
 });
+
 
 // ─── OTP request limiter ──────────────────────────────────────────────────────
 const otpRequestLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10,
     message: { message: "Too many OTP requests from this IP, please try again after 1 hour." },
+    skip: shouldSkip,
 });
 
 // ─── Document upload limiter — 30 uploads per user per hour ───────────────────
@@ -27,6 +32,7 @@ const uploadRateLimiter = rateLimit({
         message: "Upload limit reached (30 per hour). Please try again later.",
         code: "RATE_LIMIT_REACHED",
     },
+    skip: shouldSkip,
 });
 
 // ─── View/Download limiter — 100 requests per user per hour ──────────────────
@@ -40,6 +46,7 @@ const viewDownloadRateLimiter = rateLimit({
         message: "View/download limit reached (100 per hour). Please try again later.",
         code: "RATE_LIMIT_REACHED",
     },
+    skip: shouldSkip,
 });
 
 const verifyPasswordLimiter = rateLimit({
@@ -54,6 +61,7 @@ const verifyPasswordLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: shouldSkip,
 });
 
 const projectRouteLimiter = rateLimit({
@@ -68,6 +76,7 @@ const projectRouteLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: shouldSkip,
 });
 
 const passwordVerificationLimiter = rateLimit({
@@ -79,6 +88,7 @@ const passwordVerificationLimiter = rateLimit({
         message: "Too many verification attempts. Please wait a minute before trying again.",
         attemptsRemaining: 0,
     },
+    skip: shouldSkip,
 });
 
 const onboardingSubmissionLimiter = rateLimit({
@@ -93,6 +103,7 @@ const onboardingSubmissionLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: shouldSkip,
 });
 
 module.exports = {

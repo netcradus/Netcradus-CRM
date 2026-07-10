@@ -31,7 +31,7 @@ const upload = multer({
 // CREATE TICKET
 const createTicket = async (req, res) => {
     try {
-        const { title, description, category, priority } = req.body;
+        const { title, description, category, priority, companyName, contactPerson, email, phone, product } = req.body;
         const count = await Ticket.countDocuments();
         const ticketId = `TKT-${String(count + 1).padStart(4, '0')}`;
 
@@ -50,6 +50,11 @@ const createTicket = async (req, res) => {
             description,
             category,
             priority,
+            companyName,
+            contactPerson,
+            email,
+            phone,
+            product,
             attachments
         });
 
@@ -66,12 +71,12 @@ const createTicket = async (req, res) => {
 const getTickets = async (req, res) => {
     try {
         let query = {};
-        if (req.user.role === 'management') {
+        
+        // Admins and super_users see all tickets; standard users only see their own
+        const isAdmin = req.user.role === 'super_user' || req.user.role === 'admin';
+        if (!isAdmin) {
             query.raisedBy = req.user.id;
-        } else if (req.user.role === 'admin') {
-            query.role = 'management';
         }
-        // Super user sees all (implicit)
 
         const tickets = await Ticket.find(query).populate('raisedBy', 'name email').sort({ createdAt: -1 });
         res.json({ success: true, data: tickets });

@@ -41,6 +41,11 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
           <input
             placeholder="Search leads, accounts, deals..."
             aria-label="Global search"
+            onChange={(e) => {
+              window.dispatchEvent(new CustomEvent("global-search", {
+                detail: { query: e.target.value }
+              }));
+            }}
           />
         </div>
 

@@ -104,6 +104,15 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
         });
     } catch (error) {
         console.error("CRITICAL EMAIL FAILURE:", error);
+        if (process.env.DISABLE_RATE_LIMIT === "true") {
+            console.log(`\n=========================================`);
+            console.log(`[DEV BYPASS] Email failed. Printing OTP:`);
+            console.log(`OTP Code: ${plainOtp}`);
+            console.log(`Type: ${type}`);
+            console.log(`For User: ${userEmail}`);
+            console.log(`=========================================\n`);
+            return;
+        }
         await session.deleteOne();
         await logAuthEvent(userId, "EMAIL_FAILURE", ipAddress, userAgent, error.message);
         throw new Error("EMAIL_SERVICE_FAILURE");

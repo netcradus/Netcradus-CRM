@@ -15,6 +15,11 @@ const ticketSchema = new mongoose.Schema({
     description: { type: String, required: true },
     category: { type: String, required: true }, // e.g. 'Technical', 'HR', 'Facility'
     priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
+    companyName: { type: String },
+    contactPerson: { type: String },
+    email: { type: String },
+    phone: { type: String },
+    product: { type: String },
     status: { type: String, enum: ['open', 'in-progress', 'resolved', 'closed'], default: 'open' },
     attachments: [{
         filename: String,
