@@ -2494,16 +2494,16 @@ function Leads() {
   const fetchDeals = async () => {
     try {
       setLoading(true);
-      // super_user fetches leads; sales fetches deals
-      const url = isSuperUser ? apiUrl("/api/leads") : apiUrl("/api/deals");
-      const params = isSuperUser ? Object.fromEntries(searchParams.entries()) : {};
+      // Both super_user and sales fetch from /api/deals.
+      // Server-side: super_user → all deals (no filter); sales → own deals (assignedTo filter).
+      const url = apiUrl("/api/deals");
+      const params = {};
       const res = await axios.get(url, { ...getAuthConfig(), params });
       const body = res.data;
-      // support { data: [] } or { leads: [] } or { deals: [] } or plain []
-      const rows = body?.data ?? body?.leads ?? body?.deals ?? (Array.isArray(body) ? body : []);
+      // support { data: [] } or { deals: [] } or plain []
+      const rows = body?.data ?? body?.deals ?? (Array.isArray(body) ? body : []);
       setDeals(rows);
       if (body?.pagination) setPagination(body.pagination);
-      else if (body?.totalLeads !== undefined) setPagination({ totalLeads: body.totalLeads, totalPages: body.totalPages || 1, currentPage: body.currentPage || 1, limit: body.limit || 10 });
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load records");
     } finally {
@@ -2839,17 +2839,8 @@ function Leads() {
         <table className="nc-table">
           <thead>
             <tr>
-              {isSuperUser ? (
-                <>
-                  <th>Lead Name</th><th>Company</th><th>Email / Phone</th>
-                  <th>Status</th><th>Created</th><th>Last Note</th><th>Last Call</th><th>Actions</th>
-                </>
-              ) : (
-                <>
-                  <th>Deal Name</th><th>Client</th><th>Phone</th>
-                  <th>Company</th><th>Status</th><th>Value</th><th>Close Date</th><th>Actions</th>
-                </>
-              )}
+              <th>Deal Name</th><th>Client</th><th>Phone</th>
+              <th>Company</th><th>Status</th><th>Value</th><th>Close Date</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2857,57 +2848,32 @@ function Leads() {
               <tr><td colSpan={8} style={{ textAlign: "center", padding: "var(--space-8)" }}>Loading…</td></tr>
             ) : deals.length ? deals.map((row) => (
               <tr key={row._id}>
-                {isSuperUser ? (
-                  <>
-                    <td style={{ fontWeight: "var(--font-semibold)" }}>{row.name}</td>
-                    <td>{row.company || "--"}</td>
-                    <td>
-                      <div style={{ fontSize: "var(--text-xs)" }}>
-                        <div>{row.email || "--"}</div>
-                        <div style={{ color: "var(--color-text-muted)" }}>{row.phone || "--"}</div>
-                      </div>
-                    </td>
-                    <td><span className={`badge badge-${leadStatusBadgeVariant(row.status)}`}>{getStatusLabel(row.status)}</span></td>
-                    <td>{formatDateTime(row.createdAt)}</td>
-                    <td style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getLastNote(row)?.text || "--"}</td>
-                    <td>{formatDateTime(getLastCall(row)?.calledAt)}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                        <button className="btn btn-ghost" onClick={() => openSuperUserModal(row)}><Pencil size={14} /></button>
-                        <button className="btn btn-ghost" style={{ color: "var(--color-error)" }} onClick={() => handleDeleteLead(row._id)}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td style={{ fontWeight: "var(--font-semibold)" }}>{row.name || "--"}</td>
-                    <td>{row.clientName || "--"}</td>
-                    <td>{row.clientPhone || "--"}</td>
-                    <td>{row.companyName || "--"}</td>
-                    <td>
-                      <span className={`badge badge-${dealStatusBadgeVariant(row.status)}`}>
-                        {getDealStatusLabel(row.status)}
-                      </span>
-                    </td>
-                    <td>₹{Number(row.value || 0).toLocaleString()}</td>
-                    <td>
-                      {row.dealClosedAt
-                        ? new Date(row.dealClosedAt).toLocaleDateString()
-                        : row.expectedCloseDate
-                          ? new Date(row.expectedCloseDate).toLocaleDateString()
-                          : "--"}
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-primary"
-                        style={{ fontSize: 12, padding: "4px 12px" }}
-                        onClick={() => openDealDetail(row)}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </>
-                )}
+                <td style={{ fontWeight: "var(--font-semibold)" }}>{row.name || "--"}</td>
+                <td>{row.clientName || "--"}</td>
+                <td>{row.clientPhone || "--"}</td>
+                <td>{row.companyName || "--"}</td>
+                <td>
+                  <span className={`badge badge-${dealStatusBadgeVariant(row.status)}`}>
+                    {getDealStatusLabel(row.status)}
+                  </span>
+                </td>
+                <td>₹{Number(row.value || 0).toLocaleString()}</td>
+                <td>
+                  {row.dealClosedAt
+                    ? new Date(row.dealClosedAt).toLocaleDateString()
+                    : row.expectedCloseDate
+                      ? new Date(row.expectedCloseDate).toLocaleDateString()
+                      : "--"}
+                </td>
+                <td>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 12, padding: "4px 12px" }}
+                    onClick={() => openDealDetail(row)}
+                  >
+                    View
+                  </button>
+                </td>
               </tr>
             )) : (
               <tr><td colSpan={8} style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)" }}>No records found.</td></tr>
