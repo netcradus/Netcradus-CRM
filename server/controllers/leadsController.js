@@ -1350,7 +1350,8 @@ const salesUpdateLead = async (req, res) => {
       if (deal) {
         if (deal.sourceLead) {
           lead = await Lead.findById(deal.sourceLead);
-        } else {
+        }
+        if (!lead) {
           lead = await Lead.create({
             name: deal.clientName || deal.name,
             email: deal.clientEmail || "",
