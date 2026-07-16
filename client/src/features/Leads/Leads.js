@@ -2653,7 +2653,7 @@ function Leads() {
     const targetId = selectedDeal.sourceLead?._id || selectedDeal.sourceLead || selectedDeal._id || selectedDealId;
     try {
       setError(""); setSuccess("");
-      await axios.patch(apiUrl(`/api/leads/${targetId}/sales-update`), payload, getAuthConfig());
+      await axios.patch(apiUrl(`/api/deals/${targetId}/sales-update`), payload, getAuthConfig());
       setSuccess(successMsg);
       await Promise.all([fetchDeals(), loadDealDetail(selectedDeal._id || selectedDealId)]);
       if (payload.status === "meeting_aligned" || payload.callLog?.outcome === "meeting_aligned") closeDetail();
