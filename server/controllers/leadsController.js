@@ -1344,7 +1344,28 @@ const salesUpdateLead = async (req, res) => {
   }
 
   try {
-    const lead = await Lead.findById(req.params.id);
+    let lead = await Lead.findById(req.params.id);
+    if (!lead) {
+      const deal = await Deal.findById(req.params.id);
+      if (deal) {
+        if (deal.sourceLead) {
+          lead = await Lead.findById(deal.sourceLead);
+        } else {
+          lead = await Lead.create({
+            name: deal.clientName || deal.name,
+            email: deal.clientEmail || "",
+            phone: deal.clientPhone || "",
+            company: deal.companyName || "",
+            status: "call_back",
+            createdBy: req.user._id,
+            assignedTo: deal.assignedTo || req.user._id,
+          });
+          deal.sourceLead = lead._id;
+          await deal.save();
+        }
+      }
+    }
+
     if (!lead) {
       return res.status(404).json({ success: false, message: "Lead not found" });
     }

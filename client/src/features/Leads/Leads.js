@@ -2649,14 +2649,32 @@ function Leads() {
 
   /* ── Sales update helpers (for lead-detail, if super_user opens a lead) ── */
   const submitSalesUpdate = async (payload, successMsg) => {
-    if (!selectedDealId) return;
+    if (!selectedDeal) return;
+    const targetId = selectedDeal.sourceLead?._id || selectedDeal.sourceLead || selectedDeal._id || selectedDealId;
     try {
       setError(""); setSuccess("");
-      await axios.patch(apiUrl(`/api/leads/${selectedDealId}/sales-update`), payload, getAuthConfig());
+      await axios.patch(apiUrl(`/api/leads/${targetId}/sales-update`), payload, getAuthConfig());
       setSuccess(successMsg);
-      await Promise.all([fetchDeals(), loadDealDetail(selectedDealId)]);
+      await Promise.all([fetchDeals(), loadDealDetail(selectedDeal._id || selectedDealId)]);
       if (payload.status === "meeting_aligned" || payload.callLog?.outcome === "meeting_aligned") closeDetail();
     } catch (e) { setError(e.response?.data?.message || e.response?.data?.error || "Failed to update."); }
+  };
+
+  const handleDealStatusChange = async (dealId, newStatus) => {
+    try {
+      setError(""); setSuccess("");
+      if (newStatus === "Won") {
+        await axios.patch(apiUrl(`/api/deals/${dealId}/won`), {}, getAuthConfig());
+      } else if (newStatus === "Lost") {
+        await axios.patch(apiUrl(`/api/deals/${dealId}/lost`), {}, getAuthConfig());
+      } else {
+        await axios.put(apiUrl(`/api/deals/${dealId}`), { status: newStatus }, getAuthConfig());
+      }
+      setSuccess("Deal status updated successfully.");
+      fetchDeals();
+    } catch (e) {
+      setError(e.response?.data?.message || e.response?.data?.error || "Failed to update deal status.");
+    }
   };
 
   const handleSalesStatusSave = () => submitSalesUpdate({
@@ -2866,13 +2884,28 @@ function Leads() {
                       : "--"}
                 </td>
                 <td>
-                  <button
-                    className="btn btn-primary"
-                    style={{ fontSize: 12, padding: "4px 12px" }}
-                    onClick={() => openDealDetail(row)}
-                  >
-                    View
-                  </button>
+                  <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                    <button
+                      className="btn btn-primary"
+                      style={{ fontSize: 12, padding: "4px 12px" }}
+                      onClick={() => openDealDetail(row)}
+                    >
+                      View
+                    </button>
+                    {(isSales || isSuperUser) && (
+                      <select
+                        className="form-select"
+                        style={{ height: 26, padding: "2px 8px", fontSize: 12, width: "auto" }}
+                        value={row.status}
+                        onChange={(e) => handleDealStatusChange(row._id, e.target.value)}
+                      >
+                        <option value="New">New</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Won">Won</option>
+                        <option value="Lost">Lost</option>
+                      </select>
+                    )}
+                  </div>
                 </td>
               </tr>
             )) : (
@@ -3029,7 +3062,7 @@ function Leads() {
           SALES — DEAL DETAIL MODAL (tabbed)
           Calls GET /api/deals/:id  (NOT /api/leads/:id)
       ════════════════════════════════════════ */}
-      {isSales && selectedDealId && (
+      {(isSales || isSuperUser) && selectedDealId && (
         <div className="nc-modal-overlay" onClick={closeDetail}>
           <div className="nc-modal-content" onClick={(e) => e.stopPropagation()} style={{ width: 760, maxHeight: "92vh", display: "flex", flexDirection: "column", borderRadius: 12, overflow: "hidden" }}>
 

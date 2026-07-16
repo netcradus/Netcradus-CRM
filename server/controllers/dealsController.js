@@ -553,6 +553,7 @@
 
 
 const Deal = require("../models/Deal");
+const Lead = require("../models/Lead");
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const isClosedDeal = (deal) => {
@@ -618,7 +619,14 @@ exports.getDeal = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
       .populate("assignedTo", "name email role")
-      .populate("dealWonBy", "name email role");
+      .populate("dealWonBy", "name email role")
+      .populate({
+        path: "sourceLead",
+        populate: [
+          { path: "notes.addedBy", select: "name email" },
+          { path: "callLog.calledBy", select: "name email" }
+        ]
+      });
 
     if (!deal) {
       return res.status(404).json({
@@ -642,9 +650,18 @@ exports.getDeal = async (req, res) => {
       });
     }
 
+    const dealObj = deal.toObject();
+    if (dealObj.sourceLead) {
+      dealObj.notes = dealObj.sourceLead.notes || [];
+      dealObj.callLog = dealObj.sourceLead.callLog || [];
+    } else {
+      dealObj.notes = [];
+      dealObj.callLog = [];
+    }
+
     return res.json({
       success: true,
-      data: deal,
+      data: dealObj,
     });
   } catch (error) {
     console.error("Get Deal Error:", error.message);
@@ -682,6 +699,20 @@ exports.createDeal = async (req, res) => {
       reminderNote,
     } = req.body;
 
+    let finalSourceLead = sourceLead;
+    if (!finalSourceLead) {
+      const lead = await Lead.create({
+        name: clientName || name,
+        email: clientEmail || "",
+        phone: clientPhone || "",
+        company: companyName || "",
+        status: "call_back",
+        createdBy: req.user._id,
+        assignedTo: req.user._id,
+      });
+      finalSourceLead = lead._id;
+    }
+
     const deal = new Deal({
       name,
       clientName,
@@ -694,7 +725,7 @@ exports.createDeal = async (req, res) => {
       status: status || "New",
       assignedTo: req.user?._id || null,
       expectedCloseDate,
-      sourceLead,
+      sourceLead: finalSourceLead,
       comments: [],
       meetings: [],
       reminders: [],
