@@ -557,7 +557,7 @@ const Lead = require("../models/Lead");
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const isClosedDeal = (deal) => {
-  return ["Won", "Lost"].includes(deal.status);
+  return deal && ["Won", "Lost"].includes(deal.status);
 };
 
 const ensureDealAccess = (req, res) => {
@@ -926,12 +926,19 @@ exports.addMeeting = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id);
 
+    if (!deal) {
+      return res.status(404).json({
+        success: false,
+        message: "Deal not found",
+      });
+    }
+
     if (isClosedDeal(deal)) {
-  return res.status(400).json({
-    success: false,
-    message: "Closed deals cannot be modified.",
-  });
-}
+      return res.status(400).json({
+        success: false,
+        message: "Closed deals cannot be modified.",
+      });
+    }
 
     deal.meetings.push({
       title: req.body.title,
@@ -964,12 +971,19 @@ exports.addReminder = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id);
 
+    if (!deal) {
+      return res.status(404).json({
+        success: false,
+        message: "Deal not found",
+      });
+    }
+
     if (isClosedDeal(deal)) {
-  return res.status(400).json({
-    success: false,
-    message: "Closed deals cannot be modified.",
-  });
-}
+      return res.status(400).json({
+        success: false,
+        message: "Closed deals cannot be modified.",
+      });
+    }
 
     deal.reminders.push({
       title: req.body.title,
@@ -991,14 +1005,16 @@ exports.markDealWon = async (req, res) => {
 
   try {
     const deal = await Deal.findById(req.params.id);
-    if (isClosedDeal(deal)) {
-  return res.status(400).json({
-    success: false,
-    message: "Deal already closed.",
-  });
-}
+
     if (!deal) {
       return res.status(404).json({ success: false, message: "Deal not found" });
+    }
+
+    if (isClosedDeal(deal)) {
+      return res.status(400).json({
+        success: false,
+        message: "Deal already closed.",
+      });
     }
 
     deal.status = "Won";
@@ -1026,15 +1042,16 @@ exports.markDealLost = async (req, res) => {
 
   try {
     const deal = await Deal.findById(req.params.id);
-    if (isClosedDeal(deal)) {
-  return res.status(400).json({
-    success: false,
-    message: "Deal already closed.",
-  });
-}
 
     if (!deal) {
       return res.status(404).json({ success: false, message: "Deal not found" });
+    }
+
+    if (isClosedDeal(deal)) {
+      return res.status(400).json({
+        success: false,
+        message: "Deal already closed.",
+      });
     }
 
     deal.status = "Lost";
