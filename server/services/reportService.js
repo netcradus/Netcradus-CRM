@@ -1,22 +1,87 @@
 const AttendanceRecord = require('../models/AttendanceRecord');
 const AttendanceSummary = require('../models/AttendanceSummary');
+const LeaveApplication = require('../models/LeaveApplication');
 const User = require('../models/User');
 const { getSettings } = require('../config/attendanceSettings');
 const { getHolidaysForYear } = require('./holidayService');
 const { formatShiftDate, isWeekend, isHoliday } = require('../utils/dateUtils');
+const { getMonthRecords } = require('./attendanceService');
 const { Parser: Json2csvParser } = require('json2csv');
 
 /**
- * Generate full month breakdown for a single user
+ * Generate full month report summary for a single user.
+ * Returns a summary object (not a raw array) with aggregated stats and a
+ * complete day-by-day records array including synthetic absent/weekend/holiday
+ * days for dates with no stored AttendanceRecord.
  */
 async function getMonthlyReport(userId, month, year) {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 0));
-  const records = await AttendanceRecord.find({
+  const numericMonth = Number(month);
+  const numericYear = Number(year);
+
+  // Re-use the authoritative day-generation logic from attendanceService.
+  // This produces one entry per calendar day (real records + synthetic absent/
+  // weekend/holiday stubs) using the configured timezone and holiday list.
+  const allDays = await getMonthRecords(userId, numericMonth, numericYear);
+
+  // ------------------------------------------------------------------
+  // Leave integration: overlay on_leave for approved leave days that
+  // currently show as absent in the generated records.
+  // ------------------------------------------------------------------
+  const settings = await getSettings();
+  const startDate = new Date(Date.UTC(numericYear, numericMonth - 1, 1));
+  const endDate   = new Date(Date.UTC(numericYear, numericMonth, 0));   // last day of month
+
+  const approvedLeaves = await LeaveApplication.find({
     userId,
-    shiftDate: { $gte: start, $lte: end }
-  }).populate('userId', 'name email').lean();
-  return records;
+    status: 'approved',
+    from: { $lte: endDate },
+    to:   { $gte: startDate },
+  }).lean();
+
+  // Build a Set of leave date strings (YYYY-MM-DD in company timezone) for O(1) lookup.
+  const leaveDateSet = new Set();
+  for (const leave of approvedLeaves) {
+    let cur        = new Date(leave.from);
+    const leaveEnd = new Date(leave.to);
+    while (cur <= leaveEnd) {
+      leaveDateSet.add(formatShiftDate(cur, settings.timezone));
+      cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
+    }
+  }
+
+  // Apply leave overlay: absent → on_leave where an approved leave exists.
+  const records = allDays.map(day => {
+    if (day.status === 'absent' && leaveDateSet.size > 0) {
+      const dateKey = formatShiftDate(new Date(day.shiftDate), settings.timezone);
+      if (leaveDateSet.has(dateKey)) {
+        return { ...day, status: 'on_leave' };
+      }
+    }
+    return day;
+  });
+
+  // ------------------------------------------------------------------
+  // Compute summary statistics from the complete records array.
+  // Weekends and holidays are excluded from totalWorkingDays.
+  // ------------------------------------------------------------------
+  const totalWorkingDays  = records.filter(r => r.status !== 'weekend' && r.status !== 'holiday').length;
+  const present           = records.filter(r => r.status === 'present').length;
+  const absent            = records.filter(r => r.status === 'absent').length;
+  const halfDay           = records.filter(r => r.status === 'half_day').length;
+  const onLeave           = records.filter(r => r.status === 'on_leave').length;
+  const lateCount         = records.filter(r => r.isLate === true).length;
+  const totalHoursWorked  = +(records.reduce((sum, r) => sum + (r.workingHours || 0), 0)).toFixed(2);
+
+  return {
+    totalWorkingDays,
+    present,
+    absent,
+    halfDay,
+    onLeave,
+    lateCount,
+    totalHoursWorked,
+    records,
+  };
 }
 
 /**
