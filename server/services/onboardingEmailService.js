@@ -7,24 +7,24 @@ const TIMEZONE = "Asia/Kolkata";
 const formatDate = (value) =>
   value
     ? new Intl.DateTimeFormat("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        timeZone: TIMEZONE,
-      }).format(new Date(value))
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: TIMEZONE,
+    }).format(new Date(value))
     : "N/A";
 
 const formatDateTime = (value) =>
   value
     ? `${new Intl.DateTimeFormat("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-        timeZone: TIMEZONE,
-      }).format(new Date(value))} IST`
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: TIMEZONE,
+    }).format(new Date(value))} IST`
     : "N/A";
 
 const escapeHtml = (value = "") =>

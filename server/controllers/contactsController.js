@@ -8,6 +8,7 @@ const { createNotifications } = require("../services/taskNotificationService");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const PDFDocument = require("pdfkit");
 
 // Multer Config for private uploads (Salary Slips)
 const storage = multer.diskStorage({
@@ -37,7 +38,7 @@ const PRIVILEGED_CONTACT_ROLES = new Set(["admin", "hr", "super_user"]);
 
 const normalizeRole = (value = "") => String(value || "").trim().toLowerCase();
 const normalizeEmail = (value = "") => String(value || "").trim().toLowerCase();
-const SELF_PROFILE_FIELDS = ["contactNumber", "address", "emergencyContactName", "emergencyContactNumber", "personalEmail"];
+const SELF_PROFILE_FIELDS = ["contactNumber", "address", "emergencyContactName", "emergencyContactNumber", "personalEmail", "emergencyContact"];
 const STAFF_PROFILE_FIELDS = [
     "name",
     "email",
@@ -54,6 +55,7 @@ const STAFF_PROFILE_FIELDS = [
     "emergencyContactName",
     "emergencyContactNumber",
     "personalEmail",
+    "emergencyContact",
 ];
 
 const canAccessAnySalarySlip = (user) => PRIVILEGED_CONTACT_ROLES.has(normalizeRole(user?.role));
@@ -248,54 +250,170 @@ const getTodayApprovedLeave = async (userId) => {
 
 const toAmount = (value) => {
     const amount = Number(value || 0);
-    return Number.isFinite(amount) ? amount : 0;
+    return Number.isFinite(amount) && amount >= 0 ? amount : 0;
 };
 
+// --- Number → Indian words ----------------------------------------------------
+const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
+              "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
+              "Seventeen","Eighteen","Nineteen"];
+const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+
+const numToWords = (n) => {
+    n = Math.floor(Math.abs(n));
+    if (n === 0) return "Zero";
+    const chunk = (num) => {
+        if (num < 20) return ones[num];
+        if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? " " + ones[num % 10] : "");
+        return ones[Math.floor(num / 100)] + " Hundred" + (num % 100 ? " " + chunk(num % 100) : "");
+    };
+    const parts = [];
+    const crore = Math.floor(n / 10000000); n %= 10000000;
+    const lakh  = Math.floor(n / 100000);   n %= 100000;
+    const thou  = Math.floor(n / 1000);     n %= 1000;
+    if (crore) parts.push(chunk(crore) + " Crore");
+    if (lakh)  parts.push(chunk(lakh)  + " Lakh");
+    if (thou)  parts.push(chunk(thou)  + " Thousand");
+    if (n)     parts.push(chunk(n));
+    return parts.join(" ");
+};
+
+const netPayInWords = (amount) => {
+    const rupees = Math.floor(amount);
+    const paise  = Math.round((amount - rupees) * 100);
+    let result   = numToWords(rupees) + " Rupees";
+    if (paise) result += " and " + numToWords(paise) + " Paise";
+    return result + " Only";
+};
+
+const DEPT_SALES = "sales";
+const DEPT_IT    = "it";
+const normDept   = (d) => String(d || "").toLowerCase().trim();
+
+// All fields accepted from the frontend for a new salary slip
 const SALARY_SLIP_FIELDS = [
-    "month",
-    "year",
-    "payDate",
-    "basicSalary",
-    "hra",
-    "conveyance",
-    "bonus",
-    "specialAllowance",
-    "providentFund",
-    "professionalTax",
-    "otherDeductions",
+    // Period
+    "month", "year", "payDate",
+    // Department
+    "department",
+    // Common earnings
+    "basicSalary", "hra", "dearnessAllowance", "specialAllowance", "otherEarnings",
+    // Sales-specific
+    "travelAllowance", "salesIncentive", "commission", "commissionRate",
+    "monthlyTarget", "achievedSales",
+    "targetAchievementBonus", "clientAcquisitionBonus", "performanceBonus",
+    // IT-specific
+    "conveyance", "technicalAllowance", "internetAllowance",
+    "wfhAllowance", "nightShiftAllowance", "onCallAllowance",
+    "overtimePay", "projectCompletionBonus",
+    // Deductions (PF intentionally excluded from new slips)
+    "professionalTax", "otherDeductions",
+    // Attendance
+    "workingDays", "paidDays", "lopDays",
+    // Payment info
+    "paymentMode", "bankAccountLast4",
+    // Misc
     "notes",
 ];
 
+/**
+ * Department-aware salary slip calculator.
+ * Computes grossPay, lopDeduction, totalDeductions, netPay on the server;
+ * never trusts frontend-supplied totals.
+ */
 const buildSalarySlipRecord = (payload = {}, actorId) => {
-    const basicSalary = toAmount(payload.basicSalary);
-    const hra = toAmount(payload.hra);
-    const conveyance = toAmount(payload.conveyance);
-    const bonus = toAmount(payload.bonus);
-    const specialAllowance = toAmount(payload.specialAllowance);
-    const providentFund = toAmount(payload.providentFund);
+    const dept = normDept(payload.department);
+    const month = String(payload.month || "").trim();
+    const year  = Number(payload.year);
+
+    // -- Common earnings ----------------------------------------------------
+    const basicSalary       = toAmount(payload.basicSalary);
+    const hra               = toAmount(payload.hra);
+    const dearnessAllowance = toAmount(payload.dearnessAllowance);
+    const specialAllowance  = toAmount(payload.specialAllowance);
+    const otherEarnings     = toAmount(payload.otherEarnings);
+
+    // -- Sales earnings -----------------------------------------------------
+    const travelAllowance        = toAmount(payload.travelAllowance);
+    const salesIncentive         = toAmount(payload.salesIncentive);
+    const achievedSales          = toAmount(payload.achievedSales);
+    const commissionRate         = Math.min(100, Math.max(0, toAmount(payload.commissionRate)));
+    const commissionOverride     = toAmount(payload.commission);
+    const commission = (achievedSales > 0 && commissionRate > 0)
+        ? parseFloat((achievedSales * commissionRate / 100).toFixed(2))
+        : commissionOverride;
+    const monthlyTarget          = toAmount(payload.monthlyTarget);
+    const targetAchievementBonus = toAmount(payload.targetAchievementBonus);
+    const clientAcquisitionBonus = toAmount(payload.clientAcquisitionBonus);
+    const performanceBonus       = toAmount(payload.performanceBonus);
+
+    // -- IT earnings --------------------------------------------------------
+    const conveyance             = toAmount(payload.conveyance);
+    const technicalAllowance     = toAmount(payload.technicalAllowance);
+    const internetAllowance      = toAmount(payload.internetAllowance);
+    const wfhAllowance           = toAmount(payload.wfhAllowance);
+    const nightShiftAllowance    = toAmount(payload.nightShiftAllowance);
+    const onCallAllowance        = toAmount(payload.onCallAllowance);
+    const overtimePay            = toAmount(payload.overtimePay);
+    const projectCompletionBonus = toAmount(payload.projectCompletionBonus);
+
+    // -- Gross Pay (department-specific formula) ----------------------------
+    let grossPay;
+    if (dept === DEPT_SALES) {
+        grossPay = basicSalary + hra + dearnessAllowance + specialAllowance + otherEarnings
+            + travelAllowance + salesIncentive + commission
+            + targetAchievementBonus + clientAcquisitionBonus + performanceBonus;
+    } else if (dept === DEPT_IT) {
+        grossPay = basicSalary + hra + dearnessAllowance + specialAllowance + otherEarnings
+            + conveyance + technicalAllowance + internetAllowance
+            + wfhAllowance + nightShiftAllowance + onCallAllowance
+            + overtimePay + projectCompletionBonus + performanceBonus;
+    } else {
+        // Default / Other departments
+        grossPay = basicSalary + hra + dearnessAllowance + specialAllowance + otherEarnings + conveyance;
+    }
+    grossPay = parseFloat(grossPay.toFixed(2));
+
+    // -- Attendance & LOP --------------------------------------------------
+    const workingDays = Math.max(0, Math.round(toAmount(payload.workingDays)));
+    const lopDays     = Math.max(0, Math.round(toAmount(payload.lopDays)));
+    const paidDays    = Math.max(0, Math.round(toAmount(payload.paidDays)));
+    const lopDeduction = (workingDays > 0 && lopDays > 0)
+        ? parseFloat(((basicSalary / workingDays) * lopDays).toFixed(2))
+        : 0;
+
+    // -- Deductions (PF excluded from all new slips) -----------------------
     const professionalTax = toAmount(payload.professionalTax);
     const otherDeductions = toAmount(payload.otherDeductions);
-    const grossPay = basicSalary + hra + conveyance + bonus + specialAllowance;
-    const netPay = grossPay - (providentFund + professionalTax + otherDeductions);
-    const month = String(payload.month || "").trim();
-    const year = Number(payload.year);
+    const totalDeductions = parseFloat((professionalTax + otherDeductions + lopDeduction).toFixed(2));
+    const netPay          = parseFloat((grossPay - totalDeductions).toFixed(2));
 
     return {
         filename: `salary-slip-${month || "month"}-${year || new Date().getFullYear()}.pdf`,
         uploadedAt: new Date(),
         month,
-        year: Number.isFinite(year) ? year : new Date().getFullYear(),
+        year:  Number.isFinite(year) ? year : new Date().getFullYear(),
         payDate: payload.payDate ? new Date(payload.payDate) : new Date(),
-        basicSalary,
-        hra,
-        conveyance,
-        bonus,
-        specialAllowance,
-        providentFund,
-        professionalTax,
-        otherDeductions,
-        grossPay,
-        netPay,
+        department: String(payload.department || "").trim(),
+        // Common
+        basicSalary, hra, dearnessAllowance, specialAllowance, otherEarnings,
+        // Sales
+        travelAllowance, salesIncentive, commission, commissionRate,
+        monthlyTarget, achievedSales,
+        targetAchievementBonus, clientAcquisitionBonus, performanceBonus,
+        // IT
+        conveyance, technicalAllowance, internetAllowance,
+        wfhAllowance, nightShiftAllowance, onCallAllowance,
+        overtimePay, projectCompletionBonus,
+        // Deductions
+        professionalTax, otherDeductions, lopDeduction,
+        // Attendance
+        workingDays, paidDays, lopDays,
+        // Payment
+        paymentMode:      String(payload.paymentMode || "").trim(),
+        bankAccountLast4: String(payload.bankAccountLast4 || "").trim(),
+        // Totals
+        grossPay, totalDeductions, netPay,
         notes: String(payload.notes || "").trim(),
         generatedBy: actorId,
     };
@@ -308,108 +426,408 @@ const formatCurrency = (value = 0) =>
         maximumFractionDigits: 2,
     }).format(Number(value || 0));
 
-const formatCurrencyForPdf = (value = 0) =>
+// Resolve the logo once at module load time; gracefully skip if file is absent.
+const LOGO_PATH = path.resolve(__dirname, "../../client/public/LOGO.png");
+const LOGO_EXISTS = fs.existsSync(LOGO_PATH);
+
+const inrFmt = (value = 0) =>
     `Rs. ${Number(value || 0).toLocaleString("en-IN", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })}`;
 
-const escapeHtml = (value = "") =>
-    String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-
-const escapePdfText = (value = "") =>
-    String(value || "")
-        .replace(/\\/g, "\\\\")
-        .replace(/\(/g, "\\(")
-        .replace(/\)/g, "\\)")
-        .replace(/\r/g, "")
-        .replace(/\n/g, " ");
-
-const buildPdfTextLines = (contact, slip) => {
-    const payDate = slip.payDate ? new Date(slip.payDate).toLocaleDateString("en-IN") : "-";
-    return [
-        { text: "Salary Slip", size: 22, x: 50, y: 800 },
-        { text: `${contact.name || "Employee"}`, size: 16, x: 50, y: 772 },
-        {
-            text: `${contact.designation || "Employee"} | ${contact.department || "General"}`,
-            size: 11,
-            x: 50,
-            y: 754,
-        },
-        { text: `Month: ${slip.month || "-"} ${slip.year || ""}`, size: 11, x: 360, y: 800 },
-        { text: `Pay Date: ${payDate}`, size: 11, x: 360, y: 782 },
-        { text: `Email: ${contact.email || "-"}`, size: 11, x: 360, y: 764 },
-        { text: "Earnings", size: 14, x: 50, y: 720 },
-        { text: "Basic Salary", size: 11, x: 50, y: 696 },
-        { text: formatCurrencyForPdf(slip.basicSalary), size: 11, x: 220, y: 696 },
-        { text: "HRA", size: 11, x: 50, y: 676 },
-        { text: formatCurrencyForPdf(slip.hra), size: 11, x: 220, y: 676 },
-        { text: "Conveyance", size: 11, x: 50, y: 656 },
-        { text: formatCurrencyForPdf(slip.conveyance), size: 11, x: 220, y: 656 },
-        { text: "Bonus", size: 11, x: 50, y: 636 },
-        { text: formatCurrencyForPdf(slip.bonus), size: 11, x: 220, y: 636 },
-        { text: "Special Allowance", size: 11, x: 50, y: 616 },
-        { text: formatCurrencyForPdf(slip.specialAllowance), size: 11, x: 220, y: 616 },
-        { text: "Deductions", size: 14, x: 320, y: 720 },
-        { text: "Provident Fund", size: 11, x: 320, y: 696 },
-        { text: formatCurrencyForPdf(slip.providentFund), size: 11, x: 490, y: 696 },
-        { text: "Professional Tax", size: 11, x: 320, y: 676 },
-        { text: formatCurrencyForPdf(slip.professionalTax), size: 11, x: 490, y: 676 },
-        { text: "Other Deductions", size: 11, x: 320, y: 656 },
-        { text: formatCurrencyForPdf(slip.otherDeductions), size: 11, x: 490, y: 656 },
-        { text: "Gross Pay", size: 13, x: 50, y: 570 },
-        { text: formatCurrencyForPdf(slip.grossPay), size: 13, x: 180, y: 570 },
-        { text: "Net Pay", size: 13, x: 320, y: 570 },
-        { text: formatCurrencyForPdf(slip.netPay), size: 13, x: 430, y: 570 },
-        { text: `Notes: ${slip.notes || "-"}`, size: 10, x: 50, y: 520 },
-    ];
-};
-
+/**
+ * Generates a professional A4 salary slip PDF using PDFKit.
+ * Returns a Promise<Buffer>.
+ */
 const renderSalarySlipPdfBuffer = (contact, slip) => {
-    const lines = buildPdfTextLines(contact, slip);
-    const content = [
-        "BT",
-        ...lines.map(
-            (line) =>
-                `/F1 ${line.size} Tf 1 0 0 1 ${line.x} ${line.y} Tm (${escapePdfText(line.text)}) Tj`
-        ),
-        "ET",
-    ].join("\n");
+    return new Promise(async (resolve, reject) => {
+        const doc = new PDFDocument({ size: "A4", margin: 0 });
+        const chunks = [];
+        doc.on("data", (chunk) => chunks.push(chunk));
+        doc.on("end",  () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
 
-    const objects = [];
-    const addObject = (body) => {
-        objects.push(body);
-    };
+        // -- Palette ------------------------------------------------------------
+        const BRAND_DARK   = "#1a1a2e";
+        const BRAND_MID    = "#16213e";
+        const BRAND_ACCENT = "#e94560";
+        const TEXT_LIGHT   = "#ffffff";
+        const TEXT_DARK    = "#1a1a2e";
+        const TEXT_MUTED   = "#555555";
+        const ROW_ALT      = "#f5f5f5";
+        const ROW_WHITE    = "#ffffff";
+        const BORDER       = "#dddddd";
 
-    addObject("<< /Type /Catalog /Pages 2 0 R >>");
-    addObject("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-    addObject("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>");
-    addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-    addObject(`<< /Length ${Buffer.byteLength(content, "utf8")} >>\nstream\n${content}\nendstream`);
+        const PAGE_W = doc.page.width;   // 595.28
+        const MARGIN = 45;
+        const COL_W  = (PAGE_W - MARGIN * 2) / 2;
 
-    let pdf = "%PDF-1.4\n";
-    const offsets = [0];
+        const dept = normDept(slip.department || contact.department);
 
-    objects.forEach((body, index) => {
-        offsets.push(Buffer.byteLength(pdf, "utf8"));
-        pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+        // -- Helpers ------------------------------------------------------------
+        const fillRect = (x, y, w, h, color) =>
+            doc.save().rect(x, y, w, h).fill(color).restore();
+
+        const strokeRect = (x, y, w, h, color, lw = 0.5) =>
+            doc.save().lineWidth(lw).rect(x, y, w, h).stroke(color).restore();
+
+        const cell = (text, x, y, w, h, opts = {}) => {
+            const { fontSize = 9, color = TEXT_DARK, align = "left", bold = false, padding = 6 } = opts;
+            doc.font(bold ? "Helvetica-Bold" : "Helvetica")
+               .fontSize(fontSize)
+               .fillColor(color)
+               .text(String(text ?? ""), x + padding, y + padding, {
+                   width: w - padding * 2, height: h, align, lineBreak: false,
+               });
+        };
+
+        // -- HEADER BAND --------------------------------------------------------
+        const HEADER_H = 120;
+        fillRect(0, 0, PAGE_W, HEADER_H, BRAND_DARK);
+
+        doc.save()
+           .lineWidth(0.5)
+           .strokeColor("#e9456022");
+        for (let i = 0; i < 6; i++) {
+            const offset = i * 7;
+            doc.moveTo(PAGE_W - 90 + offset, 0)
+               .quadraticCurveTo(PAGE_W - 35, HEADER_H / 2, PAGE_W - offset, HEADER_H)
+               .stroke();
+        }
+        doc.restore();
+
+        fillRect(0, HEADER_H - 3, PAGE_W, 3, BRAND_ACCENT);
+
+        const BOX_SIZE = 70;
+        const BOX_X = MARGIN;
+        const BOX_Y = (HEADER_H - BOX_SIZE - 3) / 2;
+
+        doc.save()
+           .lineWidth(1)
+           .roundedRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE, 8)
+           .stroke("#ffffff88")
+           .restore();
+
+        if (LOGO_EXISTS) {
+            try {
+                const LOGO_MAX = 56;
+                doc.image(LOGO_PATH, BOX_X + 7, BOX_Y + 7, {
+                    fit: [LOGO_MAX, LOGO_MAX],
+                    align: "center",
+                    valign: "center"
+                });
+            } catch (err) {
+                doc.font("Helvetica").fontSize(7.5).fillColor("#cccccc")
+                   .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
+            }
+        } else {
+            doc.font("Helvetica").fontSize(7.5).fillColor("#cccccc")
+                   .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
+        }
+
+        const textStartX = BOX_X + BOX_SIZE + 18;
+
+        doc.font("Helvetica-Bold").fontSize(19).fillColor(TEXT_LIGHT)
+           .text("Employee Salary Slip", textStartX, BOX_Y + 14, { lineBreak: false });
+
+        const subY = BOX_Y + 41;
+        doc.font("Helvetica").fontSize(7.5).fillColor("#a0a0b0")
+           .text("-  CONFIDENTIAL", textStartX, subY, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(BRAND_ACCENT)
+           .text("  *  ", { continued: true });
+        doc.font("Helvetica").fillColor("#a0a0b0")
+           .text("PREPARED FOR EMPLOYEE USE ONLY");
+
+        const BADGE_W = 95;
+        const BADGE_H = 20;
+        const BADGE_X = PAGE_W - MARGIN - BADGE_W;
+        const BADGE_Y = BOX_Y + 10;
+
+        doc.save()
+           .fillColor(BRAND_ACCENT)
+           .roundedRect(BADGE_X, BADGE_Y, BADGE_W, BADGE_H, 10)
+           .fill()
+           .restore();
+
+        const iconX = BADGE_X + 10;
+        const iconY = BADGE_Y + 5;
+        const iconS = 9;
+        doc.save()
+           .lineWidth(1)
+           .strokeColor(TEXT_LIGHT)
+           .rect(iconX, iconY, iconS, iconS)
+           .stroke();
+        doc.save()
+           .fillColor(TEXT_LIGHT)
+           .rect(iconX + 2, iconY - 2, 1.5, 3)
+           .rect(iconX + 5.5, iconY - 2, 1.5, 3)
+           .fill()
+           .restore();
+
+        const monthLabel = String(slip.month || "").toUpperCase() + " " + (slip.year || "");
+        doc.font("Helvetica-Bold").fontSize(8).fillColor(TEXT_LIGHT)
+           .text(monthLabel, BADGE_X + 23, BADGE_Y + 6, { width: BADGE_W - 25, align: "left" });
+
+        const DIVIDER_X = BADGE_X - 18;
+        fillRect(DIVIDER_X, BOX_Y + 8, 0.75, 38, "#ffffff44");
+
+        const payDateStr = slip.payDate
+            ? new Date(slip.payDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
+            : "-";
+        const DATE_Y = BADGE_Y + 28;
+        doc.font("Helvetica").fontSize(8).fillColor("#cccccc")
+           .text("Pay Date: ", BADGE_X - 4, DATE_Y, { continued: true })
+           .font("Helvetica-Bold").fillColor(TEXT_LIGHT)
+           .text(payDateStr);
+
+        let curY = HEADER_H + 18;
+
+        // -- EMPLOYEE DETAILS ---------------------------------------------------
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND_ACCENT)
+           .text("EMPLOYEE DETAILS", MARGIN, curY);
+        curY += 14;
+        fillRect(0, curY - 1, PAGE_W, 0.5, BRAND_ACCENT);
+        curY += 6;
+
+        let linkedUser = null;
+        let managerName = null;
+        try {
+            if (contact.linkedUser || contact.sourceUserId) {
+                linkedUser = await User.findById(contact.linkedUser || contact.sourceUserId).lean();
+                if (linkedUser?.reportsTo) {
+                    const manager = await User.findById(linkedUser.reportsTo).select("name").lean();
+                    if (manager?.name) {
+                        managerName = manager.name;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("PDF generation user resolve error:", err);
+        }
+
+        const maskMobileNumber = (numStr) => {
+            if (!numStr) return "Not Provided";
+            const cleanNum = String(numStr).replace(/\D/g, "");
+            if (cleanNum.length < 3) return "Not Provided";
+            const last3 = cleanNum.slice(-3);
+            return `+91 XXXXXXX${last3}`;
+        };
+
+        const employeeId = slip.employeeId || contact.employeeId || linkedUser?.userId || "N/A";
+        const mobileNumberRaw = contact.contactNumber || linkedUser?.contactNumber;
+        const maskedMobile = maskMobileNumber(mobileNumberRaw);
+
+        // Optional fields formatting
+        const joiningDateVal = contact.joiningDate || linkedUser?.joiningDate;
+        const joiningDateStr = joiningDateVal
+            ? new Date(joiningDateVal).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
+            : null;
+
+        const officeLocation = contact.officeLocation || linkedUser?.officeLocation || contact.workLocation || linkedUser?.workLocation;
+        const employmentType = contact.employmentType || linkedUser?.employmentType;
+
+        const maskedBank = slip.bankAccountLast4
+            ? `XXXX XXXX XXXX ${slip.bankAccountLast4}`
+            : "-";
+
+        const detailRows = [
+            ["Name",         contact.name        || "-",  "Department",    contact.department  || "-"        ],
+            ["Designation",  contact.designation || "-",  "Email",         contact.email       || "-"        ],
+            ["Employee ID",  employeeId,                  "Mobile Number", maskedMobile                      ],
+        ];
+
+        if (joiningDateStr) {
+            detailRows.push(["Date of Joining", joiningDateStr, "Employment Type", employmentType || "-"]);
+        }
+        if (managerName) {
+            detailRows.push(["Reporting Manager", managerName, "Office Location", officeLocation || "-"]);
+        } else if (officeLocation || employmentType) {
+            detailRows.push(["Office Location", officeLocation || "-", "Employment Type", employmentType || "-"]);
+        }
+
+        detailRows.push(
+            ["Working Days", String(slip.workingDays || 0), "Paid Days",   String(slip.paidDays || 0)        ],
+            ["Payment Mode", slip.paymentMode     || "-",  "Bank Account",  maskedBank                       ]
+        );
+
+        const DET_H  = 22;
+        const DET_W1 = 95;
+        const DET_W2 = COL_W - DET_W1;
+
+        detailRows.forEach((row, ri) => {
+            const rowY = curY + ri * DET_H;
+            const bg   = ri % 2 === 0 ? ROW_WHITE : ROW_ALT;
+            fillRect(MARGIN, rowY, PAGE_W - MARGIN * 2, DET_H, bg);
+            cell(row[0], MARGIN,                  rowY, DET_W1, DET_H, { bold: true,  color: TEXT_MUTED, fontSize: 8 });
+            cell(row[1], MARGIN + DET_W1,         rowY, DET_W2, DET_H, { color: TEXT_DARK, fontSize: 9 });
+            cell(row[2], MARGIN + COL_W,          rowY, DET_W1, DET_H, { bold: true,  color: TEXT_MUTED, fontSize: 8 });
+            cell(row[3], MARGIN + COL_W + DET_W1, rowY, DET_W2, DET_H, { color: TEXT_DARK, fontSize: 9 });
+            strokeRect(MARGIN, rowY, PAGE_W - MARGIN * 2, DET_H, BORDER);
+        });
+
+        curY += detailRows.length * DET_H + 20;
+
+        // -- EARNINGS & DEDUCTIONS ----------------------------------------------
+        const TABLE_GAP = 16;
+        const HALF_W    = (PAGE_W - MARGIN * 2 - TABLE_GAP) / 2;
+        const EARN_X    = MARGIN;
+        const DED_X     = MARGIN + HALF_W + TABLE_GAP;
+        const COL_LABEL = HALF_W * 0.63;
+        const COL_AMT   = HALF_W - COL_LABEL;
+        const ROW_H     = 23;
+        const HEAD_H    = 26;
+
+        // Build department-specific earning rows
+        let earningsRows;
+        if (dept === DEPT_SALES) {
+            earningsRows = [
+                ["Basic Salary",             slip.basicSalary            ],
+                ["HRA",                      slip.hra                    ],
+                ["Dearness Allowance",       slip.dearnessAllowance      ],
+                ["Special Allowance",        slip.specialAllowance       ],
+                ["Travel Allowance",         slip.travelAllowance        ],
+                ["Sales Incentive",          slip.salesIncentive         ],
+                ["Commission",               slip.commission             ],
+                ["Target Achievement Bonus", slip.targetAchievementBonus ],
+                ["Client Acquisition Bonus", slip.clientAcquisitionBonus ],
+                ["Performance Bonus",        slip.performanceBonus       ],
+                ["Other Earnings",           slip.otherEarnings          ],
+            ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
+        } else if (dept === DEPT_IT) {
+            earningsRows = [
+                ["Basic Salary",          slip.basicSalary           ],
+                ["HRA",                   slip.hra                   ],
+                ["Dearness Allowance",    slip.dearnessAllowance     ],
+                ["Special Allowance",     slip.specialAllowance      ],
+                ["Conveyance",            slip.conveyance            ],
+                ["Technical Allowance",   slip.technicalAllowance    ],
+                ["Internet Allowance",    slip.internetAllowance     ],
+                ["WFH Allowance",         slip.wfhAllowance          ],
+                ["Night Shift Allowance", slip.nightShiftAllowance   ],
+                ["On-call Allowance",     slip.onCallAllowance       ],
+                ["Overtime Pay",          slip.overtimePay           ],
+                ["Project Completion Bonus", slip.projectCompletionBonus],
+                ["Performance Bonus",     slip.performanceBonus      ],
+                ["Other Earnings",        slip.otherEarnings         ],
+            ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
+        } else {
+            // Default / other departments - show all non-zero
+            earningsRows = [
+                ["Basic Salary",       slip.basicSalary     ],
+                ["HRA",                slip.hra             ],
+                ["Dearness Allowance", slip.dearnessAllowance],
+                ["Special Allowance",  slip.specialAllowance],
+                ["Conveyance",         slip.conveyance      ],
+                ["Other Earnings",     slip.otherEarnings   ],
+            ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
+        }
+
+        // Deductions - no PF for new slips; LOP shown if > 0; legacy PF shown if stored
+        const legacyPF = Number(slip.providentFund) || 0; // backward-compat
+        const deductionRows = [
+            ...(legacyPF > 0        ? [["Provident Fund (legacy)", legacyPF]] : []),
+            ["Professional Tax",   slip.professionalTax || 0],
+            ...(Number(slip.lopDeduction) > 0  ? [["LOP Deduction", slip.lopDeduction]] : []),
+            ["Other Deductions",   slip.otherDeductions || 0],
+        ].filter(r => Number(r[1]) > 0);
+
+        // Earnings header
+        fillRect(EARN_X, curY, HALF_W, HEAD_H, BRAND_MID);
+        cell("Earnings",      EARN_X,           curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Amount (Rs.)",  EARN_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+
+        // Deductions header
+        fillRect(DED_X, curY, HALF_W, HEAD_H, BRAND_MID);
+        cell("Deductions",    DED_X,            curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Amount (Rs.)",  DED_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+        curY += HEAD_H;
+
+        const maxRows = Math.max(earningsRows.length, deductionRows.length);
+        for (let i = 0; i < maxRows; i++) {
+            const rowY = curY + i * ROW_H;
+            const bg   = i % 2 === 0 ? ROW_WHITE : ROW_ALT;
+            fillRect(EARN_X, rowY, HALF_W, ROW_H, bg);
+            if (earningsRows[i]) {
+                cell(earningsRows[i][0], EARN_X,            rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
+                cell(inrFmt(earningsRows[i][1]), EARN_X + COL_LABEL, rowY, COL_AMT, ROW_H, { fontSize: 9, color: TEXT_DARK, align: "right" });
+            }
+            strokeRect(EARN_X, rowY, HALF_W, ROW_H, BORDER);
+
+            fillRect(DED_X, rowY, HALF_W, ROW_H, bg);
+            if (deductionRows[i]) {
+                cell(deductionRows[i][0], DED_X,             rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
+                cell(inrFmt(deductionRows[i][1]), DED_X + COL_LABEL, rowY, COL_AMT, ROW_H, { fontSize: 9, color: TEXT_DARK, align: "right" });
+            }
+            strokeRect(DED_X, rowY, HALF_W, ROW_H, BORDER);
+        }
+        curY += maxRows * ROW_H + 1;
+
+        // Gross Pay & Total Deductions footer row
+        const storedTotalDed = Number(slip.totalDeductions) > 0
+            ? slip.totalDeductions
+            : (legacyPF + (slip.professionalTax || 0) + (slip.otherDeductions || 0) + (slip.lopDeduction || 0));
+
+        fillRect(EARN_X, curY, HALF_W, ROW_H, BRAND_DARK);
+        cell("Gross Pay",       EARN_X,            curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell(inrFmt(slip.grossPay), EARN_X + COL_LABEL, curY, COL_AMT, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+
+        fillRect(DED_X, curY, HALF_W, ROW_H, BRAND_DARK);
+        cell("Total Deductions", DED_X,             curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell(inrFmt(storedTotalDed), DED_X + COL_LABEL, curY, COL_AMT, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+        curY += ROW_H + 16;
+
+        // -- NET PAY BAND -------------------------------------------------------
+        const NET_H = 38;
+        fillRect(MARGIN, curY, PAGE_W - MARGIN * 2, NET_H, BRAND_ACCENT);
+        doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_LIGHT)
+           .text("NET PAY", MARGIN + 10, curY + 11, { lineBreak: false });
+        doc.font("Helvetica-Bold").fontSize(14).fillColor(TEXT_LIGHT)
+           .text(inrFmt(slip.netPay), 0, curY + 9, { width: PAGE_W - MARGIN, align: "right", lineBreak: false });
+        curY += NET_H + 8;
+
+        // Net Pay in Words
+        doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
+           .text(netPayInWords(slip.netPay), MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
+        curY += 20;
+
+        // -- NOTES --------------------------------------------------------------
+        const notesText = slip.notes && slip.notes.trim() ? slip.notes.trim() : "-";
+        doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND_ACCENT)
+           .text("NOTES", MARGIN, curY);
+        curY += 13;
+        fillRect(MARGIN, curY, PAGE_W - MARGIN * 2, 0.5, BORDER);
+        curY += 6;
+        doc.font("Helvetica").fontSize(9).fillColor(TEXT_MUTED)
+           .text(notesText, MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
+        curY += 40;
+
+        // -- SIGNATURES ---------------------------------------------------------
+        const SIG_LINE_W = 140;
+        const EMP_SIG_X  = MARGIN;
+        const HR_SIG_X   = PAGE_W - MARGIN - SIG_LINE_W;
+
+        fillRect(EMP_SIG_X, curY, SIG_LINE_W, 0.75, TEXT_DARK);
+        doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
+           .text("Employee Signature", EMP_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
+
+        fillRect(HR_SIG_X, curY, SIG_LINE_W, 0.75, TEXT_DARK);
+        doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
+           .text("Authorised by HR / Management", HR_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
+
+        // -- FOOTER -------------------------------------------------------------
+        const FOOTER_Y = doc.page.height - 28;
+        fillRect(0, FOOTER_Y, PAGE_W, 28, BRAND_DARK);
+        doc.font("Helvetica").fontSize(7.5).fillColor("#888888")
+           .text("This is a computer-generated salary slip and does not require a physical signature.",
+               MARGIN, FOOTER_Y + 9, { width: PAGE_W - MARGIN * 2, align: "center", lineBreak: false });
+
+        doc.end();
     });
-
-    const xrefStart = Buffer.byteLength(pdf, "utf8");
-    pdf += `xref\n0 ${objects.length + 1}\n`;
-    pdf += "0000000000 65535 f \n";
-    for (let i = 1; i < offsets.length; i += 1) {
-        pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
-    }
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-
-    return Buffer.from(pdf, "utf8");
 };
+
+// End of renderSalarySlipPdfBuffer
+
 
 const sanitizeProfilePayload = (payload, allowedFields) =>
     allowedFields.reduce((acc, field) => {
@@ -462,14 +880,15 @@ const serializeEmployeeProfile = async (contact) => {
 
     return {
         ...doc,
+        employeeId: contact.employeeId || null,
         linkedUser: linkedUser
             ? {
-                  _id: linkedUser._id,
-                  name: linkedUser.name,
-                  email: linkedUser.email,
-                  role: linkedUser.role,
-                  department: linkedUser.department,
-              }
+                _id: linkedUser._id,
+                name: linkedUser.name,
+                email: linkedUser.email,
+                role: linkedUser.role,
+                department: linkedUser.department,
+            }
             : null,
     };
 };
@@ -477,11 +896,12 @@ const serializeEmployeeProfile = async (contact) => {
 // Helper to filter fields based on role and re-auth status
 const filterContactFields = (contact, role, isReAuthed = false) => {
     const doc = toPlainContact(contact);
-    
+
     // Management: Highly restricted
     if (role === 'management') {
         return {
             _id: doc._id,
+            employeeId: doc.employeeId || null,
             name: doc.name,
             email: doc.email,
             status: doc.status,
@@ -575,7 +995,7 @@ exports.getContactById = async (req, res) => {
         if (!canViewerAccessContact(req.user.role, linkedRole)) {
             return res.status(403).json({ message: "You are not allowed to view this contact." });
         }
-        
+
         const filtered = filterContactFields(contact, req.user.role, false);
         res.json(filtered);
     } catch (err) {
@@ -687,7 +1107,7 @@ exports.downloadSalarySlip = async (req, res) => {
             return res.download(resolvedPath, salarySlip.filename || path.basename(resolvedPath));
         }
 
-        const pdfBuffer = renderSalarySlipPdfBuffer(contact, salarySlip);
+        const pdfBuffer = await renderSalarySlipPdfBuffer(contact, salarySlip);
         const downloadName = (salarySlip.filename || `salary-slip-${salarySlip.month}-${salarySlip.year}.pdf`).replace(/\.html$/i, ".pdf");
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
@@ -709,8 +1129,82 @@ exports.generateSalarySlip = async (req, res) => {
         }
 
         const payload = sanitizeProfilePayload(req.body || {}, SALARY_SLIP_FIELDS);
-        if (!payload.month || !payload.year) {
+        if (!payload.month || !String(payload.month).trim()) {
             return res.status(400).json({ message: "Month and year are required" });
+        }
+        if (!payload.year) {
+            return res.status(400).json({ message: "Month and year are required" });
+        }
+        if (!payload.payDate) {
+            return res.status(400).json({ message: "Pay Date is required" });
+        }
+
+        const basicVal = Number(payload.basicSalary);
+        if (isNaN(basicVal) || basicVal <= 0) {
+            return res.status(400).json({ message: "Basic Salary is required and must be greater than 0" });
+        }
+
+        // Working Days must be mandatory, integer between 1 and 31.
+        const workingDaysRaw = payload.workingDays;
+        const workingDaysVal = Number(workingDaysRaw);
+        if (workingDaysRaw === undefined || workingDaysRaw === null || workingDaysRaw === "" || isNaN(workingDaysVal) || !Number.isInteger(workingDaysVal) || workingDaysVal < 1 || workingDaysVal > 31) {
+            return res.status(400).json({ message: "Working Days must be between 1 and 31." });
+        }
+
+        // Paid Days must be mandatory, integer greater than 0, cannot exceed Working Days.
+        const paidDaysRaw = payload.paidDays;
+        const paidDaysVal = Number(paidDaysRaw);
+        if (paidDaysRaw === undefined || paidDaysRaw === null || paidDaysRaw === "" || isNaN(paidDaysVal) || !Number.isInteger(paidDaysVal) || paidDaysVal <= 0) {
+            return res.status(400).json({ message: "Paid Days must be greater than 0." });
+        }
+        if (paidDaysVal > workingDaysVal) {
+            return res.status(400).json({ message: "Paid Days cannot exceed Working Days." });
+        }
+
+        // LWP/LOP Days must be integer, 0 or greater.
+        const lopDaysRaw = payload.lopDays !== undefined && payload.lopDays !== null && payload.lopDays !== "" ? payload.lopDays : 0;
+        const lopDaysVal = Number(lopDaysRaw);
+        if (isNaN(lopDaysVal) || !Number.isInteger(lopDaysVal) || lopDaysVal < 0) {
+            return res.status(400).json({ message: "LWP/LOP Days cannot be negative." });
+        }
+        if (lopDaysVal > workingDaysVal) {
+            return res.status(400).json({ message: "LWP/LOP Days cannot exceed Working Days." });
+        }
+
+        // Paid Days + LWP/LOP Days <= Working Days
+        if (paidDaysVal + lopDaysVal > workingDaysVal) {
+            return res.status(400).json({ message: "Paid Days and LWP/LOP Days cannot exceed total Working Days." });
+        }
+
+        // Monetary values check (no negative values)
+        const monetaryFields = [
+            "basicSalary", "hra", "dearnessAllowance", "specialAllowance", "otherEarnings",
+            "travelAllowance", "salesIncentive", "commission", "commissionRate",
+            "monthlyTarget", "achievedSales", "targetAchievementBonus", "clientAcquisitionBonus",
+            "conveyance", "technicalAllowance", "internetAllowance", "wfhAllowance",
+            "nightShiftAllowance", "onCallAllowance", "overtimePay", "projectCompletionBonus",
+            "performanceBonus", "professionalTax", "otherDeductions"
+        ];
+        for (const field of monetaryFields) {
+            if (payload[field] !== undefined && payload[field] !== null && payload[field] !== "") {
+                const val = Number(payload[field]);
+                if (isNaN(val) || val < 0) {
+                    return res.status(400).json({ message: `${field.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())} cannot be negative` });
+                }
+            }
+        }
+
+        // Commission rate must be between 0 and 100
+        const commRate = Number(payload.commissionRate || 0);
+        if (commRate < 0 || commRate > 100) {
+            return res.status(400).json({ message: "Commission rate must be between 0 and 100" });
+        }
+
+        // Bank account last digits must contain exactly 4 digits when provided
+        if (payload.bankAccountLast4 && payload.bankAccountLast4.trim()) {
+            if (!/^[0-9]{4}$/.test(payload.bankAccountLast4.trim())) {
+                return res.status(400).json({ message: "Bank account last digits must contain exactly 4 digits" });
+            }
         }
 
         const contact = await ensureContactProfileForUser(user._id);
@@ -718,12 +1212,15 @@ exports.generateSalarySlip = async (req, res) => {
             return res.status(404).json({ message: "Employee profile not found" });
         }
 
-        const slipData = {
-            ...payload,
+        // -- Root-cause fix: always build from buildSalarySlipRecord so that
+        //    grossPay, totalDeductions, and netPay are ALWAYS calculated
+        //    server-side and never rely on frontend-supplied values.
+        const slipRecord = buildSalarySlipRecord(payload, req.user._id);
+        const newSlip = new SalarySlip({
+            ...slipRecord,
             contactId: contact._id,
-            generatedBy: req.user._id
-        };
-        const newSlip = new SalarySlip(slipData);
+            employeeId: contact.employeeId || user.userId || ""
+        });
         await newSlip.save();
 
         try {
@@ -857,7 +1354,7 @@ exports.createContact = async (req, res) => {
     try {
         const { leavingDate } = req.body;
         const newContact = new Contact(req.body);
-        
+
         if (leavingDate) {
             newContact.isActive = false;
             newContact.status = "Ex-Employee";
@@ -874,7 +1371,7 @@ exports.createContact = async (req, res) => {
 exports.updateContact = async (req, res) => {
     try {
         const { leavingDate } = req.body;
-        
+
         if (leavingDate) {
             req.body.isActive = false;
             req.body.status = "Ex-Employee";
@@ -882,7 +1379,7 @@ exports.updateContact = async (req, res) => {
 
         const contact = await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!contact) return res.status(404).json({ message: "Contact not found" });
-        
+
         res.json(contact);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -899,5 +1396,4 @@ exports.deleteContact = async (req, res) => {
         res.status(500).send("Server Error");
     }
 };
-
 exports.uploadPrivate = uploadPrivate;

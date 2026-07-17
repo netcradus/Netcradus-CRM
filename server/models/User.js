@@ -104,6 +104,14 @@ const userSchema = new mongoose.Schema({
   zohoConnectedAt: {
     type: Date,
     default: null
+  },
+  emergencyContact: {
+    name: String,
+    relationship: String,
+    contactNumber: String,
+    alternateContactNumber: String,
+    address: String,
+    notes: String
   }
 
 }, { timestamps: true });

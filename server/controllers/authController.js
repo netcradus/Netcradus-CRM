@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Contact = require("../models/Contact");
+const Counter = require("../models/Counter");
 const AdminDevice = require("../models/AdminDevice");
 const { UAParser } = require("ua-parser-js");
 const { isDriveEnabled } = require("../utils/featureFlags");
@@ -113,24 +114,52 @@ const createUserByAdmin = async (req, res) => {
 
     await user.save();
 
+    let generatedEmployeeId = null;
+
     // Partners are external collaborators, so they should not be mirrored as employee contacts.
     if (normalizedRole !== "partner") {
-      await Contact.findOneAndUpdate(
-      { linkedUser: user._id },
-      {
-        $setOnInsert: {
-          linkedUser: user._id,
-          name: user.name,
-          email: user.email,
-          status: "Employee",
-          department: user.department || "General",
-          designation: user.designation || formatRoleLabel(user.role || "employee"),
-          joiningDate: user.createdAt,
-          isActive: true,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
+      try {
+        const counter = await Counter.findOneAndUpdate(
+          { id: "employeeId" },
+          { $inc: { seq: 1 } },
+          { new: true, upsert: true }
+        );
+        const seqNum = counter.seq;
+        generatedEmployeeId = seqNum <= 999
+          ? `NC${String(seqNum).padStart(3, "0")}`
+          : `NC${seqNum}`;
+
+        await Contact.findOneAndUpdate(
+          { linkedUser: user._id },
+          {
+            $setOnInsert: {
+              linkedUser: user._id,
+              employeeId: generatedEmployeeId,
+              name: user.name,
+              email: user.email,
+              status: "Employee",
+              department: user.department || "General",
+              designation: user.designation || formatRoleLabel(user.role || "employee"),
+              joiningDate: user.createdAt,
+              isActive: true,
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (contactErr) {
+        console.error("Contact creation failed during user onboarding, rolling back user:", contactErr);
+        await User.deleteOne({ _id: user._id });
+
+        if (contactErr.code === 11000) {
+          return res.status(400).json({
+            message: "Failed to create employee profile: Employee ID or Email duplicate error."
+          });
+        }
+        return res.status(500).json({
+          message: "Failed to create employee profile, rolled back user creation.",
+          error: contactErr.message
+        });
+      }
     }
 
     // ── Provision Google Drive storage for the new user ──────────────────────
@@ -150,6 +179,7 @@ const createUserByAdmin = async (req, res) => {
       user: {
         id: user._id,
         userId: user.userId,
+        employeeId: generatedEmployeeId,
         email: user.email,
         role: user.role,
         designation: user.designation,
@@ -579,7 +609,7 @@ const adminChangeUserPassword = async (req, res) => {
     user.lastWeeklyVerification = new Date();
     user.failedLoginAttempts = 0;
     user.lastFailedLogin = null;
-    
+
     await user.save();
 
     res.json({

@@ -142,6 +142,10 @@ function MyProfilePage() {
                      <input className="form-input" disabled value={profile?.email || ""} />
                   </div>
                   <div className="form-field">
+                     <label className="form-label">Employee ID</label>
+                     <input className="form-input" disabled value={profile?.employeeId || "N/A"} style={{ opacity: 0.7 }} />
+                  </div>
+                  <div className="form-field">
                      <label className="form-label">Personal Email</label>
                      <input className="form-input" type="email" value={form.personalEmail} onChange={e => setForm({...form, personalEmail: e.target.value})} />
                   </div>
