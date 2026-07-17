@@ -42,6 +42,9 @@ router.patch('/:documentId/move', ctrl.moveFile);
 // Delete file
 router.delete('/:documentId', ctrl.deleteFile);
 
+// Verify file
+router.patch('/:documentId/verify', ctrl.verifyDocument);
+
 // Folder management
 router.post('/folders', ctrl.createFolder);
 router.delete('/folders/:folderName', ctrl.deleteFolder);

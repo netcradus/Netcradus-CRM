@@ -44,6 +44,43 @@ const ContactSchema = new mongoose.Schema(
     // Sensitive Fields
     salary: { type: Number },
     leaves: { type: Number, default: 0 },
+    employeeStatus: {
+      type: String,
+      enum: ["Active", "Notice Period", "Ex Employee", "Terminated", "Suspended", "On Leave"],
+      default: "Active",
+    },
+    employmentType: {
+      type: String,
+      enum: [
+        "Full Time",
+        "Part Time",
+        "Contract",
+        "Consultant",
+        "Paid Intern",
+        "Unpaid Intern",
+        "Trainee",
+        "Probation",
+      ],
+      default: "Full Time",
+    },
+    probationEndDate: { type: Date, default: null },
+    noticePeriodDays: { type: Number, min: 0, max: 365, default: 0 },
+    offeredSalary: { type: Number, min: 0, default: null },
+    aadhaarNumber: { type: String, default: "" },
+    panNumber: { type: String, uppercase: true, default: "" },
+    uanNumber: { type: String, default: "" },
+    esicNumber: { type: String, default: "" },
+    bankDetails: {
+      paymentMode: { type: String, default: "" },
+      bankName: { type: String, default: "" },
+      accountHolderName: { type: String, default: "" },
+      accountNumber: { type: String, default: "" },
+      ifscCode: { type: String, default: "" },
+      branchName: { type: String, default: "" },
+      upiId: { type: String, default: "" },
+      accountType: { type: String, default: "" }
+    },
+
 
     // PII (Personal Identifiable Information)
     contactNumber: { type: String, trim: true },

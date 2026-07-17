@@ -136,7 +136,12 @@ function MyProfilePage() {
          <div className="nc-card" style={{ padding: 'var(--space-8)' }}>
             <h3 style={{ marginBottom: 'var(--space-6)' }}>Personal Details</h3>
             <form className="form" onSubmit={onSubmit}>
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
+               <h4 style={{ marginBottom: 'var(--space-3)' }}>Basic Details</h4>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+                  <div className="form-field">
+                     <label className="form-label">Full Name</label>
+                     <input className="form-input" disabled value={profile?.name || ""} />
+                  </div>
                   <div className="form-field">
                      <label className="form-label">Work Email</label>
                      <input className="form-input" disabled value={profile?.email || ""} />
@@ -146,21 +151,102 @@ function MyProfilePage() {
                      <input className="form-input" disabled value={profile?.employeeId || "N/A"} style={{ opacity: 0.7 }} />
                   </div>
                   <div className="form-field">
-                     <label className="form-label">Personal Email</label>
-                     <input className="form-input" type="email" value={form.personalEmail} onChange={e => setForm({...form, personalEmail: e.target.value})} />
+                     <label className="form-label">Department</label>
+                     <input className="form-input" disabled value={profile?.department || "General"} />
                   </div>
                   <div className="form-field">
-                     <label className="form-label">Contact Number</label>
-                     <input className="form-input" value={form.contactNumber} onChange={e => setForm({...form, contactNumber: e.target.value})} />
+                     <label className="form-label">Designation</label>
+                     <input className="form-input" disabled value={profile?.designation || ""} />
                   </div>
-                  <div className="form-field" />
-                  <div className="form-field">
-                     <label className="form-label">Emergency Contact Name</label>
-                     <input className="form-input" value={form.emergencyContactName} onChange={e => setForm({...form, emergencyContactName: e.target.value})} />
+               </div>
+
+               <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+                  <h4 style={{ marginBottom: 'var(--space-3)' }}>Employment Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                     <div className="form-field">
+                        <label className="form-label">Employee Status</label>
+                        <input className="form-input" disabled value={profile?.employeeStatus || "Active"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Employment Type</label>
+                        <input className="form-input" disabled value={profile?.employmentType || "Full Time"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Joining Date</label>
+                        <input className="form-input" disabled value={profile?.joiningDate ? new Date(profile.joiningDate).toLocaleDateString("en-IN") : "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Relieving Date</label>
+                        <input className="form-input" disabled value={profile?.leavingDate ? new Date(profile.leavingDate).toLocaleDateString("en-IN") : "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Probation End Date</label>
+                        <input className="form-input" disabled value={profile?.probationEndDate ? new Date(profile.probationEndDate).toLocaleDateString("en-IN") : "-"} />
+                     </div>
+                     {profile?.employeeStatus === "Notice Period" && (
+                        <div className="form-field">
+                           <label className="form-label">Notice Period Days</label>
+                           <input className="form-input" disabled value={profile?.noticePeriodDays || 0} />
+                        </div>
+                     )}
                   </div>
-                  <div className="form-field">
-                     <label className="form-label">Emergency Contact Number</label>
-                     <input className="form-input" value={form.emergencyContactNumber} onChange={e => setForm({...form, emergencyContactNumber: e.target.value})} />
+               </div>
+
+               <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+                  <h4 style={{ marginBottom: 'var(--space-3)' }}>Salary Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                     <div className="form-field">
+                        <label className="form-label">Offered Salary (Annual CTC - ₹)</label>
+                        <input className="form-input" disabled value={profile?.offeredSalary !== undefined && profile?.offeredSalary !== null ? profile.offeredSalary.toLocaleString("en-IN") : "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Current Salary (Annual CTC - ₹)</label>
+                        <input className="form-input" disabled value={profile?.salary !== undefined && profile?.salary !== null ? profile.salary.toLocaleString("en-IN") : "-"} />
+                     </div>
+                  </div>
+               </div>
+
+               <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+                  <h4 style={{ marginBottom: 'var(--space-3)' }}>Government Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                     <div className="form-field">
+                        <label className="form-label">Aadhaar Number</label>
+                        <input className="form-input" disabled value={profile?.aadhaarNumber || "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">PAN Number</label>
+                        <input className="form-input" disabled value={profile?.panNumber || "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">UAN Number</label>
+                        <input className="form-input" disabled value={profile?.uanNumber || "-"} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">ESIC Number</label>
+                        <input className="form-input" disabled value={profile?.esicNumber || "-"} />
+                     </div>
+                  </div>
+               </div>
+
+               <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-6)' }}>
+                  <h4 style={{ marginBottom: 'var(--space-3)' }}>Contact & Emergency Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                     <div className="form-field">
+                        <label className="form-label">Personal Email</label>
+                        <input className="form-input" type="email" value={form.personalEmail} onChange={e => setForm({...form, personalEmail: e.target.value})} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Contact Number</label>
+                        <input className="form-input" value={form.contactNumber} onChange={e => setForm({...form, contactNumber: e.target.value})} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Emergency Contact Name</label>
+                        <input className="form-input" value={form.emergencyContactName} onChange={e => setForm({...form, emergencyContactName: e.target.value})} />
+                     </div>
+                     <div className="form-field">
+                        <label className="form-label">Emergency Contact Number</label>
+                        <input className="form-input" value={form.emergencyContactNumber} onChange={e => setForm({...form, emergencyContactNumber: e.target.value})} />
+                     </div>
                   </div>
                </div>
                <div className="form-field" style={{ marginTop: 'var(--space-4)' }}>

@@ -6,6 +6,7 @@ const AuditLog = require('../models/AuditLog');
 const storageService = require('../services/storageService');
 const driveService = require('../services/driveService');
 const { createNotifications } = require('../services/taskNotificationService');
+const { isDriveEnabled } = require('../utils/featureFlags');
 
 /**
  * Wraps async route handlers to forward errors to Express error middleware.
@@ -22,7 +23,7 @@ const sanitizeDoc = (doc) => {
 };
 
 const getEffectiveUserId = (req) => {
-  if (req.user && req.user.role === 'super_user') {
+  if (req.user && ['super_user', 'admin', 'hr'].includes(req.user.role)) {
     return req.query?.userId || req.body?.userId || req.user.id;
   }
   return req.user?.id;
@@ -98,7 +99,7 @@ exports.uploadFile = catchAsync(async (req, res) => {
     return res.status(400).json({ success: false, message: 'No file uploaded.', code: 'NO_FILE' });
   }
 
-  const { folderId, entityType, entityId } = req.body;
+  const { folderId, entityType, entityId, documentType, notes } = req.body;
   if (!folderId) {
     return res.status(400).json({ success: false, message: 'folderId is required.', code: 'NO_FOLDER' });
   }
@@ -109,7 +110,9 @@ exports.uploadFile = catchAsync(async (req, res) => {
     folderId,
     req.file,
     entityType || null,
-    entityId || null
+    entityId || null,
+    documentType || null,
+    notes || null
   );
 
   // Audit
@@ -148,8 +151,19 @@ exports.viewFile = catchAsync(async (req, res) => {
 
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.originalName)}"`);
 
-  // Stream from Drive
-  await driveService.streamFile(doc.driveFileId, res);
+  if (!isDriveEnabled()) {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join('./uploads/documents', doc.driveFileId);
+    if (fs.existsSync(filePath)) {
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      return res.status(404).json({ success: false, message: 'Local file not found.' });
+    }
+  } else {
+    // Stream from Drive
+    await driveService.streamFile(doc.driveFileId, res);
+  }
 
   // Log view (fire-and-forget)
   AuditLog.create({
@@ -181,7 +195,18 @@ exports.downloadFile = catchAsync(async (req, res) => {
 
   res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.originalName)}"`);
 
-  await driveService.streamFile(doc.driveFileId, res);
+  if (!isDriveEnabled()) {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join('./uploads/documents', doc.driveFileId);
+    if (fs.existsSync(filePath)) {
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      return res.status(404).json({ success: false, message: 'Local file not found.' });
+    }
+  } else {
+    await driveService.streamFile(doc.driveFileId, res);
+  }
 
   AuditLog.create({
     action: 'DOCUMENT_DOWNLOAD',
@@ -467,4 +492,31 @@ exports.provisionUserStorage = catchAsync(async (req, res) => {
   await user.save();
 
   res.status(201).json({ success: true, message: 'Storage provisioned successfully.', data: storage });
+});
+
+/**
+ * Super User, Admin, or HR: approve or reject a document.
+ */
+exports.verifyDocument = catchAsync(async (req, res) => {
+  const { documentId } = req.params;
+  const { status } = req.body; // 'Verified' or 'Rejected'
+
+  if (!['Verified', 'Rejected', 'Pending'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid status value.' });
+  }
+
+  // Guard: HR or Admin or Super User only
+  if (!['super_user', 'admin', 'hr'].includes(req.user?.role)) {
+    return res.status(403).json({ success: false, message: 'Unauthorized action.' });
+  }
+
+  const doc = await Document.findById(documentId);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.' });
+  }
+
+  doc.status = status;
+  await doc.save();
+
+  res.json({ success: true, message: `Document status updated to ${status}.`, data: sanitizeDoc(doc) });
 });

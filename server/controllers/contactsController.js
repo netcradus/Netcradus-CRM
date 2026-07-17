@@ -56,6 +56,17 @@ const STAFF_PROFILE_FIELDS = [
     "emergencyContactNumber",
     "personalEmail",
     "emergencyContact",
+    "employeeStatus",
+    "employmentType",
+    "probationEndDate",
+    "noticePeriodDays",
+    "offeredSalary",
+    "aadhaarNumber",
+    "panNumber",
+    "uanNumber",
+    "esicNumber",
+    "reportsTo",
+    "bankDetails",
 ];
 
 const canAccessAnySalarySlip = (user) => PRIVILEGED_CONTACT_ROLES.has(normalizeRole(user?.role));
@@ -845,7 +856,7 @@ const toBoolean = (value) => {
 
 const normalizeProfileValues = (payload = {}) => {
     const next = { ...payload };
-    ["joiningDate", "leavingDate"].forEach((field) => {
+    ["joiningDate", "leavingDate", "probationEndDate"].forEach((field) => {
         if (Object.prototype.hasOwnProperty.call(next, field)) {
             next[field] = next[field] ? new Date(next[field]) : null;
         }
@@ -853,6 +864,14 @@ const normalizeProfileValues = (payload = {}) => {
 
     if (Object.prototype.hasOwnProperty.call(next, "salary")) {
         next.salary = next.salary === "" || next.salary === null ? null : Number(next.salary);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(next, "offeredSalary")) {
+        next.offeredSalary = next.offeredSalary === "" || next.offeredSalary === null ? null : Number(next.offeredSalary);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(next, "noticePeriodDays")) {
+        next.noticePeriodDays = next.noticePeriodDays === "" || next.noticePeriodDays === null ? 0 : Number(next.noticePeriodDays);
     }
 
     if (Object.prototype.hasOwnProperty.call(next, "leaves")) {
@@ -871,6 +890,16 @@ const normalizeProfileValues = (payload = {}) => {
         next.personalEmail = normalizeEmail(next.personalEmail);
     }
 
+    if (Object.prototype.hasOwnProperty.call(next, "panNumber")) {
+        next.panNumber = String(next.panNumber || "").trim().toUpperCase();
+    }
+
+    ["aadhaarNumber", "uanNumber", "esicNumber"].forEach((field) => {
+        if (Object.prototype.hasOwnProperty.call(next, field)) {
+            next[field] = String(next[field] || "").replace(/\D/g, "");
+        }
+    });
+
     return next;
 };
 
@@ -881,6 +910,7 @@ const serializeEmployeeProfile = async (contact) => {
     return {
         ...doc,
         employeeId: contact.employeeId || null,
+        reportsTo: linkedUser?.reportsTo || null,
         linkedUser: linkedUser
             ? {
                 _id: linkedUser._id,
@@ -888,9 +918,45 @@ const serializeEmployeeProfile = async (contact) => {
                 email: linkedUser.email,
                 role: linkedUser.role,
                 department: linkedUser.department,
+                reportsTo: linkedUser.reportsTo || null,
             }
             : null,
     };
+};
+
+const maskBankAccount = (val) => {
+    if (!val) return "";
+    const clean = String(val).trim();
+    if (clean.length < 4) return val;
+    return `${"X".repeat(clean.length - 4)}${clean.slice(-4)}`;
+};
+
+const maskAadhaar = (val) => {
+    if (!val) return "";
+    const clean = String(val).replace(/\s/g, "");
+    if (clean.length !== 12) return val;
+    return `XXXX XXXX ${clean.slice(-4)}`;
+};
+
+const maskPan = (val) => {
+    if (!val) return "";
+    const clean = String(val).trim().toUpperCase();
+    if (clean.length !== 10) return val;
+    return `${clean.slice(0, 3)}XXXXXX${clean.slice(-1)}`;
+};
+
+const maskUan = (val) => {
+    if (!val) return "";
+    const clean = String(val).trim();
+    if (clean.length < 4) return val;
+    return `${"X".repeat(clean.length - 4)}${clean.slice(-4)}`;
+};
+
+const maskEsic = (val) => {
+    if (!val) return "";
+    const clean = String(val).trim();
+    if (clean.length < 4) return val;
+    return `${"X".repeat(clean.length - 4)}${clean.slice(-4)}`;
 };
 
 // Helper to filter fields based on role and re-auth status
@@ -916,11 +982,22 @@ const filterContactFields = (contact, role, isReAuthed = false) => {
     // Admin and HR: Can see most things, but PII and slips require re-auth
     if (role === 'admin' || role === 'hr') {
         const result = { ...doc };
+        result.aadhaarNumber = maskAadhaar(doc.aadhaarNumber);
+        result.panNumber = maskPan(doc.panNumber);
+        result.uanNumber = maskUan(doc.uanNumber);
+        result.esicNumber = maskEsic(doc.esicNumber);
         if (!isReAuthed) {
             result.salary = "********";
+            result.offeredSalary = "********";
             result.contactNumber = "********";
             result.address = "********";
             result.salarySlips = doc.salarySlips ? doc.salarySlips.length : 0; // Just return count
+            if (result.bankDetails && result.bankDetails.accountNumber) {
+                result.bankDetails = {
+                    ...result.bankDetails,
+                    accountNumber: maskBankAccount(result.bankDetails.accountNumber)
+                };
+            }
         }
         return result;
     }
@@ -928,11 +1005,22 @@ const filterContactFields = (contact, role, isReAuthed = false) => {
     // Super User: Sees all, but still masks PII/Slips if not re-authed (per user requirement)
     if (role === 'super_user') {
         const result = { ...doc };
+        result.aadhaarNumber = maskAadhaar(doc.aadhaarNumber);
+        result.panNumber = maskPan(doc.panNumber);
+        result.uanNumber = maskUan(doc.uanNumber);
+        result.esicNumber = maskEsic(doc.esicNumber);
         if (!isReAuthed) {
             result.contactNumber = "********";
             result.address = "********";
             result.salary = "********";
+            result.offeredSalary = "********";
             result.salarySlips = doc.salarySlips ? doc.salarySlips.length : 0;
+            if (result.bankDetails && result.bankDetails.accountNumber) {
+                result.bankDetails = {
+                    ...result.bankDetails,
+                    accountNumber: maskBankAccount(result.bankDetails.accountNumber)
+                };
+            }
         }
         return result;
     }
@@ -1309,13 +1397,202 @@ exports.updateEmployeeProfile = async (req, res) => {
             return res.status(403).json({ message: "Super Admin profile cannot be edited here" });
         }
 
+        const cleanBody = { ...req.body };
+        const maskedFields = ["salary", "offeredSalary", "contactNumber", "address", "aadhaarNumber", "panNumber", "uanNumber", "esicNumber"];
+        maskedFields.forEach(field => {
+            if (cleanBody[field] !== undefined) {
+                const valStr = String(cleanBody[field]);
+                if (valStr.includes("*") || valStr.includes("X") || valStr.includes("x")) {
+                    delete cleanBody[field];
+                }
+            }
+        });
+
+        if (cleanBody.bankDetails) {
+            const accNum = String(cleanBody.bankDetails.accountNumber || "");
+            if (accNum.includes("X") || accNum.includes("*") || accNum.includes("x")) {
+                delete cleanBody.bankDetails.accountNumber;
+            }
+        }
+
         const updates = normalizeProfileValues(
-            sanitizeProfilePayload(req.body || {}, STAFF_PROFILE_FIELDS)
+            sanitizeProfilePayload(cleanBody, STAFF_PROFILE_FIELDS)
         );
         const contact = await ensureContactProfileForUser(user._id);
 
         if (!contact) {
             return res.status(404).json({ message: "Employee profile not found" });
+        }
+
+        // --- VALIDATIONS ---
+
+        // 1. Joining Date
+        if (updates.joiningDate) {
+            const now = new Date();
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            if (updates.joiningDate > todayEnd) {
+                return res.status(400).json({ message: "Joining Date cannot be in the future." });
+            }
+        }
+
+        // 2. Relieving Date (leavingDate)
+        const currentJoiningDate = updates.joiningDate || contact.joiningDate;
+        if (updates.leavingDate) {
+            if (!currentJoiningDate) {
+                return res.status(400).json({ message: "Joining Date is required before setting a Relieving Date." });
+            }
+            if (updates.leavingDate < currentJoiningDate) {
+                return res.status(400).json({ message: "Relieving Date cannot be before Joining Date." });
+            }
+        }
+
+        // 3. Probation End Date
+        if (updates.probationEndDate) {
+            if (!currentJoiningDate) {
+                return res.status(400).json({ message: "Joining Date is required before setting a Probation End Date." });
+            }
+            if (updates.probationEndDate < currentJoiningDate) {
+                return res.status(400).json({ message: "Probation End Date cannot be before Joining Date." });
+            }
+        }
+
+        // 4. Employee Status, sync to status / leavingDate
+        const newEmpStatus = updates.employeeStatus || contact.employeeStatus || "Active";
+        if (newEmpStatus === "Ex Employee" || newEmpStatus === "Terminated") {
+            const currentLeavingDate = updates.leavingDate || contact.leavingDate;
+            if (!currentLeavingDate) {
+                return res.status(400).json({ message: "Relieving Date is required when status is Ex Employee or Terminated." });
+            }
+            updates.status = "Ex-Employee";
+            updates.isActive = false;
+        } else if (newEmpStatus === "Notice Period") {
+            const currentNoticePeriod = updates.noticePeriodDays !== undefined ? updates.noticePeriodDays : contact.noticePeriodDays;
+            if (currentNoticePeriod === undefined || currentNoticePeriod === null || isNaN(Number(currentNoticePeriod)) || Number(currentNoticePeriod) < 0) {
+                return res.status(400).json({ message: "Notice Period Days is required when status is Notice Period." });
+            }
+            updates.status = "Employee";
+            updates.isActive = true;
+        } else {
+            updates.status = "Employee";
+            updates.isActive = true;
+        }
+
+        // 5. Notice Period Days
+        if (updates.noticePeriodDays !== undefined && updates.noticePeriodDays !== null) {
+            const npDays = Number(updates.noticePeriodDays);
+            if (isNaN(npDays) || !Number.isInteger(npDays) || npDays < 0 || npDays > 365) {
+                return res.status(400).json({ message: "Notice Period Days must be an integer between 0 and 365." });
+            }
+        }
+
+        // 6. Offered Salary
+        if (updates.offeredSalary !== undefined && updates.offeredSalary !== null) {
+            const sal = Number(updates.offeredSalary);
+            if (isNaN(sal) || sal < 0) {
+                return res.status(400).json({ message: "Offered Salary cannot be negative." });
+            }
+        }
+
+        // 7. Current Salary
+        if (updates.salary !== undefined && updates.salary !== null) {
+            const sal = Number(updates.salary);
+            if (isNaN(sal) || sal < 0) {
+                return res.status(400).json({ message: "Current Salary cannot be negative." });
+            }
+        }
+
+        // 8. Aadhaar Validation
+        if (updates.aadhaarNumber) {
+            if (!/^[0-9]{12}$/.test(updates.aadhaarNumber)) {
+                return res.status(400).json({ message: "Aadhaar Number must contain exactly 12 digits." });
+            }
+        }
+
+        // 9. PAN Validation
+        if (updates.panNumber) {
+            if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(updates.panNumber)) {
+                return res.status(400).json({ message: "Enter a valid PAN number, for example ABCDE1234F." });
+            }
+        }
+
+        // 10. UAN Validation
+        if (updates.uanNumber) {
+            if (!/^[0-9]{12}$/.test(updates.uanNumber)) {
+                return res.status(400).json({ message: "UAN Number must contain exactly 12 digits." });
+            }
+        }
+
+        // 11. ESIC Validation
+        if (updates.esicNumber) {
+            if (!/^[0-9]{10,17}$/.test(updates.esicNumber)) {
+                return res.status(400).json({ message: "ESIC Number must contain between 10 and 17 digits." });
+            }
+        }
+
+        // 12. Reporting Manager (reportsTo)
+        if (Object.prototype.hasOwnProperty.call(updates, "reportsTo")) {
+            const managerId = updates.reportsTo;
+            if (managerId && managerId !== "" && managerId !== "null") {
+                if (String(managerId) === String(user._id)) {
+                    return res.status(400).json({ message: "Employee cannot report to themselves." });
+                }
+                const manager = await User.findById(managerId);
+                if (!manager) {
+                    return res.status(400).json({ message: "Reporting Manager not found." });
+                }
+                if (manager.reportsTo && String(manager.reportsTo) === String(user._id)) {
+                    return res.status(400).json({ message: "Circular reporting detected. Manager cannot report to this employee." });
+                }
+                user.reportsTo = manager._id;
+            } else {
+                user.reportsTo = null;
+            }
+            delete updates.reportsTo;
+        }
+
+        // Bank Details Validation
+        if (updates.bankDetails) {
+            const currentBankDetails = {
+                ...(contact.bankDetails || {}),
+                ...updates.bankDetails
+            };
+
+            // Payment Mode
+            if (currentBankDetails.paymentMode) {
+                const validModes = ["Bank Transfer", "Cash", "Cheque", "UPI", ""];
+                if (!validModes.includes(currentBankDetails.paymentMode)) {
+                    return res.status(400).json({ message: "Invalid Payment Mode selected." });
+                }
+            }
+
+            // Account Number
+            if (currentBankDetails.accountNumber) {
+                const cleanAcc = String(currentBankDetails.accountNumber).trim();
+                if (!/^[0-9]{9,18}$/.test(cleanAcc)) {
+                    return res.status(400).json({ message: "Account Number must contain between 9 and 18 digits." });
+                }
+            }
+
+            // IFSC Code
+            if (currentBankDetails.ifscCode) {
+                const cleanIfsc = String(currentBankDetails.ifscCode).trim().toUpperCase();
+                if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanIfsc)) {
+                    return res.status(400).json({ message: "Enter a valid IFSC code (e.g. SBIN0001234)." });
+                }
+                updates.bankDetails.ifscCode = cleanIfsc;
+            }
+
+            // Account Type
+            if (currentBankDetails.accountType) {
+                const validTypes = ["Savings", "Current", ""];
+                if (!validTypes.includes(currentBankDetails.accountType)) {
+                    return res.status(400).json({ message: "Invalid Account Type selected." });
+                }
+            }
+
+            // Merge into contact.bankDetails manually
+            contact.bankDetails = currentBankDetails;
+            delete updates.bankDetails;
         }
 
         Object.assign(contact, updates);

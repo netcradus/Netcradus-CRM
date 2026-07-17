@@ -37,6 +37,10 @@ const documentSchema = new mongoose.Schema({
   },
   entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
 
+  documentType: { type: String, default: null },
+  notes: { type: String, default: null },
+  status: { type: String, enum: ['Pending', 'Verified', 'Rejected'], default: 'Pending' },
+
   // Soft delete
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },

@@ -77,10 +77,33 @@ const notifyUser = async (userId, message, targetPath = '/documents', type = 'ge
  * @param {string} role
  * @returns {Promise<UserStorage>}
  */
+const User = require('../models/User');
+
 const provisionUserStorage = async (userId, fullName, role) => {
-  const rootFolderName = driveService.sanitizeDriveName(
-    `${String(userId)}_${fullName.replace(/\s+/g, '_')}`
-  );
+  const rootFolderName = `${String(userId)}_${fullName.replace(/\s+/g, '_')}`;
+
+  if (!isDriveEnabled()) {
+    // Local filesystem storage fallback
+    const defaultFolders = ROLE_DEFAULT_FOLDERS[role] || ['general'];
+    const subFolders = defaultFolders.map((folderName, idx) => ({
+      name: folderName,
+      driveFolderId: `local-${folderName}-${idx}-${Date.now()}`,
+      isDefault: true,
+      createdAt: new Date(),
+    }));
+
+    const userStorage = await UserStorage.create({
+      userId,
+      personalRootFolderId: 'local-root',
+      personalRootFolderName: rootFolderName,
+      subFolders,
+      quotaMB: 500,
+      usedMB: 0,
+      fileCount: 0,
+    });
+
+    return userStorage;
+  }
 
   const rootFolderId_env = process.env.DRIVE_FOLDER_ID;
   if (!rootFolderId_env) throw new Error('DRIVE_FOLDER_ID is not set in environment.');
@@ -139,16 +162,20 @@ const provisionUserStorage = async (userId, fullName, role) => {
 // ─── getUserStorage ───────────────────────────────────────────────────────────
 
 /**
- * Returns the UserStorage document for a user.
+ * Returns the UserStorage document for a user. Auto-provisions storage if missing.
  * @param {string|ObjectId} userId
  * @returns {Promise<UserStorage>}
  */
 const getUserStorage = async (userId) => {
-  const storage = await UserStorage.findOne({ userId });
+  let storage = await UserStorage.findOne({ userId });
   if (!storage) {
-    const err = new Error('Storage not provisioned for this user.');
-    err.statusCode = 404;
-    throw err;
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error('User not found.');
+      err.statusCode = 404;
+      throw err;
+    }
+    storage = await provisionUserStorage(user._id, user.name || user.email, user.role);
   }
   return storage;
 };
@@ -256,7 +283,7 @@ const deleteCustomFolder = async (userId, folderName) => {
  * @param {string|ObjectId|null} entityId
  * @returns {Promise<Document>}
  */
-const uploadToFolder = async (userId, folderId, file, entityType = null, entityId = null) => {
+const uploadToFolder = async (userId, folderId, file, entityType = null, entityId = null, documentType = null, notes = null) => {
   const storage = await getUserStorage(userId);
 
   // Validate folder ownership (prevent folder ID injection)
@@ -298,13 +325,32 @@ const uploadToFolder = async (userId, folderId, file, entityType = null, entityI
     : file.originalname;
   const safeName = slugify(baseName, { lower: true, strict: true }) + ext;
 
-  // Upload to Drive
-  const { driveFileId, driveViewLink } = await driveService.uploadFile(
-    file.buffer,
-    safeName,
-    file.mimetype,
-    folderId
-  );
+  let driveFileId = "";
+  let driveViewLink = "";
+
+  if (!isDriveEnabled()) {
+    const fs = require('fs');
+    const path = require('path');
+    const uploadDir = './uploads/documents';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const localFileName = `${Date.now()}-${safeName}`;
+    fs.writeFileSync(path.join(uploadDir, localFileName), file.buffer);
+
+    driveFileId = localFileName;
+    driveViewLink = `/uploads/documents/${localFileName}`;
+  } else {
+    // Upload to Drive
+    const driveUpload = await driveService.uploadFile(
+      file.buffer,
+      safeName,
+      file.mimetype,
+      folderId
+    );
+    driveFileId = driveUpload.driveFileId;
+    driveViewLink = driveUpload.driveViewLink;
+  }
 
   // Create Document record
   const doc = await Document.create({
@@ -320,6 +366,8 @@ const uploadToFolder = async (userId, folderId, file, entityType = null, entityI
     driveViewLink,
     entityType: entityType || null,
     entityId: entityId || null,
+    documentType: documentType || null,
+    notes: notes || null,
   });
 
   // Update UserStorage counters
@@ -344,8 +392,7 @@ const uploadToFolder = async (userId, folderId, file, entityType = null, entityI
 // ─── deleteDocument ───────────────────────────────────────────────────────────
 
 /**
- * Deletes a file from Drive (hard) and soft-deletes the Document record in MongoDB.
- * MongoDB is only updated AFTER Drive deletion confirms success.
+ * Deletes a file from Drive (hard) or filesystem and soft-deletes the Document record in MongoDB.
  * @param {string|ObjectId} userId
  * @param {string|ObjectId} documentId
  * @param {string|ObjectId} deletedBy - ID of the user performing the delete
@@ -364,8 +411,21 @@ const deleteDocument = async (userId, documentId, deletedBy, isSuperUser = false
     throw err;
   }
 
-  // Hard delete from Drive FIRST — if this fails, we do NOT touch MongoDB
-  await driveService.deleteFile(doc.driveFileId);
+  if (!isDriveEnabled()) {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join('./uploads/documents', doc.driveFileId);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        console.error("Local file delete error:", err);
+      }
+    }
+  } else {
+    // Hard delete from Drive FIRST — if this fails, we do NOT touch MongoDB
+    await driveService.deleteFile(doc.driveFileId);
+  }
 
   // Only now soft-delete in MongoDB
   doc.isDeleted = true;

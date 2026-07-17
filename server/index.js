@@ -110,17 +110,7 @@ app.use("/api/cases", require("./routes/caseRoutes"));
 app.use("/api/meetings", require("./routes/meetingsRoutes"));
 app.use("/api/solutions", require("./routes/solutionRoutes"));
 
-if (isDriveEnabled()) {
-  app.use("/api/documents", require("./routes/documentRoutes"));
-} else {
-  app.use("/api/documents", (req, res) => {
-    res.status(503).json({
-      success: false,
-      code: "DRIVE_MAINTENANCE",
-      message: "Drive is temporarily unavailable while we perform maintenance.",
-    });
-  });
-}
+app.use("/api/documents", require("./routes/documentRoutes"));
 
 app.use("/api/forecasts", require("./routes/forecastRoutes"));
 app.use("/api/attendance", require("./routes/attendance"));
