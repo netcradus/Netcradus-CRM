@@ -105,6 +105,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  skipOnboarding: {
+    type: Boolean,
+    default: false
+  },
   emergencyContact: {
     name: String,
     relationship: String,

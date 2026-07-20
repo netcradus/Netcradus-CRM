@@ -26,7 +26,7 @@ const setCachedDecision = (userId, decision, ttlMs) => {
 
 const onboardingExemptMiddleware = async (req, res, next) => {
   // Partners are external accounts and skip employee onboarding enforcement entirely.
-  if (req.user?.role === "super_user" || req.user?.role === "partner") {
+  if (req.user?.role === "super_user" || req.user?.role === "partner" || req.user?.skipOnboarding) {
     return next();
   }
 

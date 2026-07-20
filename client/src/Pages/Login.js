@@ -87,6 +87,7 @@ function Login() {
       localStorage.setItem("userRole", user.role);
       localStorage.setItem("userName", user.name);
       localStorage.setItem("userEmail", user.email || form.email);
+      localStorage.setItem("skipOnboarding", user.skipOnboarding ? "true" : "false");
 
       if (passwordExpiryWarning) {
         localStorage.setItem("passwordExpiryWarning", "true");
@@ -189,6 +190,7 @@ function Login() {
         localStorage.setItem("userRole", response.data.user.role);
         localStorage.setItem("userName", response.data.user.name);
         localStorage.setItem("userEmail", response.data.user.email || form.email);
+        localStorage.setItem("skipOnboarding", response.data.user.skipOnboarding ? "true" : "false");
         setSecurityAction(null);
         navigate("/welcome");
       }
@@ -488,7 +490,7 @@ function Login() {
               </div>
             )}
 
-            <p className="lp-copy">© 2026 Netcradus. All rights reserved.</p>
+            <p className="lp-copy">ï¿½ 2026 Netcradus. All rights reserved.</p>
           </div>
         </section>
       </div>

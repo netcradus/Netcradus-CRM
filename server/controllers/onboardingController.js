@@ -155,7 +155,7 @@ const buildFallbackAttachment = (file) => {
 
 const getOnboardingStatus = async (req, res) => {
   // Partners are exempt because onboarding documents apply only to employee accounts.
-  if (req.user.role === "super_user" || req.user.role === "partner") {
+  if (req.user.role === "super_user" || req.user.role === "partner" || req.user.skipOnboarding) {
     return res.json({
       status: "complete",
       hasRecord: false,
@@ -170,7 +170,7 @@ const getOnboardingStatus = async (req, res) => {
 
 const submitStep1 = async (req, res) => {
   // Partners must never enter the employee onboarding submission flow.
-  if (req.user.role === "super_user" || req.user.role === "partner") {
+  if (req.user.role === "super_user" || req.user.role === "partner" || req.user.skipOnboarding) {
     return res.status(403).json({ success: false, message: "Super user onboarding is exempt." });
   }
 
@@ -262,7 +262,7 @@ const submitStep1 = async (req, res) => {
 
 const submitStep2 = async (req, res) => {
   // Partners must never receive onboarding emails or files from step-two completion.
-  if (req.user.role === "super_user" || req.user.role === "partner") {
+  if (req.user.role === "super_user" || req.user.role === "partner" || req.user.skipOnboarding) {
     return res.status(403).json({ success: false, message: "Super user onboarding is exempt." });
   }
 

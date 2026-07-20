@@ -39,6 +39,7 @@ const UserManagement = () => {
     password: "",
     role: "sales",
     designation: "",
+    skipOnboarding: false,
   });
 
   // Edit User Modal
@@ -50,6 +51,7 @@ const UserManagement = () => {
     password: "",
     role: "sales",
     designation: "",
+    skipOnboarding: false,
   });
 
   // Password visibility
@@ -133,6 +135,7 @@ const UserManagement = () => {
         password: "",
         role: "sales",
         designation: "",
+        skipOnboarding: false,
       });
 
       setShowCreatePassword(false);
@@ -153,6 +156,7 @@ const UserManagement = () => {
       password: "",
       role: user.role || "sales",
       designation: user.designation || "",
+      skipOnboarding: Boolean(user.skipOnboarding),
     });
   };
 
@@ -166,6 +170,7 @@ const UserManagement = () => {
         email: editForm.email,
         role: editForm.role,
         designation: editForm.designation,
+        skipOnboarding: editForm.skipOnboarding,
       };
 
       // Add password only if entered
@@ -193,6 +198,7 @@ const UserManagement = () => {
         password: "",
         role: "sales",
         designation: "",
+        skipOnboarding: false,
       });
 
       setShowEditPassword(false);
@@ -718,6 +724,23 @@ const UserManagement = () => {
                 />
               </div>
 
+              <div className="form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+                <input
+                  type="checkbox"
+                  id="skipOnboarding"
+                  checked={form.skipOnboarding}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      skipOnboarding: e.target.checked,
+                    })
+                  }
+                />
+                <label htmlFor="skipOnboarding" className="form-label" style={{ margin: 0, cursor: "pointer" }}>
+                  Test Account — Skip Onboarding
+                </label>
+              </div>
+
               <div
                 style={{
                   display: "flex",
@@ -945,6 +968,23 @@ const UserManagement = () => {
                     })
                   }
                 />
+              </div>
+
+              <div className="form-field" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginTop: "var(--space-4)" }}>
+                <input
+                  type="checkbox"
+                  id="editSkipOnboarding"
+                  checked={editForm.skipOnboarding}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      skipOnboarding: e.target.checked,
+                    })
+                  }
+                />
+                <label htmlFor="editSkipOnboarding" className="form-label" style={{ margin: 0, cursor: "pointer" }}>
+                  Test Account — Skip Onboarding
+                </label>
               </div>
 
               <div

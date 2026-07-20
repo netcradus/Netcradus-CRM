@@ -60,7 +60,7 @@ const getAttemptState = (userId) => {
 // Create user (super user only)
 const createUserByAdmin = async (req, res) => {
   try {
-    const { email, password, role, department: manualDept, designation: manualDesignation, name } = req.body;
+    const { email, password, role, department: manualDept, designation: manualDesignation, name, skipOnboarding } = req.body;
     const normalizedRole = String(role || "").trim().toLowerCase();
     // Partner is selectable by super users but remains outside employee/admin role groups.
     const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media", "partner"];
@@ -110,6 +110,7 @@ const createUserByAdmin = async (req, res) => {
       role: normalizedRole,
       department: manualDept || department,
       designation: String(manualDesignation || formatRoleLabel(normalizedRole)).trim(),
+      skipOnboarding: Boolean(skipOnboarding),
     });
 
     await user.save();
@@ -183,6 +184,7 @@ const createUserByAdmin = async (req, res) => {
         email: user.email,
         role: user.role,
         designation: user.designation,
+        skipOnboarding: user.skipOnboarding,
       },
     });
 
@@ -384,7 +386,7 @@ const login = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
     res.status(200).json({
       token, passwordExpiryWarning,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt, skipOnboarding: user.skipOnboarding }
     });
   } catch (err) {
     console.error("Login Error:", err);
@@ -626,7 +628,7 @@ const adminChangeUserPassword = async (req, res) => {
 const updateUserByAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, department, designation } = req.body;
+    const { name, email, role, department, designation, skipOnboarding } = req.body;
 
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -640,6 +642,7 @@ const updateUserByAdmin = async (req, res) => {
     if (role && role !== "super_user") user.role = role.toLowerCase();
     if (department) user.department = department;
     if (designation !== undefined) user.designation = String(designation || "").trim();
+    if (skipOnboarding !== undefined) user.skipOnboarding = Boolean(skipOnboarding);
 
     await user.save();
 
@@ -670,7 +673,8 @@ const updateUserByAdmin = async (req, res) => {
         email: user.email,
         role: user.role,
         department: user.department,
-        designation: user.designation
+        designation: user.designation,
+        skipOnboarding: user.skipOnboarding
       }
     });
 
