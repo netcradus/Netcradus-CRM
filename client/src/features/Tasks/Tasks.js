@@ -397,6 +397,19 @@ export default function Tasks() {
     }
   };
 
+  const requestChangesSelfTask = async (task, message) => {
+    try {
+      await axios.post(apiUrl(`/api/tasks/self/${task._id}/request-changes`), { message }, { headers });
+      setPendingApprovals((items) => items.filter((item) => item._id !== task._id));
+      setSuccess("Changes requested and employee notified.");
+      setError("");
+      await fetchSelfTasks();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to request changes");
+      throw requestError;
+    }
+  };
+
   const activeTasks = tasks.filter((task) => !["completed", "reviewed"].includes(task.status)).length;
   const completedAssignedTasks = tasks.filter((task) => ["completed", "reviewed"].includes(task.status)).length;
   const approvedSelfTasks = selfTasks.filter((task) => task.selfTaskStatus === "approved").length;
@@ -636,6 +649,9 @@ export default function Tasks() {
           loading={approvalLoading}
           onApprove={approveSelfTask}
           onReject={rejectSelfTask}
+          onRequestChanges={requestChangesSelfTask}
+          headers={headers}
+          apiUrl={apiUrl}
         />
       ) : null}
 
@@ -734,6 +750,63 @@ export default function Tasks() {
                 <div><label className="form-label">Scheduled Date</label><div style={{ fontSize: "var(--text-sm)" }}>{formatDate(viewTask.scheduledDate)}</div></div>
                 <div><label className="form-label">Due Date</label><div style={{ fontSize: "var(--text-sm)" }}>{formatDate(viewTask.dueDate)}</div></div>
               </div>
+              {(() => {
+                const latestApprovalAction = viewTask.approvalHistory && viewTask.approvalHistory.length > 0
+                  ? viewTask.approvalHistory[viewTask.approvalHistory.length - 1].action
+                  : "";
+                const isReworkRequired =
+                  viewTask.selfTaskStatus === "rework_required" ||
+                  viewTask.selfTaskStatus === "changes_requested" ||
+                  latestApprovalAction === "rework_required" ||
+                  latestApprovalAction === "changes_requested";
+                const reworkEntry = isReworkRequired
+                  ? [...(viewTask.approvalHistory || [])].reverse().find(h => h.action === "rework_required" || h.action === "changes_requested")
+                  : null;
+                return reworkEntry ? (
+                  <div
+                    style={{
+                      marginTop: "var(--space-4)",
+                      padding: "var(--space-3)",
+                      border: "1px solid var(--color-warning)",
+                      background: "rgba(245, 158, 11, 0.05)",
+                      color: "var(--color-text-primary)",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "var(--text-sm)",
+                      marginBottom: "var(--space-4)"
+                    }}
+                  >
+                    <div style={{ fontWeight: "var(--font-bold)", color: "var(--color-warning)", marginBottom: "var(--space-1)" }}>
+                      Rework Required
+                    </div>
+                    <div style={{ whiteSpace: "pre-wrap", marginBottom: "var(--space-2)" }}>
+                      Remarks from {reworkEntry.performedBy?.name || "Reviewer"}: "{reworkEntry.note || reworkEntry.remarks || "No remarks provided"}"
+                    </div>
+                    <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                      Sent back by: {reworkEntry.performedBy?.name || "Reviewer"} {reworkEntry.performedBy?.role ? `(${prettify(reworkEntry.performedBy.role)})` : ""}
+                      <br />
+                      Sent back on: {new Date(reworkEntry.performedAt).toLocaleString("en-GB")}
+                    </div>
+                    <div style={{ fontStyle: "italic", color: "var(--color-text-secondary)", fontSize: "var(--text-xs)", borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)" }}>
+                      Please complete the requested improvements and resubmit this task for approval.
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+              {viewTask.reviewerNotes && viewTask.reviewerNotes.length > 0 ? (
+                <div style={{ marginTop: "var(--space-4)" }}>
+                  <label className="form-label">Reviewer Notes</label>
+                  <div style={{ display: "grid", gap: "var(--space-2)", background: "var(--color-bg-surface-dim)", padding: "var(--space-3)", borderRadius: "var(--space-2)", border: "1px solid var(--color-border)", maxHeight: 150, overflowY: "auto" }}>
+                    {[...viewTask.reviewerNotes].reverse().map((rNote, idx) => (
+                      <div key={idx} style={{ fontSize: "var(--text-xs)", borderBottom: idx < viewTask.reviewerNotes.length - 1 ? "1px solid var(--color-border)" : "none", paddingBottom: idx < viewTask.reviewerNotes.length - 1 ? "var(--space-2)" : 0, marginBottom: idx < viewTask.reviewerNotes.length - 1 ? "var(--space-2)" : 0 }}>
+                        <div style={{ color: "var(--color-text-primary)", whiteSpace: "pre-wrap" }}>{rNote.note}</div>
+                        <div style={{ color: "var(--color-text-muted)", fontSize: "10px", marginTop: "2px" }}>
+                          By: {rNote.addedBy?.name || "Reviewer"} {rNote.addedBy?.role ? `(${prettify(rNote.addedBy.role)})` : ""} - {new Date(rNote.addedAt).toLocaleString("en-GB")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="nc-modal-footer"><button className="btn btn-ghost" onClick={() => setViewTask(null)} style={{ width: "100%" }}>Close</button></div>
           </div>

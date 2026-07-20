@@ -11,6 +11,8 @@ router.get("/self/pending-approvals", tasksController.getPendingApprovals);
 router.post("/self/:taskId/submit", tasksController.submitSelfTaskForApproval);
 router.post("/self/:taskId/approve", tasksController.approveSelfTask);
 router.post("/self/:taskId/reject", tasksController.rejectSelfTask);
+router.post("/self/:taskId/request-changes", tasksController.requestChangesSelfTask);
+router.post("/self/:id/reviewer-note", tasksController.addReviewerNote);
 router.patch("/:id/timing", tasksController.setTaskTiming);
 router.patch("/:id/complete", tasksController.completeTask);
 router.patch("/:id/review", tasksController.reviewTask);
@@ -24,4 +26,4 @@ router.get("/:id", tasksController.getTaskById);
 router.put("/:id", tasksController.updateTask);
 router.delete("/:id", tasksController.deleteTask);
 
-module.exports = router;
+module.exports = router; // trigger restart

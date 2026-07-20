@@ -29,7 +29,7 @@ const approvalHistorySchema = new mongoose.Schema(
   {
     action: {
       type: String,
-      enum: ["submitted", "approved", "rejected", "revised"],
+      enum: ["submitted", "approved", "rejected", "revised", "changes_requested", "resubmitted"],
       required: true,
     },
     performedBy: {
@@ -146,7 +146,7 @@ const taskSchema = new mongoose.Schema(
     },
     selfTaskStatus: {
       type: String,
-      enum: ["draft", "pending_approval", "approved", "rejected", "revision"],
+      enum: ["draft", "pending_approval", "approved", "rejected", "revision", "changes_requested"],
       default: undefined,
     },
     submittedForApprovalAt: {
@@ -189,6 +189,28 @@ const taskSchema = new mongoose.Schema(
     },
     approvalHistory: {
       type: [approvalHistorySchema],
+      default: [],
+    },
+    reviewerNotes: {
+      type: [
+        {
+          note: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 1000,
+          },
+          addedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+          },
+          addedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
       default: [],
     },
   },

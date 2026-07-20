@@ -33,6 +33,7 @@ const TASK_POPULATE = [
   { path: "rejectedBy", select: "name email role" },
   { path: "statusHistory.changedBy", select: "name email role" },
   { path: "approvalHistory.performedBy", select: "name email role" },
+  { path: "reviewerNotes.addedBy", select: "name email role" },
 ];
 
 function isReviewer(user) {
@@ -74,6 +75,11 @@ function canAccessTask(user, task) {
 }
 
 async function canReviewSelfTask(user, task) {
+  const role = String(user.role || "").trim().toLowerCase();
+  if (role === "super_user") {
+    return true;
+  }
+
   if (await isUserSuperiorTo(user._id, task.createdBy)) {
     return true;
   }
@@ -337,7 +343,7 @@ async function submitSelfTaskForApproval(req, res) {
     if (String(task.createdBy) !== String(req.user._id)) {
       return res.status(403).json({ success: false, message: "Only the task creator can submit this task for approval" });
     }
-    if (!["draft", "revision"].includes(task.selfTaskStatus)) {
+    if (!["draft", "revision", "changes_requested"].includes(task.selfTaskStatus)) {
       return res.status(400).json({ success: false, message: "This self task cannot be submitted in its current state" });
     }
     if (task.status !== "completed") {
@@ -352,12 +358,13 @@ async function submitSelfTaskForApproval(req, res) {
       });
     }
 
-    const wasRevision = task.selfTaskStatus === "revision";
+    const isChangesRequested = task.selfTaskStatus === "changes_requested";
+    const wasRevision = task.selfTaskStatus === "revision" || isChangesRequested;
     task.selfTaskStatus = "pending_approval";
     task.submittedForApprovalAt = new Date();
     if (wasRevision) task.revisionCount += 1;
     task.approvalHistory.push({
-      action: wasRevision ? "revised" : "submitted",
+      action: isChangesRequested ? "resubmitted" : (wasRevision ? "revised" : "submitted"),
       performedBy: req.user._id,
       performedAt: new Date(),
     });
@@ -385,7 +392,7 @@ async function submitSelfTaskForApproval(req, res) {
     }
 
     await writeTaskAudit({
-      action: wasRevision ? "self_task_revised" : "self_task_submitted",
+      action: isChangesRequested ? "self_task_resubmitted" : (wasRevision ? "self_task_revised" : "self_task_submitted"),
       performedBy: req.user._id,
       taskId: task._id,
     });
@@ -531,10 +538,23 @@ async function rejectSelfTask(req, res) {
 
 async function getPendingApprovals(req, res) {
   try {
+    const role = String(req.user.role || "").trim().toLowerCase();
     const subordinateUserIds = await getSubordinatesForUser(req.user._id);
     const visibleCreatorIds = new Set(subordinateUserIds.map(String));
 
-    if (isReviewer(req.user)) {
+    if (role === "super_user") {
+      const allPendingTasks = await Task.find({
+        taskType: "self",
+        selfTaskStatus: "pending_approval",
+      })
+        .select("createdBy")
+        .lean();
+      allPendingTasks.forEach(task => {
+        if (task.createdBy) {
+          visibleCreatorIds.add(String(task.createdBy));
+        }
+      });
+    } else if (isReviewer(req.user)) {
       const reviewerFallbackTasks = await Task.find({
         taskType: "self",
         selfTaskStatus: "pending_approval",
@@ -1060,7 +1080,120 @@ async function getUserQueue(req, res) {
   }
 }
 
+async function addReviewerNote(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.id, res);
+    if (!task) return;
 
+    if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
+      return res.status(400).json({ success: false, message: "This self task is not pending approval" });
+    }
+
+    const role = String(req.user.role || "").trim().toLowerCase();
+    const isSuperUser = role === "super_user";
+    const canReview = isSuperUser || (await canReviewSelfTask(req.user, task));
+
+    if (!canReview) {
+      return res.status(403).json({ success: false, message: "You are not authorized to review this task" });
+    }
+
+    const note = String(req.body.note || "").trim();
+    if (!note) {
+      return res.status(400).json({ success: false, message: "Note is required" });
+    }
+    if (note.length > 1000) {
+      return res.status(400).json({ success: false, message: "Note cannot exceed 1000 characters" });
+    }
+
+    const updatedTask = await Task.findByIdAndUpdate(
+      task._id,
+      {
+        $push: {
+          reviewerNotes: {
+            note,
+            addedBy: req.user._id,
+            addedAt: new Date(),
+          },
+        },
+      },
+      { new: true }
+    )
+      .populate(TASK_POPULATE)
+      .lean();
+
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Add Reviewer Note Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to add reviewer note", error: error.message });
+  }
+}
+
+async function requestChangesSelfTask(req, res) {
+  try {
+    const task = await findTaskOr404(req.params.taskId, res);
+    if (!task) return;
+
+    if (task.taskType !== "self" || task.selfTaskStatus !== "pending_approval") {
+      return res.status(400).json({ success: false, message: "This self task is not pending approval" });
+    }
+
+    if (!(await canReviewSelfTask(req.user, task))) {
+      return res.status(403).json({ success: false, message: "You are not authorised to request changes on this task." });
+    }
+
+    const message = String(req.body.message || "").trim();
+    if (message.length < 10) {
+      return res.status(400).json({ success: false, message: "Improvement message must be at least 10 characters" });
+    }
+    if (message.length > 1000) {
+      return res.status(400).json({ success: false, message: "Improvement message cannot exceed 1000 characters" });
+    }
+
+    const reviewedAt = new Date();
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: task._id, selfTaskStatus: "pending_approval" },
+      {
+        $set: {
+          selfTaskStatus: "changes_requested",
+          approvalNote: message,
+        },
+        $push: {
+          approvalHistory: {
+            action: "changes_requested",
+            performedBy: req.user._id,
+            performedAt: reviewedAt,
+            note: message,
+          },
+        },
+      },
+      { new: true }
+    ).populate(TASK_POPULATE).lean();
+
+    if (!updatedTask) {
+      return res.status(409).json({ success: false, message: "This task has already been reviewed." });
+    }
+
+    await createNotifications({
+      taskId: task._id,
+      userIds: [task.createdBy],
+      message: `Changes requested for your task "${task.title}": ${message.slice(0, 100)}`,
+      targetPath: "/tasks?tab=self",
+      type: "self_task_changes_requested",
+    });
+
+    await writeTaskAudit({
+      action: "self_task_changes_requested",
+      performedBy: req.user._id,
+      taskId: task._id,
+      note: message,
+    });
+
+    return res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error("Request Changes Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to request changes", error: error.message });
+  }
+}
 
 module.exports = {
   createTask,
@@ -1083,4 +1216,6 @@ module.exports = {
   addTaskComment,
   getTaskComments,
   getUserQueue,
+  addReviewerNote,
+  requestChangesSelfTask,
 };

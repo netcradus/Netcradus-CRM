@@ -35,6 +35,7 @@ const taskNotificationSchema = new mongoose.Schema(
         "self_task_rejected",
         "partner_project",
         "meeting_reminder",
+        "self_task_changes_requested",
       ],
       default: "general"
     },

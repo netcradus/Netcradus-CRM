@@ -6,6 +6,9 @@ const actionMeta = {
   approved: { label: "Approved", Icon: CheckCircle, color: "var(--color-success)" },
   rejected: { label: "Rejected", Icon: XCircle, color: "var(--color-error)" },
   revised: { label: "Revised", Icon: RefreshCw, color: "var(--color-warning)" },
+  changes_requested: { label: "Sent Back for Rework", Icon: RefreshCw, color: "var(--color-warning)" },
+  rework_required: { label: "Sent Back for Rework", Icon: RefreshCw, color: "var(--color-warning)" },
+  resubmitted: { label: "Resubmitted", Icon: Clock, color: "var(--color-warning)" },
 };
 
 const formatDateTime = (value) =>

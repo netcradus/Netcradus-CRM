@@ -8,6 +8,8 @@ const statusMeta = {
   approved: { label: "Approved", badge: "success" },
   rejected: { label: "Rejected", badge: "error" },
   revision: { label: "Revision", badge: "warning" },
+  changes_requested: { label: "Rework Required", badge: "warning" },
+  rework_required: { label: "Rework Required", badge: "warning" },
 };
 
 const prettify = (value) =>
@@ -44,9 +46,22 @@ const priorityBadge = (priority) => {
 };
 
 export default function SelfTaskCard({ task, onSubmitForApproval, onEdit, onDelete }) {
+  const latestApprovalAction = task.approvalHistory && task.approvalHistory.length > 0
+    ? task.approvalHistory[task.approvalHistory.length - 1].action
+    : "";
+
+  const isReworkRequired =
+    task.selfTaskStatus === "rework_required" ||
+    task.selfTaskStatus === "changes_requested" ||
+    latestApprovalAction === "rework_required" ||
+    latestApprovalAction === "changes_requested";
+
   const meta = statusMeta[task.selfTaskStatus] || statusMeta.draft;
   const isOverdue = task.dueDate && new Date(task.dueDate).getTime() < Date.now() && task.selfTaskStatus !== "approved";
   const revisionText = task.revisionCount > 0 ? `Revision ${task.revisionCount}` : null;
+  const reworkEntry = isReworkRequired
+    ? [...(task.approvalHistory || [])].reverse().find(h => h.action === "rework_required" || h.action === "changes_requested")
+    : null;
 
   return (
     <div className="nc-card" style={{ padding: "var(--space-4)" }}>
@@ -77,13 +92,42 @@ export default function SelfTaskCard({ task, onSubmitForApproval, onEdit, onDele
       >
         <span>Due: {formatDate(task.dueDate)}</span>
         <span>Estimated: {task.estimatedHours ? `${task.estimatedHours}h` : "Not set"}</span>
-        <span>Work status: {prettify(task.status)}</span>
+        <span>Work status: {isReworkRequired ? "Rework Required" : prettify(task.status)}</span>
       </div>
 
       {task.selfTaskStatus === "pending_approval" ? (
         <div style={{ marginTop: "var(--space-4)", display: "flex", gap: "var(--space-2)", alignItems: "center", color: "var(--color-text-muted)", fontSize: "var(--text-sm)" }}>
           <Clock size={14} />
           Awaiting approval from your manager
+        </div>
+      ) : null}
+
+      {isReworkRequired && reworkEntry ? (
+        <div
+          style={{
+            marginTop: "var(--space-4)",
+            padding: "var(--space-3)",
+            border: "1px solid var(--color-warning)",
+            background: "rgba(245, 158, 11, 0.05)",
+            color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--text-sm)",
+          }}
+        >
+          <div style={{ fontWeight: "var(--font-bold)", color: "var(--color-warning)", marginBottom: "var(--space-1)" }}>
+            Rework Required
+          </div>
+          <div style={{ whiteSpace: "pre-wrap", marginBottom: "var(--space-2)" }}>
+            Remarks from {reworkEntry.performedBy?.name || "Reviewer"}: "{reworkEntry.note || reworkEntry.remarks || "No remarks provided"}"
+          </div>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+            Sent back by: {reworkEntry.performedBy?.name || "Reviewer"} {reworkEntry.performedBy?.role ? `(${prettify(reworkEntry.performedBy.role)})` : ""}
+            <br />
+            Sent back on: {formatDateTime(reworkEntry.performedAt)}
+          </div>
+          <div style={{ fontStyle: "italic", color: "var(--color-text-secondary)", fontSize: "var(--text-xs)", borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)" }}>
+            Please complete the requested improvements and resubmit this task for approval.
+          </div>
         </div>
       ) : null}
 
@@ -115,8 +159,18 @@ export default function SelfTaskCard({ task, onSubmitForApproval, onEdit, onDele
       <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-4)", flexWrap: "wrap" }}>
         {["draft", "revision"].includes(task.selfTaskStatus) ? (
           <button type="button" className="btn btn-primary" onClick={() => onSubmitForApproval(task)}>
-            <CheckCircle2 size={16} /> Mark Complete and Submit
+            <CheckCircle2 size={16} /> Submit for Approval
           </button>
+        ) : null}
+        {isReworkRequired ? (
+          <>
+            <button type="button" className="btn btn-primary" onClick={() => onSubmitForApproval(task)}>
+              <CheckCircle2 size={16} /> Resubmit for Approval
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => onEdit(task)}>
+              <Pencil size={16} /> Update Task
+            </button>
+          </>
         ) : null}
         {task.selfTaskStatus === "rejected" ? (
           <button type="button" className="btn btn-primary" onClick={() => onEdit(task)}>
