@@ -88,6 +88,9 @@ const ContactSchema = new mongoose.Schema(
     emergencyContactName: { type: String, trim: true },
     emergencyContactNumber: { type: String, trim: true },
     personalEmail: { type: String, trim: true, lowercase: true },
+    profilePhoto: { type: String, default: "" },
+    dob: { type: Date, default: null },
+    bloodGroup: { type: String, default: "" },
     emergencyContact: {
       name: {
         type: String,

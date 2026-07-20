@@ -38,7 +38,7 @@ const PRIVILEGED_CONTACT_ROLES = new Set(["admin", "hr", "super_user"]);
 
 const normalizeRole = (value = "") => String(value || "").trim().toLowerCase();
 const normalizeEmail = (value = "") => String(value || "").trim().toLowerCase();
-const SELF_PROFILE_FIELDS = ["contactNumber", "address", "emergencyContactName", "emergencyContactNumber", "personalEmail", "emergencyContact"];
+const SELF_PROFILE_FIELDS = ["contactNumber", "address", "emergencyContactName", "emergencyContactNumber", "personalEmail", "emergencyContact", "dob", "bloodGroup", "profilePhoto"];
 const STAFF_PROFILE_FIELDS = [
     "name",
     "email",
@@ -67,6 +67,9 @@ const STAFF_PROFILE_FIELDS = [
     "esicNumber",
     "reportsTo",
     "bankDetails",
+    "dob",
+    "bloodGroup",
+    "profilePhoto",
 ];
 
 const canAccessAnySalarySlip = (user) => PRIVILEGED_CONTACT_ROLES.has(normalizeRole(user?.role));
@@ -906,9 +909,14 @@ const normalizeProfileValues = (payload = {}) => {
 const serializeEmployeeProfile = async (contact) => {
     const linkedUser = await resolveLinkedUser(contact);
     const doc = toPlainContact(contact);
+    const targetUserId = contact.linkedUser || contact.sourceUserId || contact._id;
+    const profilePhotoUrl = contact.profilePhoto
+        ? `/api/contacts/profiles/${targetUserId}/photo`
+        : "";
 
     return {
         ...doc,
+        profilePhoto: profilePhotoUrl,
         employeeId: contact.employeeId || null,
         reportsTo: linkedUser?.reportsTo || null,
         linkedUser: linkedUser
@@ -919,6 +927,7 @@ const serializeEmployeeProfile = async (contact) => {
                 role: linkedUser.role,
                 department: linkedUser.department,
                 reportsTo: linkedUser.reportsTo || null,
+                profilePhoto: profilePhotoUrl,
             }
             : null,
     };
@@ -1673,4 +1682,122 @@ exports.deleteContact = async (req, res) => {
         res.status(500).send("Server Error");
     }
 };
+
+// Configure multer for profile photo upload
+const avatarUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const dir = './uploads/avatars/';
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            cb(null, `avatar-${req.params.userId || Date.now()}-${Date.now()}${ext}`);
+        }
+    }),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpg|jpeg|png|webp/i;
+        const extname = allowed.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowed.test(file.mimetype);
+        if (extname && mimetype) return cb(null, true);
+        cb(new Error("Only JPG, JPEG, PNG, and WEBP files are allowed."));
+    }
+}).single("photo");
+
+// Upload Profile Photo
+exports.uploadProfilePhoto = (req, res) => {
+    avatarUpload(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ message: err.message || "Failed to upload file" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        try {
+            const { userId } = req.params;
+            const contact = await ensureContactProfileForUser(userId);
+            if (!contact) {
+                return res.status(404).json({ message: "Employee profile not found" });
+            }
+
+            // Remove old photo if it exists
+            if (contact.profilePhoto) {
+                const oldPath = path.resolve(contact.profilePhoto);
+                if (fs.existsSync(oldPath)) {
+                    try {
+                        fs.unlinkSync(oldPath);
+                    } catch (unlinkErr) {
+                        console.error("Failed to delete old avatar file:", unlinkErr);
+                    }
+                }
+            }
+
+            // Save new photo path
+            contact.profilePhoto = req.file.path.replace(/\\/g, "/");
+            await Contact.updateOne({ _id: contact._id }, { $set: { profilePhoto: contact.profilePhoto } });
+
+            res.json({
+                message: "Profile photo uploaded successfully",
+                profilePhoto: `/api/contacts/profiles/${userId}/photo`
+            });
+        } catch (dbErr) {
+            console.error("Upload Profile Photo DB Error:", dbErr);
+            res.status(500).json({ message: "Server Error" });
+        }
+    });
+};
+
+// Delete Profile Photo
+exports.deleteProfilePhoto = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const contact = await ensureContactProfileForUser(userId);
+        if (!contact) {
+            return res.status(404).json({ message: "Employee profile not found" });
+        }
+
+        if (contact.profilePhoto) {
+            const oldPath = path.resolve(contact.profilePhoto);
+            if (fs.existsSync(oldPath)) {
+                try {
+                    fs.unlinkSync(oldPath);
+                } catch (unlinkErr) {
+                    console.error("Failed to delete avatar file:", unlinkErr);
+                }
+            }
+            contact.profilePhoto = "";
+            await Contact.updateOne({ _id: contact._id }, { $set: { profilePhoto: "" } });
+        }
+
+        res.json({ message: "Profile photo removed successfully" });
+    } catch (err) {
+        console.error("Delete Profile Photo Error:", err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// Stream Profile Photo
+exports.getProfilePhoto = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const contact = await Contact.findOne({ linkedUser: userId });
+        if (!contact || !contact.profilePhoto) {
+            return res.status(404).json({ message: "Profile photo not found" });
+        }
+
+        const resolvedPath = path.resolve(contact.profilePhoto);
+        if (!fs.existsSync(resolvedPath)) {
+            return res.status(404).json({ message: "Profile photo file not found" });
+        }
+
+        res.sendFile(resolvedPath);
+    } catch (err) {
+        console.error("Get Profile Photo Error:", err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
 exports.uploadPrivate = uploadPrivate;

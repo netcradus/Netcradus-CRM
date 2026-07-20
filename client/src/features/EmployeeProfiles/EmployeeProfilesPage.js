@@ -17,6 +17,9 @@ const emptyForm = {
   panNumber: "",
   uanNumber: "",
   esicNumber: "",
+  dob: "",
+  bloodGroup: "",
+  profilePhoto: "",
   bankDetails: {
     paymentMode: "",
     bankName: "",
@@ -83,6 +86,13 @@ const emptySalarySlipForm = {
 
 const toDateInput = (v) => v ? new Date(v).toISOString().slice(0, 10) : "";
 const formatRole = (r = "") => r === "admin" ? "Administrator" : String(r || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+const getInitials = (name) => {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 function EmployeeProfilesPage() {
   const token = localStorage.getItem("token");
@@ -170,6 +180,9 @@ function EmployeeProfilesPage() {
         panNumber: selectedProfile.panNumber || "",
         uanNumber: selectedProfile.uanNumber || "",
         esicNumber: selectedProfile.esicNumber || "",
+        dob: toDateInput(selectedProfile.dob),
+        bloodGroup: selectedProfile.bloodGroup || "",
+        profilePhoto: selectedProfile.profilePhoto || "",
         bankDetails: {
           paymentMode: selectedProfile.bankDetails?.paymentMode || "",
           bankName: selectedProfile.bankDetails?.bankName || "",
@@ -288,6 +301,68 @@ function EmployeeProfilesPage() {
       setUploadError(err.response?.data?.message || "Failed to upload document");
     } finally {
       setUploadingDoc(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      setError("File size exceeds 2 MB limit.");
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Only JPG, PNG or WEBP files are allowed.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    setError("");
+    setMessage("");
+    setSaving(true);
+
+    try {
+      await axios.post(
+        apiUrl(`/api/contacts/profiles/${selectedUserId}/photo`),
+        formData,
+        {
+          headers: {
+            ...headers,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      setMessage("Profile photo updated successfully");
+      fetchProfiles();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to upload photo");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!window.confirm("Are you sure you want to remove this profile photo?")) return;
+
+    setError("");
+    setMessage("");
+    setSaving(true);
+
+    try {
+      await axios.delete(apiUrl(`/api/contacts/profiles/${selectedUserId}/photo`), { headers });
+      setMessage("Profile photo removed successfully");
+      fetchProfiles();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to remove photo");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -842,6 +917,97 @@ function EmployeeProfilesPage() {
                   {activeTab === "Personal" && (
                     <>
                       <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-4)' }}>Personal Details</h3>
+
+                      {/* Profile Photo Section */}
+                      <div className="profile-photo-section" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-5)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-4)' }}>
+                        {form.profilePhoto ? (
+                          <div style={{ position: 'relative', width: '96px', height: '96px' }}>
+                            <img
+                              src={`${apiUrl(form.profilePhoto)}?token=${localStorage.getItem("token") || ""}`}
+                              alt={form.name}
+                              style={{
+                                width: '96px',
+                                height: '96px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '2px solid var(--color-border)'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                            <div
+                              style={{
+                                display: 'none',
+                                width: '96px',
+                                height: '96px',
+                                borderRadius: '50%',
+                                backgroundColor: 'var(--color-bg-alt, #2a2a2a)',
+                                color: 'var(--color-text-primary, #ffffff)',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '32px',
+                                fontWeight: 'var(--font-bold, 700)',
+                                border: '2px solid var(--color-border)'
+                              }}
+                            >
+                              {getInitials(form.name)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: '96px',
+                              height: '96px',
+                              borderRadius: '50%',
+                              backgroundColor: 'var(--color-bg-alt, #2a2a2a)',
+                              color: 'var(--color-text-primary, #ffffff)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '32px',
+                              fontWeight: 'var(--font-bold, 700)',
+                              border: '2px solid var(--color-border)'
+                            }}
+                          >
+                            {getInitials(form.name)}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius-sm)' }}
+                              onClick={() => document.getElementById('avatar-upload-input').click()}
+                            >
+                              {form.profilePhoto ? "Change Photo" : "Upload Photo"}
+                            </button>
+                            {form.profilePhoto && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-danger"
+                                style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', border: '1px solid var(--color-danger, #ef4444)', color: 'var(--color-danger, #ef4444)', borderRadius: 'var(--border-radius-sm)' }}
+                                onClick={handleRemovePhoto}
+                              >
+                                Remove Photo
+                              </button>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted, #888888)' }}>
+                            JPG, PNG or WEBP. Max 2 MB.
+                          </span>
+                          <input
+                            id="avatar-upload-input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            style={{ display: 'none' }}
+                            onChange={handlePhotoUpload}
+                          />
+                        </div>
+                      </div>
+
                       <h4 style={{ marginBottom: 'var(--space-3)' }}>Basic Details</h4>
                       <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
                         <div className="form-field">
@@ -863,6 +1029,24 @@ function EmployeeProfilesPage() {
                         <div className="form-field">
                           <label className="form-label">Designation</label>
                           <input className="form-input" value={form.designation || ""} onChange={e => setForm({ ...form, designation: e.target.value })} />
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Date of Birth</label>
+                          <input className="form-input" type="date" value={form.dob || ""} onChange={e => setForm({ ...form, dob: e.target.value })} />
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Blood Group</label>
+                          <select className="form-select" value={form.bloodGroup || ""} onChange={e => setForm({ ...form, bloodGroup: e.target.value })}>
+                            <option value="">Select Blood Group</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                          </select>
                         </div>
                       </div>
 
