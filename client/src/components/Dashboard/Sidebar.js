@@ -203,6 +203,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
         { label: "Messages", path: "/messages", icon: <MessageSquare size={18} />, roles: ACCESS_GROUPS.personal },
         { label: "Mail", path: "/mail", icon: <Mail size={18} />, roles: ACCESS_GROUPS.personal, badge: mailUnreadCount },
         { label: "My Drive", path: "/documents", icon: <HardDrive size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "Broadcasts", path: "/broadcasts", icon: <Megaphone size={18} />, roles: ACCESS_GROUPS.personal },
       ]
     });
 

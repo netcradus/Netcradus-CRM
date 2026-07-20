@@ -88,6 +88,7 @@ app.use(
 );
 app.use("/api/tasks", require("./routes/taskRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/broadcasts", require("./routes/broadcastRoutes"));
 app.use("/api/meeting-reminders", require("./routes/meetingReminderRoutes"));
 app.use("/api/projects", require("./routes/projectRoutes"));
 app.use("/api/partner", require("./routes/partnerRoutes"));

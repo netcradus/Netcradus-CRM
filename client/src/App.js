@@ -36,6 +36,7 @@ const Deals                    = lazy(() => import("./features/Deals/Deals"));
 const Documents                = lazy(() => import("./features/Documents/Documents"));
 const Forecasts                = lazy(() => import("./features/Forecasts/Forecasts"));
 const Tasks                    = lazy(() => import("./features/Tasks/Tasks"));
+const BroadcastsPage           = lazy(() => import("./features/Broadcasts/BroadcastsPage"));
 const Accounts                 = lazy(() => import("./features/Accounts/Accounts"));
 const MeetingsPage             = lazy(() => import("./features/Meetings/MeetingsPage"));
 const Products                 = lazy(() => import("./features/Products/Products"));
@@ -219,6 +220,7 @@ const App = () => {
               <Route path="/mail" element={<MailPage />} />
               <Route path="/tickets" element={<RoleRoute roles={ACCESS_GROUPS.tickets}><TicketsPage /></RoleRoute>} />
               <Route path="/my-profile" element={<MyProfilePage />} />
+              <Route path="/broadcasts" element={<RoleRoute roles={ACCESS_GROUPS.personal}><BroadcastsPage /></RoleRoute>} />
               
               <Route path="/employee-profiles" element={
                 <RoleRoute roles={["super_user", "hr"]}>

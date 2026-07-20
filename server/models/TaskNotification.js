@@ -36,6 +36,7 @@ const taskNotificationSchema = new mongoose.Schema(
         "partner_project",
         "meeting_reminder",
         "self_task_changes_requested",
+        "announcement",
       ],
       default: "general"
     },

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../config/api";
 import { getNotificationSocket } from "../services/socket";
@@ -260,9 +260,15 @@ export default function NotificationButton() {
                     type="button"
                     className={`popup-item ${notification.isRead ? "" : "is-unread"}`}
                     onClick={() => openTaskFromNotification(notification)}
+                    style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)", textAlign: "left" }}
                   >
-                    <span className="popup-item-message">{notification.message}</span>
-                    <span className="popup-item-time">{formatTimeAgo(notification.createdAt)}</span>
+                    {notification.type === "announcement" && (
+                      <Megaphone size={14} style={{ marginTop: "3px", flexShrink: 0, color: "var(--primary)" }} />
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                      <span className="popup-item-message">{notification.message}</span>
+                      <span className="popup-item-time">{formatTimeAgo(notification.createdAt)}</span>
+                    </div>
                   </button>
                 </li>
               ))}
