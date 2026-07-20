@@ -3,6 +3,7 @@ const UserStorage = require('../models/UserStorage');
 const Document = require('../models/Document');
 const driveService = require('./driveService');
 const { createNotifications } = require('./taskNotificationService');
+const { isDriveEnabled } = require('../utils/featureFlags');
 
 // ─── Role-based default subfolders ───────────────────────────────────────────
 const ROLE_DEFAULT_FOLDERS = {

@@ -38,3 +38,6 @@ temp/
 Thumbs.db
 .vscode/
 .idea/
+
+# uploads
+uploads/
