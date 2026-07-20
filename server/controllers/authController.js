@@ -63,7 +63,7 @@ const createUserByAdmin = async (req, res) => {
     const { email, password, role, department: manualDept, designation: manualDesignation, name, skipOnboarding } = req.body;
     const normalizedRole = String(role || "").trim().toLowerCase();
     // Partner is selectable by super users but remains outside employee/admin role groups.
-    const allowedRoles = ["admin", "management", "sales", "support", "it", "hr", "digital_media", "partner"];
+    const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"];
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -639,7 +639,16 @@ const updateUserByAdmin = async (req, res) => {
     const previousEmail = user.email;
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase().trim();
-    if (role && role !== "super_user") user.role = role.toLowerCase();
+    if (role) {
+      const normalizedRole = String(role).trim().toLowerCase();
+      const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"];
+      if (!allowedRoles.includes(normalizedRole) && normalizedRole !== "super_user") {
+        return res.status(400).json({
+          message: "Invalid role selected"
+        });
+      }
+      user.role = normalizedRole;
+    }
     if (department) user.department = department;
     if (designation !== undefined) user.designation = String(designation || "").trim();
     if (skipOnboarding !== undefined) user.skipOnboarding = Boolean(skipOnboarding);

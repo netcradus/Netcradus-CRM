@@ -5,7 +5,7 @@ import {
   Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3,
   Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box,
   BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare,
-  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail, Settings
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail, Settings, UserCog
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
@@ -176,6 +176,18 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
         { label: "Vendors", path: "/vendors", icon: <Truck size={18} />, roles: ACCESS_GROUPS.vendors },
         { label: "Products", path: "/products", icon: <Box size={18} />, roles: ACCESS_GROUPS.products },
         { label: "Forecasts", path: "/forecasts", icon: <BarChart size={18} />, roles: ACCESS_GROUPS.forecasts },
+      ]
+    });
+
+    // Manager Tools: dedicated portal for the manager role only.
+    if (role === "manager") items.push({
+      label: "Manager Tools",
+      path: "/manager/dashboard",
+      icon: <UserCog size={20} />,
+      roles: ["manager"],
+      submenu: [
+        { label: "Manager Dashboard", path: "/manager/dashboard", icon: <LayoutGrid size={18} />, roles: ["manager"] },
+        { label: "My Team", path: "/manager/team", icon: <Users2 size={18} />, roles: ["manager"] },
       ]
     });
 

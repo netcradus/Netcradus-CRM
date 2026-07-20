@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy } from "react";
 import SuperUserDashboard from "./SuperUserDashboard.js";
 import ManagementDashboard from "./ManagementDashboard.js";
 import AdminDashboard from "./AdminDashboard.js";
@@ -8,6 +8,7 @@ import HRDashboard from "./HRDashboard.js";
 import TechDashboard from "./TechDashboard.js";
 import DigitalMediaDashboard from "./DigitalMediaDashboard.js";
 import PartnerDashboard from "../../features/Partner/PartnerDashboard.js";
+import ManagerDashboard from "../../features/ManagerPortal/ManagerDashboard.js";
 import { normalizeRole } from "../../config/access";
 
 function Dashboard() {
@@ -18,6 +19,7 @@ function Dashboard() {
       case "super_user": return <SuperUserDashboard />;
       case "admin": return <AdminDashboard />;
       case "management": return <ManagementDashboard />;
+      case "manager": return <ManagerDashboard />;
       case "sales": return <SalesDashboard />;
       case "support": return <SupportDashboard />;
       case "hr": return <HRDashboard />;

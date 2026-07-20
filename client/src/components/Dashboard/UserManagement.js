@@ -678,6 +678,10 @@ const UserManagement = () => {
                     Management
                   </option>
 
+                  <option value="manager">
+                    Manager
+                  </option>
+
                   <option value="sales">
                     Sales
                   </option>
@@ -921,6 +925,10 @@ const UserManagement = () => {
 
                   <option value="management">
                     Management
+                  </option>
+
+                  <option value="manager">
+                    Manager
                   </option>
 
                   <option value="sales">

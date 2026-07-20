@@ -2,6 +2,7 @@ export const ALL_ROLES = [
   "super_user",
   "admin",
   "management",
+  "manager",
   "sales",
   "support",
   "hr",
@@ -15,7 +16,7 @@ export const ACCESS_GROUPS = {
   security: ["super_user"],
   userAdmin: ["super_user"],
   peopleOps: ["super_user", "hr"],
-  tickets: ["super_user", "admin", "management", "sales", "support", "hr", "it", "digital_media"],
+  tickets: ["super_user", "admin", "management", "manager", "sales", "support", "hr", "it", "digital_media"],
   financeAdmin: ["super_user", "admin"],
   financeBusiness: ["super_user", "admin", "management", "sales"],
   quotes: ["super_user", "management", "sales"],
@@ -27,7 +28,9 @@ export const ACCESS_GROUPS = {
   crmDeals: ["super_user"],
   projects: ["super_user", "it", "management"],
   management: ["super_user", "management"],
-  tasks: ["super_user", "admin", "management", "sales", "support", "hr", "it", "digital_media"],
+  // Manager Portal is the dedicated Phase 1 portal for the manager role.
+  managerPortal: ["manager"],
+  tasks: ["super_user", "admin", "management", "manager", "sales", "support", "hr", "it", "digital_media"],
   calls: ["super_user", "management", "sales", "support"],
   cases: ["super_user", "support"],
   solutions: ["super_user", "management", "support"],
@@ -39,6 +42,7 @@ export const ACCESS_GROUPS = {
   marketing: ["super_user", "digital_media"],
   reports: ["super_user", "digital_media"],
   // Partners are external accounts and must not see attendance/HR employee flows.
+  // Managers have attendance and personal tools.
   attendance: ALL_ROLES.filter((role) => role !== "partner"),
   attendanceAdmin: ["super_user", "admin", "hr"],
   // Personal employee tools exclude partners; partner profile is routed explicitly.

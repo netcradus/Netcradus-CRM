@@ -261,6 +261,7 @@ const SuperUserDashboard = () => {
       case "it": return <TechDashboard preview={!selectedUser} />;
       case "digital_media": return <DigitalMediaDashboard preview={!selectedUser} />;
       case "management": return <ManagementDashboard preview={!selectedUser} />;
+      case "manager": return <div style={{ padding: "var(--space-6)", color: "var(--color-text-muted)", textAlign: "center" }}>Manager Dashboard preview</div>;
       default: return null;
     }
   };
@@ -365,6 +366,7 @@ const SuperUserDashboard = () => {
             <option value="it">IT</option>
             <option value="digital_media">Digital Media</option>
             <option value="management">Management</option>
+            <option value="manager">Manager</option>
             <option value="all">All Roles</option>
           </select>
         </div>

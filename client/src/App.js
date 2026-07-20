@@ -89,6 +89,9 @@ const PartnerProjects          = lazy(() => import("./features/Partner/PartnerPr
 const PartnerProjectDetail     = lazy(() => import("./features/Partner/PartnerProjectDetail"));
 const AdminPartners            = lazy(() => import("./features/Partner/AdminPartners"));
 const AdminPartnerDetail       = lazy(() => import("./features/Partner/AdminPartnerDetail"));
+const ManagerDashboardPage     = lazy(() => import("./features/ManagerPortal/ManagerDashboard"));
+const ManagerTeamPage          = lazy(() => import("./features/ManagerPortal/ManagerTeamPage"));
+const ManagerTeamMemberPage    = lazy(() => import("./features/ManagerPortal/ManagerTeamMemberPage"));
 
 /* ========== Protected Wrapper ========== */
 function ProtectedApp() {
@@ -243,6 +246,23 @@ const App = () => {
               <Route path="/calls" element={<RoleRoute roles={ACCESS_GROUPS.calls}><Calls /></RoleRoute>} />
               <Route path="/cases" element={<RoleRoute roles={ACCESS_GROUPS.cases}><Cases /></RoleRoute>} />
               <Route path="/contacts" element={<RoleRoute roles={ACCESS_GROUPS.crmContacts}><Contacts /></RoleRoute>} />
+
+              {/* Manager Portal Routes — manager role only */}
+              <Route path="/manager/dashboard" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerDashboardPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/team" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerTeamPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/team/:userId" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerTeamMemberPage />
+                </RoleRoute>
+              } />
 
               {/* Management Hub Routes */}
               <Route path="/management" element={
