@@ -1,0 +1,36 @@
+name: netcradus-crm
+region: nyc
+services:
+  - name: crm-server
+    source_dir: server
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    run_command: npm start
+    http_port: 5000
+    envs:
+      - key: MONGO_URI
+        scope: RUN_TIME
+      - key: JWT_SECRET
+        scope: RUN_TIME
+      - key: CLIENT_ORIGIN
+        scope: RUN_TIME
+        value: ${crm-frontend.PUBLIC_URL}
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: DRIVE_FEATURE_ENABLED
+        scope: RUN_TIME
+        value: "false"
+      - key: MAX_UPLOAD_MB
+        scope: RUN_TIME
+        value: "10"
+
+static_sites:
+  - name: crm-frontend
+    source_dir: client
+    build_command: npm run build
+    output_dir: build
+    envs:
+      - key: REACT_APP_API_URL
+        scope: BUILD_TIME
+        value: ${crm-server.PUBLIC_URL}/api

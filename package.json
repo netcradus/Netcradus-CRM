@@ -1,0 +1,14 @@
+{
+  "name": "netcradus-crm",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "client-start": "npm start --workspace=client",
+    "server-start": "npm start --workspace=server",
+    "client-build": "npm run build --workspace=client"
+  }
+}
