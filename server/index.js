@@ -122,6 +122,7 @@ app.use("/api/vendors", require("./routes/vendors"));
 app.use("/api/tickets", require("./routes/ticketRoutes"));
 app.use("/api/management", require("./routes/managementRoutes"));
 app.use("/api/manager", require("./routes/managerRoutes"));
+app.use("/api/manager/meetings", require("./routes/teamMeetingRoutes"));
 app.use("/api/password-manager", require("./routes/passwordManagerRoutes"));
 app.use("/api/workspace", require("./routes/workspaceRoutes"));
 

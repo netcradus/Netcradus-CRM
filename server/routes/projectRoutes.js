@@ -3,8 +3,10 @@ const router = express.Router();
 const projectController = require("../controllers/projectController");
 const rbac = require("../middleware/rbac");
 const { verifyPasswordLimiter, projectRouteLimiter } = require("../middleware/rateLimiter");
+const authMiddleware = require("../middleware/authMiddleware");
 
 router.use(projectRouteLimiter);
+router.use(authMiddleware);
 
 // Partner accounts use /api/partner/projects so internal project APIs stay employee/admin scoped.
 router.use((req, res, next) => {

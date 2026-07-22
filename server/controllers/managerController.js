@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const OrgHierarchy = require("../models/OrgHierarchy");
 const { getSubordinatesForUser } = require("../utils/hierarchyUtils");
+const TeamMeeting = require("../models/TeamMeeting");
 
 
 /**
@@ -303,10 +304,42 @@ const getDashboardSummary = async (req, res) => {
     }));
 
     // 8. Upcoming Meetings
-    // Manager is strictly restricted from seeing CRM Leads/Client details.
-    // Therefore, meetings query must return 0 and empty list.
-    const upcomingMeetingsCount = 0;
-    const nextMeetings = [];
+    const upcomingMeetingsCount = await TeamMeeting.countDocuments({
+      status: "scheduled",
+      meetingDate: { $gte: new Date() },
+      $or: [
+        { organizer: managerId },
+        { participants: managerId }
+      ]
+    });
+
+    const nextMeetingsDocs = await TeamMeeting.find({
+      status: "scheduled",
+      meetingDate: { $gte: new Date() },
+      $or: [
+        { organizer: managerId },
+        { participants: managerId }
+      ]
+    })
+      .populate("organizer", "name")
+      .populate("participants", "name")
+      .populate("relatedProject", "name")
+      .sort({ meetingDate: 1, startTime: 1 })
+      .limit(5)
+      .lean();
+
+    const nextMeetings = nextMeetingsDocs.map(m => ({
+      meetingId: m._id,
+      title: m.title,
+      meetingDate: m.meetingDate,
+      startTime: m.startTime,
+      endTime: m.endTime,
+      meetingType: m.meetingType,
+      organizer: m.organizer?.name || "Unknown",
+      participants: (m.participants || []).map(p => p.name || "Unknown"),
+      project: m.relatedProject?.name || null,
+      location: m.location || m.meetingLink || "No location/link"
+    }));
 
     // 9. Notifications Summary
     const [unreadNotificationsCount, recentNotificationsDocs] = await Promise.all([

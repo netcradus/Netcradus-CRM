@@ -96,6 +96,9 @@ const ManagerProjectsPage      = lazy(() => import("./features/ManagerPortal/Man
 const ManagerProjectDetailPage = lazy(() => import("./features/ManagerPortal/ManagerProjectDetailPage"));
 const ManagerProjectFormPage   = lazy(() => import("./features/ManagerPortal/ManagerProjectFormPage"));
 const ManagerAttendancePage    = lazy(() => import("./features/ManagerPortal/ManagerAttendancePage"));
+const ManagerMeetingsPage      = lazy(() => import("./features/ManagerPortal/ManagerMeetingsPage"));
+const ManagerMeetingFormPage    = lazy(() => import("./features/ManagerPortal/ManagerMeetingFormPage"));
+const ManagerMeetingDetailPage  = lazy(() => import("./features/ManagerPortal/ManagerMeetingDetailPage"));
 
 
 
@@ -292,6 +295,26 @@ const App = () => {
               <Route path="/manager/attendance" element={
                 <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
                   <ManagerAttendancePage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/meetings" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerMeetingsPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/meetings/new" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerMeetingFormPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/meetings/:meetingId" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerMeetingDetailPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/meetings/:meetingId/edit" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerMeetingFormPage />
                 </RoleRoute>
               } />
 

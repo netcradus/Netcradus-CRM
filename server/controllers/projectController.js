@@ -318,21 +318,32 @@ exports.deleteProject = catchAsync(async (req, res) => {
 
 exports.getProjects = catchAsync(async (req, res) => {
   const { status, industry, search, sortBy = "", page = 1, limit = 20 } = req.query;
-  const query = { isDeleted: false };
+  let query = { isDeleted: false };
 
-  if (!isSuperUser(req.user)) {
-    query.$or = [
-      { createdBy: req.user.id },
-      { assignedEngineer: req.user.id },
-      { collaborators: req.user.id }
-    ];
+  if (req.user.role === "super_user") {
+    query = { isDeleted: false };
+  } else {
+    query = {
+      isDeleted: false,
+      $or: [
+        { createdBy: req.user._id },
+        { assignedEngineer: req.user._id },
+        { collaborators: req.user._id }
+      ]
+    };
   }
 
   if (status && STATUSES.includes(status)) query.status = status;
   if (industry) query.industry = new RegExp(trimString(industry), "i");
   if (search) {
     const pattern = new RegExp(trimString(search), "i");
-    query.$or = [{ name: pattern }, { clientName: pattern }, { clientCompany: pattern }];
+    const searchOr = [{ name: pattern }, { clientName: pattern }, { clientCompany: pattern }];
+    if (query.$or) {
+      query.$and = query.$and || [];
+      query.$and.push({ $or: searchOr });
+    } else {
+      query.$or = searchOr;
+    }
   }
 
   const sortMap = {

@@ -480,14 +480,48 @@ const ManagerDashboard = () => {
 
           {/* Upcoming Meetings */}
           <div className="nc-panel nc-section">
-            <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", marginBottom: "var(--space-4)" }}>
-              Upcoming Meetings
-            </h2>
-            <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-text-muted)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)" }}>
-              <Calendar size={24} style={{ marginBottom: "var(--space-2)", opacity: 0.4 }} />
-              <p style={{ margin: 0, fontSize: "var(--text-sm)", marginBottom: "var(--space-2)" }}>No upcoming meetings.</p>
-              <p style={{ margin: 0, fontSize: "10px", color: "var(--color-text-muted)" }}>Sales customer meetings are restricted for Managers.</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+              <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", margin: 0 }}>
+                Upcoming Meetings
+              </h2>
+              {meetings?.upcomingCount > 0 && (
+                <span className="badge badge-info" style={{ fontSize: "10px" }}>{meetings.upcomingCount} Total</span>
+              )}
             </div>
+            {meetings?.nextMeetings?.length === 0 ? (
+              <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--color-text-muted)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)" }}>
+                <Calendar size={24} style={{ marginBottom: "var(--space-2)", opacity: 0.4 }} />
+                <p style={{ margin: 0, fontSize: "var(--text-sm)" }}>No upcoming team meetings.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                {meetings?.nextMeetings?.map((m) => (
+                  <div key={m.meetingId} style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "var(--space-1)" }}>
+                      <span style={{ fontWeight: "var(--font-semibold)", fontSize: "var(--text-sm)" }}>{m.title}</span>
+                      <span className="badge badge-info" style={{ fontSize: "9px" }}>
+                        {m.meetingType === "team_meeting" ? "Team Meeting" : 
+                         m.meetingType === "one_to_one" ? "One-to-One" : 
+                         m.meetingType === "project_review" ? "Project Review" : 
+                         m.meetingType === "daily_standup" ? "Daily Stand-up" :
+                         m.meetingType === "performance_review" ? "Performance Review" :
+                         m.meetingType === "training" ? "Training" : "Internal Discussion"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                      <span>Date: {formatDate(m.meetingDate)} ({m.startTime})</span>
+                      {m.project && <span className="badge badge-neutral" style={{ fontSize: "9px" }}>{m.project}</span>}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--color-border-subtle)", paddingTop: "var(--space-2)", marginTop: "2px" }}>
+                      <span style={{ fontSize: "10px", color: "var(--color-text-muted)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        Participants: {m.participants?.join(", ")}
+                      </span>
+                      <button className="btn btn-ghost" style={{ padding: "2px 8px", fontSize: "11px", height: "auto" }} onClick={() => navigate(`/manager/meetings/${m.meetingId}`)}>View</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Recent Notifications */}
