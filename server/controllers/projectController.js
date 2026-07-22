@@ -219,7 +219,13 @@ const ensureProjectAccess = (project, req, res) => {
     return false;
   }
 
-  if (isSuperUser(req.user) || isProjectOwner(project, req.user.id)) {
+  const userId = req.user.id;
+  const isOwner = String(project.createdBy?._id || project.createdBy || "") === String(userId);
+  const isAssigned = String(project.assignedEngineer?._id || project.assignedEngineer || "") === String(userId);
+  const collaborators = Array.isArray(project.collaborators) ? project.collaborators : [];
+  const isCollaborator = collaborators.some((c) => String(c?._id || c || "") === String(userId));
+
+  if (isSuperUser(req.user) || isOwner || isAssigned || isCollaborator) {
     return true;
   }
 
@@ -315,7 +321,11 @@ exports.getProjects = catchAsync(async (req, res) => {
   const query = { isDeleted: false };
 
   if (!isSuperUser(req.user)) {
-    query.createdBy = req.user.id;
+    query.$or = [
+      { createdBy: req.user.id },
+      { assignedEngineer: req.user.id },
+      { collaborators: req.user.id }
+    ];
   }
 
   if (status && STATUSES.includes(status)) query.status = status;

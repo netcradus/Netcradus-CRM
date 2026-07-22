@@ -1,21 +1,11 @@
-import { ExternalLink, Eye, Globe, Building2 } from "lucide-react";
+import React from "react";
+import { Eye, Globe, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { projectAssetUrl } from "./projectApi";
+import { projectAssetUrl } from "../Projects/projectApi";
 
-const statusLabel = {
-  completed: "Completed",
-  ongoing: "Ongoing",
-  maintenance: "Maintenance",
-  in_progress: "In Progress",
-  testing: "Testing",
-  on_hold: "On Hold",
-  cancelled: "Cancelled",
-  under_review: "Under Review",
-  approved: "Approved",
-  new: "New"
-};
+const statusLabel = { completed: "Completed", ongoing: "Ongoing", maintenance: "Maintenance" };
 
-export default function ProjectCard({ project }) {
+export default function ManagerProjectCard({ project }) {
   const tags = project.techStack || [];
 
   return (
@@ -36,7 +26,7 @@ export default function ProjectCard({ project }) {
 
       <div style={{ padding: 'var(--space-5)', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <h3 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-1)' }}>{project.name}</h3>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)', lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{project.tagline || "No description provided."}</p>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-4)', lineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{project.tagline || "No description provided."}</p>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
            <Building2 size={12} /> <span>{project.clientCompany || "Internal project"}</span>
@@ -55,8 +45,8 @@ export default function ProjectCard({ project }) {
                  <Globe size={12} /> Visit Site
               </a>
            ) : <div />}
-           <Link to={`/projects/${project._id}`} className="btn btn-ghost" style={{ padding: 'var(--space-1) var(--space-3)', fontSize: '11px' }}>
-             <Eye size={12} style={{ marginRight: '6px' }} /> Details
+           <Link to={`/manager/projects/${project._id}`} className="btn btn-ghost" style={{ padding: 'var(--space-1) var(--space-3)', fontSize: '11px' }}>
+              <Eye size={12} style={{ marginRight: '6px' }} /> Details
            </Link>
         </div>
       </div>

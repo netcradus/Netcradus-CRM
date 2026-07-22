@@ -57,8 +57,12 @@ export default function ProjectsPage() {
          </div>
          <select className="form-select" style={{ width: '150px' }} value={filters.status} onChange={e => setFilter("status", e.target.value)}>
             <option value="">All Status</option>
-            <option value="completed">Completed</option>
+            <option value="in_progress">In Progress</option>
             <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="testing">Testing</option>
+            <option value="on_hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
          </select>
          <select className="form-select" style={{ width: '150px' }} value={filters.industry} onChange={e => setFilter("industry", e.target.value)}>
             <option value="">All Industries</option>

@@ -92,6 +92,12 @@ const AdminPartnerDetail       = lazy(() => import("./features/Partner/AdminPart
 const ManagerDashboardPage     = lazy(() => import("./features/ManagerPortal/ManagerDashboard"));
 const ManagerTeamPage          = lazy(() => import("./features/ManagerPortal/ManagerTeamPage"));
 const ManagerTeamMemberPage    = lazy(() => import("./features/ManagerPortal/ManagerTeamMemberPage"));
+const ManagerProjectsPage      = lazy(() => import("./features/ManagerPortal/ManagerProjectsPage"));
+const ManagerProjectDetailPage = lazy(() => import("./features/ManagerPortal/ManagerProjectDetailPage"));
+const ManagerProjectFormPage   = lazy(() => import("./features/ManagerPortal/ManagerProjectFormPage"));
+const ManagerAttendancePage    = lazy(() => import("./features/ManagerPortal/ManagerAttendancePage"));
+
+
 
 /* ========== Protected Wrapper ========== */
 function ProtectedApp() {
@@ -261,6 +267,31 @@ const App = () => {
               <Route path="/manager/team/:userId" element={
                 <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
                   <ManagerTeamMemberPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/projects" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerProjectsPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/projects/new" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerProjectFormPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/projects/:id" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerProjectDetailPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/projects/:id/edit" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerProjectFormPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/attendance" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerAttendancePage />
                 </RoleRoute>
               } />
 
