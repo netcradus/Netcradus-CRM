@@ -57,6 +57,101 @@ const getAttemptState = (userId) => {
   return current;
 };
 
+// Common user saving and onboarding logic (shared by admin and manager)
+const saveAndOnboardUserInternal = async ({
+  name,
+  email,
+  password,
+  role,
+  department: manualDept,
+  designation: manualDesignation,
+  skipOnboarding,
+  reportsTo = null
+}) => {
+  const normalizedRole = String(role || "").trim().toLowerCase();
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Extract first name from email or use provided name
+  const firstName = name || normalizedEmail.split("@")[0].split(".")[0];
+
+  // Department prefix
+  const department = normalizedRole.replace("_", "");
+
+  // Count existing users in same department
+  const count = await User.countDocuments({ role: normalizedRole });
+
+  // Generate sequential number (001, 002, 003...)
+  const number = String(count + 1).padStart(3, "0");
+
+  const uniqueId = `${department}_${firstName}_${number}`;
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = new User({
+    userId: uniqueId,
+    name: firstName,
+    email: normalizedEmail,
+    password: hashedPassword,
+    role: normalizedRole,
+    department: manualDept || department,
+    designation: String(manualDesignation || formatRoleLabel(normalizedRole)).trim(),
+    skipOnboarding: Boolean(skipOnboarding),
+    reportsTo: reportsTo || null
+  });
+
+  await user.save();
+
+  let generatedEmployeeId = null;
+
+  // Partners are external collaborators, so they should not be mirrored as employee contacts.
+  if (normalizedRole !== "partner") {
+    try {
+      const counter = await Counter.findOneAndUpdate(
+        { id: "employeeId" },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const seqNum = counter.seq;
+      generatedEmployeeId = seqNum <= 999
+        ? `NC${String(seqNum).padStart(3, "0")}`
+        : `NC${seqNum}`;
+
+      await Contact.findOneAndUpdate(
+        { linkedUser: user._id },
+        {
+          $setOnInsert: {
+            linkedUser: user._id,
+            employeeId: generatedEmployeeId,
+            name: user.name,
+            email: user.email,
+            status: "Employee",
+            department: user.department || "General",
+            designation: user.designation || formatRoleLabel(user.role || "employee"),
+            joiningDate: user.createdAt,
+            isActive: true,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } catch (contactErr) {
+      console.error("Contact creation failed during user onboarding, rolling back user:", contactErr);
+      await User.deleteOne({ _id: user._id });
+      throw contactErr;
+    }
+  }
+
+  // ── Provision Google Drive storage for the new user ──────────────────────
+  try {
+    await storageService.provisionUserStorage(user._id, user.name || firstName, user.role);
+    user.storageProvisioned = true;
+    await user.save();
+  } catch (storageErr) {
+    console.error(`[AuthController] Drive provisioning failed for user ${user._id}:`, storageErr.message);
+  }
+
+  return { user, generatedEmployeeId };
+};
+
 // Create user (super user only)
 const createUserByAdmin = async (req, res) => {
   try {
@@ -86,94 +181,16 @@ const createUserByAdmin = async (req, res) => {
       });
     }
 
-    // Extract first name from email or use provided name
-    const firstName = name || normalizedEmail.split("@")[0].split(".")[0];
-
-    // Department prefix
-    const department = normalizedRole.replace("_", "");
-
-    // Count existing users in same department
-    const count = await User.countDocuments({ role: normalizedRole });
-
-    // Generate sequential number (001, 002, 003...)
-    const number = String(count + 1).padStart(3, "0");
-
-    const uniqueId = `${department}_${firstName}_${number}`;
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({
-      userId: uniqueId,
-      name: firstName,
-      email: normalizedEmail,
-      password: hashedPassword,
+    const { user, generatedEmployeeId } = await saveAndOnboardUserInternal({
+      name,
+      email,
+      password,
       role: normalizedRole,
-      department: manualDept || department,
-      designation: String(manualDesignation || formatRoleLabel(normalizedRole)).trim(),
-      skipOnboarding: Boolean(skipOnboarding),
+      department: manualDept,
+      designation: manualDesignation,
+      skipOnboarding,
+      reportsTo: null
     });
-
-    await user.save();
-
-    let generatedEmployeeId = null;
-
-    // Partners are external collaborators, so they should not be mirrored as employee contacts.
-    if (normalizedRole !== "partner") {
-      try {
-        const counter = await Counter.findOneAndUpdate(
-          { id: "employeeId" },
-          { $inc: { seq: 1 } },
-          { new: true, upsert: true }
-        );
-        const seqNum = counter.seq;
-        generatedEmployeeId = seqNum <= 999
-          ? `NC${String(seqNum).padStart(3, "0")}`
-          : `NC${seqNum}`;
-
-        await Contact.findOneAndUpdate(
-          { linkedUser: user._id },
-          {
-            $setOnInsert: {
-              linkedUser: user._id,
-              employeeId: generatedEmployeeId,
-              name: user.name,
-              email: user.email,
-              status: "Employee",
-              department: user.department || "General",
-              designation: user.designation || formatRoleLabel(user.role || "employee"),
-              joiningDate: user.createdAt,
-              isActive: true,
-            },
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-      } catch (contactErr) {
-        console.error("Contact creation failed during user onboarding, rolling back user:", contactErr);
-        await User.deleteOne({ _id: user._id });
-
-        if (contactErr.code === 11000) {
-          return res.status(400).json({
-            message: "Failed to create employee profile: Employee ID or Email duplicate error."
-          });
-        }
-        return res.status(500).json({
-          message: "Failed to create employee profile, rolled back user creation.",
-          error: contactErr.message
-        });
-      }
-    }
-
-    // ── Provision Google Drive storage for the new user ──────────────────────
-    // Storage provisioning is safe for partners; onboarding emails/files are skipped separately.
-    try {
-      await storageService.provisionUserStorage(user._id, user.name || firstName, user.role);
-      user.storageProvisioned = true;
-      await user.save();
-    } catch (storageErr) {
-      // Do NOT block user creation if Drive provisioning fails.
-      // storageProvisioned stays false — retryable from the admin panel.
-      console.error(`[AuthController] Drive provisioning failed for user ${user._id}:`, storageErr.message);
-    }
 
     res.status(201).json({
       message: "User created successfully",
@@ -190,7 +207,12 @@ const createUserByAdmin = async (req, res) => {
 
   } catch (err) {
     console.error("Create User Error:", err);
-    res.status(500).json({ message: "Server error" });
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "Failed to create employee profile: Employee ID or Email duplicate error."
+      });
+    }
+    res.status(500).json({ message: err.message || "Server error" });
   }
 };
 // Login User
@@ -937,6 +959,7 @@ const revokeAdminDevice = async (req, res) => {
 
 module.exports = {
   createUserByAdmin,
+  saveAndOnboardUserInternal,
   login,
   requestForgotPasswordOTP,
   resetPasswordWithOTP,

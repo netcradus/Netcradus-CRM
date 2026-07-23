@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X, Calendar, User as UserIcon, Eye, CheckCircle2 } from "lucide-react";
-import { broadcastApi } from "./broadcastApi";
+import { broadcastApi, managerBroadcastApi } from "./broadcastApi";
 
 const PRIORITY_THEMES = {
   normal: { bg: "rgba(156, 163, 175, 0.1)", text: "var(--text-secondary)", border: "rgba(156, 163, 175, 0.2)" },
@@ -8,7 +8,7 @@ const PRIORITY_THEMES = {
   urgent: { bg: "rgba(239, 68, 68, 0.1)", text: "var(--danger)", border: "rgba(239, 68, 68, 0.2)" }
 };
 
-export default function BroadcastDetailsModal({ isOpen, broadcastId, onClose, onMarkReadLocal }) {
+export default function BroadcastDetailsModal({ isOpen, broadcastId, onClose, onMarkReadLocal, isManager = false }) {
   const [broadcast, setBroadcast] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,7 +17,8 @@ export default function BroadcastDetailsModal({ isOpen, broadcastId, onClose, on
     if (isOpen && broadcastId) {
       setLoading(true);
       setError("");
-      broadcastApi.get(broadcastId)
+      const api = isManager ? managerBroadcastApi : broadcastApi;
+      api.get(broadcastId)
         .then(async (res) => {
           setBroadcast(res.data?.data || null);
 
@@ -25,7 +26,7 @@ export default function BroadcastDetailsModal({ isOpen, broadcastId, onClose, on
           const detail = res.data?.data;
           if (detail && !detail.isRead) {
             try {
-              const markRes = await broadcastApi.markRead(broadcastId);
+              const markRes = await api.markRead(broadcastId);
               if (markRes.data?.success) {
                 // Update local list state
                 onMarkReadLocal(broadcastId, markRes.data.data.readCount);
@@ -44,7 +45,7 @@ export default function BroadcastDetailsModal({ isOpen, broadcastId, onClose, on
           setLoading(false);
         });
     }
-  }, [isOpen, broadcastId]);
+  }, [isOpen, broadcastId, isManager]);
 
   if (!isOpen) return null;
 

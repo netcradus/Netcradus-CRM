@@ -12,3 +12,12 @@ export const broadcastApi = {
   markRead: (id) => axios.patch(apiUrl(`/api/broadcasts/${id}/read`), {}, { headers: authHeaders() }),
   getUsers: () => axios.get(apiUrl("/api/tasks/assignable-users"), { headers: authHeaders() })
 };
+
+export const managerBroadcastApi = {
+  list: () => axios.get(apiUrl("/api/manager/broadcasts"), { headers: authHeaders() }),
+  get: (id) => axios.get(apiUrl(`/api/manager/broadcasts/${id}`), { headers: authHeaders() }),
+  create: (payload) => axios.post(apiUrl("/api/manager/broadcasts"), payload, { headers: authHeaders() }),
+  markRead: (id) => axios.patch(apiUrl(`/api/manager/broadcasts/${id}/read`), {}, { headers: authHeaders() }),
+  getManagerTeam: () => axios.get(apiUrl("/api/manager/team"), { headers: authHeaders() }),
+  getManagerProjects: () => axios.get(apiUrl("/api/manager/projects"), { headers: authHeaders() })
+};

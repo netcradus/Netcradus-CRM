@@ -14,7 +14,13 @@ const {
   getManagerPendingLeaves,
   getManagerLeaveDetails,
   approveManagerLeave,
-  rejectManagerLeave
+  rejectManagerLeave,
+  getManagerUsers,
+  createManagerUser,
+  getManagerBroadcasts,
+  createManagerBroadcast,
+  getManagerBroadcastById,
+  markManagerBroadcastRead
 } = require("../controllers/managerController");
 
 // All manager portal routes require authentication and the manager role.
@@ -23,6 +29,16 @@ router.use(rbac(["manager"]));
 
 // GET /api/manager/dashboard — get dashboard operational summary metrics
 router.get("/dashboard", getDashboardSummary);
+
+// Manager User Management endpoints
+router.get("/users", getManagerUsers);
+router.post("/users", createManagerUser);
+
+// Manager Broadcasts endpoints
+router.get("/broadcasts", getManagerBroadcasts);
+router.post("/broadcasts", createManagerBroadcast);
+router.get("/broadcasts/:broadcastId", getManagerBroadcastById);
+router.patch("/broadcasts/:broadcastId/read", markManagerBroadcastRead);
 
 // GET /api/manager/team — list all subordinates of the authenticated manager
 router.get("/team", getMyTeam);

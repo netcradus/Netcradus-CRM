@@ -19,14 +19,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-    role: {
-      type: String,
-      // Partner is a non-admin, non-employee role used only for vendor/project collaboration.
-      enum: ["super_user", "admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"],
-      default: "management",
-      trim: true,
-      lowercase: true
-    },
+  role: {
+    type: String,
+    // Partner is a non-admin, non-employee role used only for vendor/project collaboration.
+    enum: ["super_user", "admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"],
+    default: "management",
+    trim: true,
+    lowercase: true
+  },
   department: {
     type: String,
     trim: true,

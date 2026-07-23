@@ -120,9 +120,19 @@ const getBroadcasts = async (req, res) => {
   try {
     const isSuperOrHr = ["super_user", "hr"].includes(req.user.role);
     let query;
+    let managerIds = [];
 
-    if (isSuperOrHr) {
-      // Authors see what they wrote + active announcements targeted to them
+    if (req.user.role === "super_user") {
+      const managers = await User.find({ role: "manager" }).select("_id").lean();
+      managerIds = managers.map(m => m._id);
+      query = {
+        $or: [
+          { authorId: req.user._id },
+          { recipientUserIds: req.user._id, isActive: true },
+          { authorId: { $in: managerIds } }
+        ]
+      };
+    } else if (req.user.role === "hr") {
       query = {
         $or: [
           { authorId: req.user._id },
@@ -144,7 +154,8 @@ const getBroadcasts = async (req, res) => {
 
     const formatted = broadcasts.map(b => {
       const isAuthor = String(b.authorId?._id || b.authorId) === String(req.user._id);
-      const showStats = isAuthor && isSuperOrHr;
+      const isManagerCreated = b.authorId?.role === "manager" || (managerIds.length > 0 && managerIds.some(id => String(id) === String(b.authorId?._id || b.authorId)));
+      const showStats = isAuthor && isSuperOrHr || (req.user.role === "super_user" && isManagerCreated);
 
       const item = {
         _id: b._id,
@@ -162,6 +173,7 @@ const getBroadcasts = async (req, res) => {
       };
 
       if (showStats) {
+        item.targetType = b.targetType;
         item.totalRecipients = b.recipientUserIds.length;
         item.readCount = b.readBy.length;
       }
@@ -199,7 +211,7 @@ const getBroadcastById = async (req, res) => {
     }
 
     const isSuperOrHr = ["super_user", "hr"].includes(req.user.role);
-    const showStats = isAuthor && isSuperOrHr;
+    const showStats = (isAuthor && isSuperOrHr) || (isSuperUser && broadcast.authorId?.role === "manager");
 
     const data = {
       _id: broadcast._id,

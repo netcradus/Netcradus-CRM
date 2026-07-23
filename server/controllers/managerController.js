@@ -1,7 +1,10 @@
 const User = require("../models/User");
+const Contact = require("../models/Contact");
 const OrgHierarchy = require("../models/OrgHierarchy");
 const { getSubordinatesForUser } = require("../utils/hierarchyUtils");
+const { saveAndOnboardUserInternal } = require("./authController");
 const TeamMeeting = require("../models/TeamMeeting");
+const Broadcast = require("../models/Broadcast");
 
 
 /**
@@ -1274,6 +1277,433 @@ const rejectManagerLeave = async (req, res) => {
   }
 };
 
+const getManagerUsers = async (req, res) => {
+  try {
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ success: false, message: "Only managers can access team users" });
+    }
+
+    const managerId = req.user._id;
+
+    // 1. Fetch team IDs using hierarchy traversal
+    const subordinateIds = await getSubordinatesForUser(managerId);
+
+    // 2. Fetch users in that hierarchy OR directly reporting to the manager (direct reports)
+    const users = await User.find({
+      $or: [
+        { _id: { $in: subordinateIds } },
+        { reportsTo: managerId }
+      ]
+    })
+      .select("_id userId name email role department designation reportsTo createdAt isDisabled")
+      .lean();
+
+    if (!users.length) {
+      return res.status(200).json([]);
+    }
+
+    // 3. Populate employeeIds from Contacts
+    const userIds = users.map(u => u._id);
+    const contacts = await Contact.find({ linkedUser: { $in: userIds } })
+      .select("linkedUser employeeId")
+      .lean();
+
+    const contactMap = new Map(contacts.map(c => [String(c.linkedUser), c.employeeId]));
+
+    // 4. Return safe fields only
+    const safeUsers = users.map(u => ({
+      _id: u._id,
+      employeeId: contactMap.get(String(u._id)) || null,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      department: u.department,
+      designation: u.designation,
+      status: u.isDisabled ? "Disabled" : "Active",
+      createdAt: u.createdAt
+    }));
+
+    return res.status(200).json(safeUsers);
+  } catch (err) {
+    console.error("managerController.getManagerUsers error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const createManagerUser = async (req, res) => {
+  try {
+    // 1. Verify role is exactly "manager"
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ message: "Only managers can create users" });
+    }
+
+    const { email, password, role, department: manualDept, designation: manualDesignation, name, skipOnboarding } = req.body;
+
+    if (!email || !password || !role) {
+      return res.status(400).json({ message: "Email, password and role are required" });
+    }
+
+    // 2. Validate target role against a restricted employee-role allowlist
+    const normalizedRole = String(role || "").trim().toLowerCase();
+    const ALLOWED_MANAGER_ROLES = ["sales", "support", "it", "digital_media"];
+
+    // 3. Reject privileged roles or unknown roles with 403
+    if (!ALLOWED_MANAGER_ROLES.includes(normalizedRole)) {
+      return res.status(403).json({ message: "You are not authorized to assign this role. Only sales, support, it, and digital_media can be assigned." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 10. Prevent duplicate email creation
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    // 4 & 5. Create user setting reportsTo = req.user._id automatically
+    const managerId = req.user._id;
+
+    // Use saveAndOnboardUserInternal
+    const { user: newUser, generatedEmployeeId } = await saveAndOnboardUserInternal({
+      name,
+      email,
+      password,
+      role: normalizedRole,
+      department: manualDept,
+      designation: manualDesignation,
+      skipOnboarding,
+      reportsTo: managerId
+    });
+
+    // 6. Create or synchronize the hierarchy node
+    const managerNode = await OrgHierarchy.findOne({ userId: managerId });
+    if (managerNode) {
+      await OrgHierarchy.create({
+        userId: newUser._id,
+        parentId: managerNode._id,
+        priorityLevel: (managerNode.priorityLevel || 0) + 1,
+        positionX: 100,
+        positionY: 100
+      });
+    } else {
+      // Fallback
+      await OrgHierarchy.create({
+        userId: newUser._id,
+        parentId: null,
+        priorityLevel: 1,
+        positionX: 100,
+        positionY: 100
+      });
+    }
+
+    // Create notification: manager_user_created
+    try {
+      const activeSuperUsers = await User.find({ role: "super_user", isDisabled: false })
+        .select("_id")
+        .lean();
+      
+      if (activeSuperUsers.length > 0) {
+        const superUserIds = activeSuperUsers.map(su => su._id);
+        const managerName = req.user.name || "Manager";
+        const newUserName = newUser.name;
+        const formattedDesignation = newUser.designation || (normalizedRole.toUpperCase());
+        const notificationMessage = `${newUserName} was created by ${managerName} as ${formattedDesignation}.`;
+
+        await createNotifications({
+          userIds: superUserIds,
+          message: notificationMessage,
+          targetPath: "/user-management",
+          type: "manager_user_created"
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to send manager_user_created notification to super users:", notifErr);
+    }
+
+    return res.status(201).json({
+      message: "User created successfully",
+      user: {
+        id: newUser._id,
+        userId: newUser.userId,
+        employeeId: generatedEmployeeId,
+        email: newUser.email,
+        role: newUser.role,
+        designation: newUser.designation,
+        skipOnboarding: newUser.skipOnboarding
+      }
+    });
+
+  } catch (err) {
+    console.error("createManagerUser error:", err);
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "Failed to create employee profile: Employee ID or Email duplicate error."
+      });
+    }
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+};
+
+// 1. Get Manager Broadcasts
+const getManagerBroadcasts = async (req, res) => {
+  try {
+    const query = {
+      $or: [
+        { authorId: req.user._id },
+        { recipientUserIds: req.user._id, isActive: true }
+      ]
+    };
+
+    const broadcasts = await Broadcast.find(query)
+      .populate("authorId", "_id name email role")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const formatted = broadcasts.map(b => {
+      const isAuthor = String(b.authorId?._id || b.authorId) === String(req.user._id);
+
+      const item = {
+        _id: b._id,
+        title: b.title,
+        contentPreview: b.content.length > 200 ? b.content.substring(0, 200) + "..." : b.content,
+        priority: b.priority,
+        publishedAt: b.publishedAt,
+        isActive: b.isActive,
+        author: b.authorId ? {
+          name: b.authorId.name,
+          role: b.authorId.role,
+          email: b.authorId.email
+        } : { name: "System" },
+        isRead: b.readBy.some(id => String(id) === String(req.user._id))
+      };
+
+      if (isAuthor) {
+        item.totalRecipients = b.recipientUserIds.length;
+        item.readCount = b.readBy.length;
+        item.unreadCount = Math.max(0, b.recipientUserIds.length - b.readBy.length);
+      }
+
+      return item;
+    });
+
+    return res.json({ success: true, data: formatted });
+
+  } catch (error) {
+    console.error("Get Manager Broadcasts Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch broadcasts" });
+  }
+};
+
+// 2. Create Manager Broadcast
+const createManagerBroadcast = async (req, res) => {
+  try {
+    const { title, content, priority, targetType, targetUserIds, targetProjectId } = req.body;
+
+    const trimmedTitle = String(title || "").trim();
+    const trimmedContent = String(content || "").trim();
+
+    if (!trimmedTitle || trimmedTitle.length > 150) {
+      return res.status(400).json({ success: false, message: "Title is required and must be under 150 characters." });
+    }
+
+    if (!trimmedContent || trimmedContent.length > 5000) {
+      return res.status(400).json({ success: false, message: "Content is required and must be under 5000 characters." });
+    }
+
+    if (!["normal", "important", "urgent"].includes(priority)) {
+      return res.status(400).json({ success: false, message: "Invalid priority level." });
+    }
+
+    if (!["all_team", "selected_users", "project_team"].includes(targetType)) {
+      return res.status(400).json({ success: false, message: "Invalid target type for manager announcements." });
+    }
+
+    // Resolve subordinates
+    const subordinates = await getSubordinatesForUser(req.user._id);
+    const subordinateIds = subordinates.map(s => String(s));
+
+    if (subordinateIds.length === 0) {
+      return res.status(400).json({ success: false, message: "You do not have any reporting team members to target." });
+    }
+
+    let resolvedRecipientIds = [];
+
+    if (targetType === "all_team") {
+      resolvedRecipientIds = subordinateIds;
+    } else if (targetType === "selected_users") {
+      if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one recipient must be selected." });
+      }
+      const invalidIds = targetUserIds.filter(id => !subordinateIds.includes(String(id)));
+      if (invalidIds.length > 0) {
+        return res.status(403).json({ success: false, message: "Forbidden: You can only target employees within your hierarchy." });
+      }
+      resolvedRecipientIds = targetUserIds.map(id => String(id));
+    } else if (targetType === "project_team") {
+      if (!targetProjectId) {
+        return res.status(400).json({ success: false, message: "Project ID is required for project team audience." });
+      }
+      const project = await Project.findOne({ _id: targetProjectId, isDeleted: { $ne: true } });
+      if (!project) {
+        return res.status(404).json({ success: false, message: "Project not found." });
+      }
+      const isManagerProject = String(project.createdBy) === String(req.user._id) || project.collaborators.some(id => String(id) === String(req.user._id));
+      if (!isManagerProject) {
+        return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to target this project." });
+      }
+      const projectTeamIds = [project.assignedEngineer, ...project.collaborators]
+        .filter(Boolean)
+        .map(id => String(id));
+      
+      resolvedRecipientIds = projectTeamIds.filter(id => subordinateIds.includes(id));
+    }
+
+    // Exclude the manager themselves from receiving the notification/being in the recipient list
+    resolvedRecipientIds = [...new Set(resolvedRecipientIds)].filter(id => id !== String(req.user._id));
+
+    if (resolvedRecipientIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No active recipients found for the selected target." });
+    }
+
+    const broadcast = new Broadcast({
+      title: trimmedTitle,
+      content: trimmedContent,
+      priority,
+      authorId: req.user._id,
+      targetType: "selected_users",
+      targetUserIds: resolvedRecipientIds,
+      recipientUserIds: resolvedRecipientIds,
+      isActive: true,
+      publishedAt: new Date()
+    });
+
+    await broadcast.save({ validateBeforeSave: false });
+
+    // Pushes realtime socket and bell notifications using the existing notification mechanism
+    await createNotifications({
+      userIds: resolvedRecipientIds,
+      message: `New team announcement: ${trimmedTitle}`,
+      targetPath: `/manager/broadcasts?open=${broadcast._id}`,
+      type: "announcement"
+    });
+
+    // Notify all active Super Users for oversight
+    const superUsers = await User.find({ role: "super_user", isDisabled: { $ne: true } }).select("_id").lean();
+    const superUserIds = superUsers.map(su => String(su._id));
+    if (superUserIds.length > 0) {
+      await createNotifications({
+        userIds: superUserIds,
+        message: `${req.user.name} published '${trimmedTitle}' to ${resolvedRecipientIds.length} team members.`,
+        targetPath: `/broadcasts?open=${broadcast._id}`,
+        type: "manager_broadcast_published"
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Broadcast published successfully",
+      data: {
+        _id: broadcast._id,
+        title: broadcast.title,
+        content: broadcast.content,
+        priority: broadcast.priority,
+        publishedAt: broadcast.publishedAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Create Manager Broadcast Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to publish announcement", error: error.message });
+  }
+};
+
+// 3. Get Manager Broadcast by ID
+const getManagerBroadcastById = async (req, res) => {
+  try {
+    const { broadcastId } = req.params;
+    const broadcast = await Broadcast.findById(broadcastId)
+      .populate("authorId", "_id name email role")
+      .lean();
+
+    if (!broadcast) {
+      return res.status(404).json({ success: false, message: "Broadcast not found" });
+    }
+
+    const isAuthor = String(broadcast.authorId?._id || broadcast.authorId) === String(req.user._id);
+    const isRecipient = broadcast.recipientUserIds.some(uid => String(uid) === String(req.user._id));
+
+    if (!isAuthor && !isRecipient) {
+      return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to view this broadcast" });
+    }
+
+    const data = {
+      _id: broadcast._id,
+      title: broadcast.title,
+      content: broadcast.content,
+      priority: broadcast.priority,
+      publishedAt: broadcast.publishedAt,
+      isActive: broadcast.isActive,
+      author: broadcast.authorId ? {
+        name: broadcast.authorId.name,
+        role: broadcast.authorId.role,
+        email: broadcast.authorId.email
+      } : { name: "System" },
+      isRead: broadcast.readBy.some(id => String(id) === String(req.user._id))
+    };
+
+    if (isAuthor) {
+      data.targetType = "selected_users";
+      data.totalRecipients = broadcast.recipientUserIds.length;
+      data.readCount = broadcast.readBy.length;
+      data.unreadCount = Math.max(0, broadcast.recipientUserIds.length - broadcast.readBy.length);
+    }
+
+    return res.json({ success: true, data });
+
+  } catch (error) {
+    console.error("Get Manager Broadcast by ID Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch broadcast details" });
+  }
+};
+
+// 4. Mark Manager Broadcast as Read
+const markManagerBroadcastRead = async (req, res) => {
+  try {
+    const { broadcastId } = req.params;
+    const broadcast = await Broadcast.findById(broadcastId);
+
+    if (!broadcast) {
+      return res.status(404).json({ success: false, message: "Broadcast not found" });
+    }
+
+    if (!broadcast.isActive) {
+      return res.status(400).json({ success: false, message: "Cannot read an inactive broadcast" });
+    }
+
+    const isRecipient = broadcast.recipientUserIds.some(uid => String(uid) === String(req.user._id));
+    if (!isRecipient) {
+      return res.status(403).json({ success: false, message: "You are not a recipient of this broadcast" });
+    }
+
+    if (!broadcast.readBy.some(uid => String(uid) === String(req.user._id))) {
+      broadcast.readBy.push(req.user._id);
+      await broadcast.save({ validateBeforeSave: false });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        isRead: true,
+        readCount: broadcast.readBy.length
+      }
+    });
+
+  } catch (error) {
+    console.error("Mark Manager Broadcast Read Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update read state" });
+  }
+};
+
 module.exports = {
   getMyTeam,
   getTeamMember,
@@ -1286,5 +1716,11 @@ module.exports = {
   getManagerPendingLeaves,
   getManagerLeaveDetails,
   approveManagerLeave,
-  rejectManagerLeave
+  rejectManagerLeave,
+  getManagerUsers,
+  createManagerUser,
+  getManagerBroadcasts,
+  createManagerBroadcast,
+  getManagerBroadcastById,
+  markManagerBroadcastRead
 };

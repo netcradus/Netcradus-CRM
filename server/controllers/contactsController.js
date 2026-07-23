@@ -268,10 +268,10 @@ const toAmount = (value) => {
 };
 
 // --- Number → Indian words ----------------------------------------------------
-const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
-              "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
-              "Seventeen","Eighteen","Nineteen"];
-const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"];
+const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
 const numToWords = (n) => {
     n = Math.floor(Math.abs(n));
@@ -283,26 +283,26 @@ const numToWords = (n) => {
     };
     const parts = [];
     const crore = Math.floor(n / 10000000); n %= 10000000;
-    const lakh  = Math.floor(n / 100000);   n %= 100000;
-    const thou  = Math.floor(n / 1000);     n %= 1000;
+    const lakh = Math.floor(n / 100000); n %= 100000;
+    const thou = Math.floor(n / 1000); n %= 1000;
     if (crore) parts.push(chunk(crore) + " Crore");
-    if (lakh)  parts.push(chunk(lakh)  + " Lakh");
-    if (thou)  parts.push(chunk(thou)  + " Thousand");
-    if (n)     parts.push(chunk(n));
+    if (lakh) parts.push(chunk(lakh) + " Lakh");
+    if (thou) parts.push(chunk(thou) + " Thousand");
+    if (n) parts.push(chunk(n));
     return parts.join(" ");
 };
 
 const netPayInWords = (amount) => {
     const rupees = Math.floor(amount);
-    const paise  = Math.round((amount - rupees) * 100);
-    let result   = numToWords(rupees) + " Rupees";
+    const paise = Math.round((amount - rupees) * 100);
+    let result = numToWords(rupees) + " Rupees";
     if (paise) result += " and " + numToWords(paise) + " Paise";
     return result + " Only";
 };
 
 const DEPT_SALES = "sales";
-const DEPT_IT    = "it";
-const normDept   = (d) => String(d || "").toLowerCase().trim();
+const DEPT_IT = "it";
+const normDept = (d) => String(d || "").toLowerCase().trim();
 
 // All fields accepted from the frontend for a new salary slip
 const SALARY_SLIP_FIELDS = [
@@ -338,37 +338,37 @@ const SALARY_SLIP_FIELDS = [
 const buildSalarySlipRecord = (payload = {}, actorId) => {
     const dept = normDept(payload.department);
     const month = String(payload.month || "").trim();
-    const year  = Number(payload.year);
+    const year = Number(payload.year);
 
     // -- Common earnings ----------------------------------------------------
-    const basicSalary       = toAmount(payload.basicSalary);
-    const hra               = toAmount(payload.hra);
+    const basicSalary = toAmount(payload.basicSalary);
+    const hra = toAmount(payload.hra);
     const dearnessAllowance = toAmount(payload.dearnessAllowance);
-    const specialAllowance  = toAmount(payload.specialAllowance);
-    const otherEarnings     = toAmount(payload.otherEarnings);
+    const specialAllowance = toAmount(payload.specialAllowance);
+    const otherEarnings = toAmount(payload.otherEarnings);
 
     // -- Sales earnings -----------------------------------------------------
-    const travelAllowance        = toAmount(payload.travelAllowance);
-    const salesIncentive         = toAmount(payload.salesIncentive);
-    const achievedSales          = toAmount(payload.achievedSales);
-    const commissionRate         = Math.min(100, Math.max(0, toAmount(payload.commissionRate)));
-    const commissionOverride     = toAmount(payload.commission);
+    const travelAllowance = toAmount(payload.travelAllowance);
+    const salesIncentive = toAmount(payload.salesIncentive);
+    const achievedSales = toAmount(payload.achievedSales);
+    const commissionRate = Math.min(100, Math.max(0, toAmount(payload.commissionRate)));
+    const commissionOverride = toAmount(payload.commission);
     const commission = (achievedSales > 0 && commissionRate > 0)
         ? parseFloat((achievedSales * commissionRate / 100).toFixed(2))
         : commissionOverride;
-    const monthlyTarget          = toAmount(payload.monthlyTarget);
+    const monthlyTarget = toAmount(payload.monthlyTarget);
     const targetAchievementBonus = toAmount(payload.targetAchievementBonus);
     const clientAcquisitionBonus = toAmount(payload.clientAcquisitionBonus);
-    const performanceBonus       = toAmount(payload.performanceBonus);
+    const performanceBonus = toAmount(payload.performanceBonus);
 
     // -- IT earnings --------------------------------------------------------
-    const conveyance             = toAmount(payload.conveyance);
-    const technicalAllowance     = toAmount(payload.technicalAllowance);
-    const internetAllowance      = toAmount(payload.internetAllowance);
-    const wfhAllowance           = toAmount(payload.wfhAllowance);
-    const nightShiftAllowance    = toAmount(payload.nightShiftAllowance);
-    const onCallAllowance        = toAmount(payload.onCallAllowance);
-    const overtimePay            = toAmount(payload.overtimePay);
+    const conveyance = toAmount(payload.conveyance);
+    const technicalAllowance = toAmount(payload.technicalAllowance);
+    const internetAllowance = toAmount(payload.internetAllowance);
+    const wfhAllowance = toAmount(payload.wfhAllowance);
+    const nightShiftAllowance = toAmount(payload.nightShiftAllowance);
+    const onCallAllowance = toAmount(payload.onCallAllowance);
+    const overtimePay = toAmount(payload.overtimePay);
     const projectCompletionBonus = toAmount(payload.projectCompletionBonus);
 
     // -- Gross Pay (department-specific formula) ----------------------------
@@ -390,8 +390,8 @@ const buildSalarySlipRecord = (payload = {}, actorId) => {
 
     // -- Attendance & LOP --------------------------------------------------
     const workingDays = Math.max(0, Math.round(toAmount(payload.workingDays)));
-    const lopDays     = Math.max(0, Math.round(toAmount(payload.lopDays)));
-    const paidDays    = Math.max(0, Math.round(toAmount(payload.paidDays)));
+    const lopDays = Math.max(0, Math.round(toAmount(payload.lopDays)));
+    const paidDays = Math.max(0, Math.round(toAmount(payload.paidDays)));
     const lopDeduction = (workingDays > 0 && lopDays > 0)
         ? parseFloat(((basicSalary / workingDays) * lopDays).toFixed(2))
         : 0;
@@ -400,13 +400,13 @@ const buildSalarySlipRecord = (payload = {}, actorId) => {
     const professionalTax = toAmount(payload.professionalTax);
     const otherDeductions = toAmount(payload.otherDeductions);
     const totalDeductions = parseFloat((professionalTax + otherDeductions + lopDeduction).toFixed(2));
-    const netPay          = parseFloat((grossPay - totalDeductions).toFixed(2));
+    const netPay = parseFloat((grossPay - totalDeductions).toFixed(2));
 
     return {
         filename: `salary-slip-${month || "month"}-${year || new Date().getFullYear()}.pdf`,
         uploadedAt: new Date(),
         month,
-        year:  Number.isFinite(year) ? year : new Date().getFullYear(),
+        year: Number.isFinite(year) ? year : new Date().getFullYear(),
         payDate: payload.payDate ? new Date(payload.payDate) : new Date(),
         department: String(payload.department || "").trim(),
         // Common
@@ -424,7 +424,7 @@ const buildSalarySlipRecord = (payload = {}, actorId) => {
         // Attendance
         workingDays, paidDays, lopDays,
         // Payment
-        paymentMode:      String(payload.paymentMode || "").trim(),
+        paymentMode: String(payload.paymentMode || "").trim(),
         bankAccountLast4: String(payload.bankAccountLast4 || "").trim(),
         // Totals
         grossPay, totalDeductions, netPay,
@@ -459,23 +459,23 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         const doc = new PDFDocument({ size: "A4", margin: 0 });
         const chunks = [];
         doc.on("data", (chunk) => chunks.push(chunk));
-        doc.on("end",  () => resolve(Buffer.concat(chunks)));
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
         doc.on("error", reject);
 
         // -- Palette ------------------------------------------------------------
-        const BRAND_DARK   = "#1a1a2e";
-        const BRAND_MID    = "#16213e";
+        const BRAND_DARK = "#1a1a2e";
+        const BRAND_MID = "#16213e";
         const BRAND_ACCENT = "#e94560";
-        const TEXT_LIGHT   = "#ffffff";
-        const TEXT_DARK    = "#1a1a2e";
-        const TEXT_MUTED   = "#555555";
-        const ROW_ALT      = "#f5f5f5";
-        const ROW_WHITE    = "#ffffff";
-        const BORDER       = "#dddddd";
+        const TEXT_LIGHT = "#ffffff";
+        const TEXT_DARK = "#1a1a2e";
+        const TEXT_MUTED = "#555555";
+        const ROW_ALT = "#f5f5f5";
+        const ROW_WHITE = "#ffffff";
+        const BORDER = "#dddddd";
 
         const PAGE_W = doc.page.width;   // 595.28
         const MARGIN = 45;
-        const COL_W  = (PAGE_W - MARGIN * 2) / 2;
+        const COL_W = (PAGE_W - MARGIN * 2) / 2;
 
         const dept = normDept(slip.department || contact.department);
 
@@ -489,11 +489,11 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         const cell = (text, x, y, w, h, opts = {}) => {
             const { fontSize = 9, color = TEXT_DARK, align = "left", bold = false, padding = 6 } = opts;
             doc.font(bold ? "Helvetica-Bold" : "Helvetica")
-               .fontSize(fontSize)
-               .fillColor(color)
-               .text(String(text ?? ""), x + padding, y + padding, {
-                   width: w - padding * 2, height: h, align, lineBreak: false,
-               });
+                .fontSize(fontSize)
+                .fillColor(color)
+                .text(String(text ?? ""), x + padding, y + padding, {
+                    width: w - padding * 2, height: h, align, lineBreak: false,
+                });
         };
 
         // -- HEADER BAND --------------------------------------------------------
@@ -501,13 +501,13 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         fillRect(0, 0, PAGE_W, HEADER_H, BRAND_DARK);
 
         doc.save()
-           .lineWidth(0.5)
-           .strokeColor("#e9456022");
+            .lineWidth(0.5)
+            .strokeColor("#e9456022");
         for (let i = 0; i < 6; i++) {
             const offset = i * 7;
             doc.moveTo(PAGE_W - 90 + offset, 0)
-               .quadraticCurveTo(PAGE_W - 35, HEADER_H / 2, PAGE_W - offset, HEADER_H)
-               .stroke();
+                .quadraticCurveTo(PAGE_W - 35, HEADER_H / 2, PAGE_W - offset, HEADER_H)
+                .stroke();
         }
         doc.restore();
 
@@ -518,10 +518,10 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         const BOX_Y = (HEADER_H - BOX_SIZE - 3) / 2;
 
         doc.save()
-           .lineWidth(1)
-           .roundedRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE, 8)
-           .stroke("#ffffff88")
-           .restore();
+            .lineWidth(1)
+            .roundedRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE, 8)
+            .stroke("#ffffff88")
+            .restore();
 
         if (LOGO_EXISTS) {
             try {
@@ -533,25 +533,25 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
                 });
             } catch (err) {
                 doc.font("Helvetica").fontSize(7.5).fillColor("#cccccc")
-                   .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
+                    .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
             }
         } else {
             doc.font("Helvetica").fontSize(7.5).fillColor("#cccccc")
-                   .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
+                .text("Company Logo", BOX_X + 2, BOX_Y + 31, { width: BOX_SIZE - 4, align: "center" });
         }
 
         const textStartX = BOX_X + BOX_SIZE + 18;
 
         doc.font("Helvetica-Bold").fontSize(19).fillColor(TEXT_LIGHT)
-           .text("Employee Salary Slip", textStartX, BOX_Y + 14, { lineBreak: false });
+            .text("Employee Salary Slip", textStartX, BOX_Y + 14, { lineBreak: false });
 
         const subY = BOX_Y + 41;
         doc.font("Helvetica").fontSize(7.5).fillColor("#a0a0b0")
-           .text("-  CONFIDENTIAL", textStartX, subY, { continued: true });
+            .text("-  CONFIDENTIAL", textStartX, subY, { continued: true });
         doc.font("Helvetica-Bold").fillColor(BRAND_ACCENT)
-           .text("  *  ", { continued: true });
+            .text("  *  ", { continued: true });
         doc.font("Helvetica").fillColor("#a0a0b0")
-           .text("PREPARED FOR EMPLOYEE USE ONLY");
+            .text("PREPARED FOR EMPLOYEE USE ONLY");
 
         const BADGE_W = 95;
         const BADGE_H = 20;
@@ -559,29 +559,29 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         const BADGE_Y = BOX_Y + 10;
 
         doc.save()
-           .fillColor(BRAND_ACCENT)
-           .roundedRect(BADGE_X, BADGE_Y, BADGE_W, BADGE_H, 10)
-           .fill()
-           .restore();
+            .fillColor(BRAND_ACCENT)
+            .roundedRect(BADGE_X, BADGE_Y, BADGE_W, BADGE_H, 10)
+            .fill()
+            .restore();
 
         const iconX = BADGE_X + 10;
         const iconY = BADGE_Y + 5;
         const iconS = 9;
         doc.save()
-           .lineWidth(1)
-           .strokeColor(TEXT_LIGHT)
-           .rect(iconX, iconY, iconS, iconS)
-           .stroke();
+            .lineWidth(1)
+            .strokeColor(TEXT_LIGHT)
+            .rect(iconX, iconY, iconS, iconS)
+            .stroke();
         doc.save()
-           .fillColor(TEXT_LIGHT)
-           .rect(iconX + 2, iconY - 2, 1.5, 3)
-           .rect(iconX + 5.5, iconY - 2, 1.5, 3)
-           .fill()
-           .restore();
+            .fillColor(TEXT_LIGHT)
+            .rect(iconX + 2, iconY - 2, 1.5, 3)
+            .rect(iconX + 5.5, iconY - 2, 1.5, 3)
+            .fill()
+            .restore();
 
         const monthLabel = String(slip.month || "").toUpperCase() + " " + (slip.year || "");
         doc.font("Helvetica-Bold").fontSize(8).fillColor(TEXT_LIGHT)
-           .text(monthLabel, BADGE_X + 23, BADGE_Y + 6, { width: BADGE_W - 25, align: "left" });
+            .text(monthLabel, BADGE_X + 23, BADGE_Y + 6, { width: BADGE_W - 25, align: "left" });
 
         const DIVIDER_X = BADGE_X - 18;
         fillRect(DIVIDER_X, BOX_Y + 8, 0.75, 38, "#ffffff44");
@@ -591,15 +591,15 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
             : "-";
         const DATE_Y = BADGE_Y + 28;
         doc.font("Helvetica").fontSize(8).fillColor("#cccccc")
-           .text("Pay Date: ", BADGE_X - 4, DATE_Y, { continued: true })
-           .font("Helvetica-Bold").fillColor(TEXT_LIGHT)
-           .text(payDateStr);
+            .text("Pay Date: ", BADGE_X - 4, DATE_Y, { continued: true })
+            .font("Helvetica-Bold").fillColor(TEXT_LIGHT)
+            .text(payDateStr);
 
         let curY = HEADER_H + 18;
 
         // -- EMPLOYEE DETAILS ---------------------------------------------------
         doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND_ACCENT)
-           .text("EMPLOYEE DETAILS", MARGIN, curY);
+            .text("EMPLOYEE DETAILS", MARGIN, curY);
         curY += 14;
         fillRect(0, curY - 1, PAGE_W, 0.5, BRAND_ACCENT);
         curY += 6;
@@ -646,9 +646,9 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
             : "-";
 
         const detailRows = [
-            ["Name",         contact.name        || "-",  "Department",    contact.department  || "-"        ],
-            ["Designation",  contact.designation || "-",  "Email",         contact.email       || "-"        ],
-            ["Employee ID",  employeeId,                  "Mobile Number", maskedMobile                      ],
+            ["Name", contact.name || "-", "Department", contact.department || "-"],
+            ["Designation", contact.designation || "-", "Email", contact.email || "-"],
+            ["Employee ID", employeeId, "Mobile Number", maskedMobile],
         ];
 
         if (joiningDateStr) {
@@ -661,21 +661,21 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         }
 
         detailRows.push(
-            ["Working Days", String(slip.workingDays || 0), "Paid Days",   String(slip.paidDays || 0)        ],
-            ["Payment Mode", slip.paymentMode     || "-",  "Bank Account",  maskedBank                       ]
+            ["Working Days", String(slip.workingDays || 0), "Paid Days", String(slip.paidDays || 0)],
+            ["Payment Mode", slip.paymentMode || "-", "Bank Account", maskedBank]
         );
 
-        const DET_H  = 22;
+        const DET_H = 22;
         const DET_W1 = 95;
         const DET_W2 = COL_W - DET_W1;
 
         detailRows.forEach((row, ri) => {
             const rowY = curY + ri * DET_H;
-            const bg   = ri % 2 === 0 ? ROW_WHITE : ROW_ALT;
+            const bg = ri % 2 === 0 ? ROW_WHITE : ROW_ALT;
             fillRect(MARGIN, rowY, PAGE_W - MARGIN * 2, DET_H, bg);
-            cell(row[0], MARGIN,                  rowY, DET_W1, DET_H, { bold: true,  color: TEXT_MUTED, fontSize: 8 });
-            cell(row[1], MARGIN + DET_W1,         rowY, DET_W2, DET_H, { color: TEXT_DARK, fontSize: 9 });
-            cell(row[2], MARGIN + COL_W,          rowY, DET_W1, DET_H, { bold: true,  color: TEXT_MUTED, fontSize: 8 });
+            cell(row[0], MARGIN, rowY, DET_W1, DET_H, { bold: true, color: TEXT_MUTED, fontSize: 8 });
+            cell(row[1], MARGIN + DET_W1, rowY, DET_W2, DET_H, { color: TEXT_DARK, fontSize: 9 });
+            cell(row[2], MARGIN + COL_W, rowY, DET_W1, DET_H, { bold: true, color: TEXT_MUTED, fontSize: 8 });
             cell(row[3], MARGIN + COL_W + DET_W1, rowY, DET_W2, DET_H, { color: TEXT_DARK, fontSize: 9 });
             strokeRect(MARGIN, rowY, PAGE_W - MARGIN * 2, DET_H, BORDER);
         });
@@ -684,93 +684,93 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
 
         // -- EARNINGS & DEDUCTIONS ----------------------------------------------
         const TABLE_GAP = 16;
-        const HALF_W    = (PAGE_W - MARGIN * 2 - TABLE_GAP) / 2;
-        const EARN_X    = MARGIN;
-        const DED_X     = MARGIN + HALF_W + TABLE_GAP;
+        const HALF_W = (PAGE_W - MARGIN * 2 - TABLE_GAP) / 2;
+        const EARN_X = MARGIN;
+        const DED_X = MARGIN + HALF_W + TABLE_GAP;
         const COL_LABEL = HALF_W * 0.63;
-        const COL_AMT   = HALF_W - COL_LABEL;
-        const ROW_H     = 23;
-        const HEAD_H    = 26;
+        const COL_AMT = HALF_W - COL_LABEL;
+        const ROW_H = 23;
+        const HEAD_H = 26;
 
         // Build department-specific earning rows
         let earningsRows;
         if (dept === DEPT_SALES) {
             earningsRows = [
-                ["Basic Salary",             slip.basicSalary            ],
-                ["HRA",                      slip.hra                    ],
-                ["Dearness Allowance",       slip.dearnessAllowance      ],
-                ["Special Allowance",        slip.specialAllowance       ],
-                ["Travel Allowance",         slip.travelAllowance        ],
-                ["Sales Incentive",          slip.salesIncentive         ],
-                ["Commission",               slip.commission             ],
-                ["Target Achievement Bonus", slip.targetAchievementBonus ],
-                ["Client Acquisition Bonus", slip.clientAcquisitionBonus ],
-                ["Performance Bonus",        slip.performanceBonus       ],
-                ["Other Earnings",           slip.otherEarnings          ],
+                ["Basic Salary", slip.basicSalary],
+                ["HRA", slip.hra],
+                ["Dearness Allowance", slip.dearnessAllowance],
+                ["Special Allowance", slip.specialAllowance],
+                ["Travel Allowance", slip.travelAllowance],
+                ["Sales Incentive", slip.salesIncentive],
+                ["Commission", slip.commission],
+                ["Target Achievement Bonus", slip.targetAchievementBonus],
+                ["Client Acquisition Bonus", slip.clientAcquisitionBonus],
+                ["Performance Bonus", slip.performanceBonus],
+                ["Other Earnings", slip.otherEarnings],
             ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
         } else if (dept === DEPT_IT) {
             earningsRows = [
-                ["Basic Salary",          slip.basicSalary           ],
-                ["HRA",                   slip.hra                   ],
-                ["Dearness Allowance",    slip.dearnessAllowance     ],
-                ["Special Allowance",     slip.specialAllowance      ],
-                ["Conveyance",            slip.conveyance            ],
-                ["Technical Allowance",   slip.technicalAllowance    ],
-                ["Internet Allowance",    slip.internetAllowance     ],
-                ["WFH Allowance",         slip.wfhAllowance          ],
-                ["Night Shift Allowance", slip.nightShiftAllowance   ],
-                ["On-call Allowance",     slip.onCallAllowance       ],
-                ["Overtime Pay",          slip.overtimePay           ],
+                ["Basic Salary", slip.basicSalary],
+                ["HRA", slip.hra],
+                ["Dearness Allowance", slip.dearnessAllowance],
+                ["Special Allowance", slip.specialAllowance],
+                ["Conveyance", slip.conveyance],
+                ["Technical Allowance", slip.technicalAllowance],
+                ["Internet Allowance", slip.internetAllowance],
+                ["WFH Allowance", slip.wfhAllowance],
+                ["Night Shift Allowance", slip.nightShiftAllowance],
+                ["On-call Allowance", slip.onCallAllowance],
+                ["Overtime Pay", slip.overtimePay],
                 ["Project Completion Bonus", slip.projectCompletionBonus],
-                ["Performance Bonus",     slip.performanceBonus      ],
-                ["Other Earnings",        slip.otherEarnings         ],
+                ["Performance Bonus", slip.performanceBonus],
+                ["Other Earnings", slip.otherEarnings],
             ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
         } else {
             // Default / other departments - show all non-zero
             earningsRows = [
-                ["Basic Salary",       slip.basicSalary     ],
-                ["HRA",                slip.hra             ],
+                ["Basic Salary", slip.basicSalary],
+                ["HRA", slip.hra],
                 ["Dearness Allowance", slip.dearnessAllowance],
-                ["Special Allowance",  slip.specialAllowance],
-                ["Conveyance",         slip.conveyance      ],
-                ["Other Earnings",     slip.otherEarnings   ],
+                ["Special Allowance", slip.specialAllowance],
+                ["Conveyance", slip.conveyance],
+                ["Other Earnings", slip.otherEarnings],
             ].filter(r => Number(r[1]) > 0 || r[0] === "Basic Salary");
         }
 
         // Deductions - no PF for new slips; LOP shown if > 0; legacy PF shown if stored
         const legacyPF = Number(slip.providentFund) || 0; // backward-compat
         const deductionRows = [
-            ...(legacyPF > 0        ? [["Provident Fund (legacy)", legacyPF]] : []),
-            ["Professional Tax",   slip.professionalTax || 0],
-            ...(Number(slip.lopDeduction) > 0  ? [["LOP Deduction", slip.lopDeduction]] : []),
-            ["Other Deductions",   slip.otherDeductions || 0],
+            ...(legacyPF > 0 ? [["Provident Fund (legacy)", legacyPF]] : []),
+            ["Professional Tax", slip.professionalTax || 0],
+            ...(Number(slip.lopDeduction) > 0 ? [["LOP Deduction", slip.lopDeduction]] : []),
+            ["Other Deductions", slip.otherDeductions || 0],
         ].filter(r => Number(r[1]) > 0);
 
         // Earnings header
         fillRect(EARN_X, curY, HALF_W, HEAD_H, BRAND_MID);
-        cell("Earnings",      EARN_X,           curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
-        cell("Amount (Rs.)",  EARN_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+        cell("Earnings", EARN_X, curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Amount (Rs.)", EARN_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
 
         // Deductions header
         fillRect(DED_X, curY, HALF_W, HEAD_H, BRAND_MID);
-        cell("Deductions",    DED_X,            curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
-        cell("Amount (Rs.)",  DED_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
+        cell("Deductions", DED_X, curY, COL_LABEL, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Amount (Rs.)", DED_X + COL_LABEL, curY, COL_AMT, HEAD_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
         curY += HEAD_H;
 
         const maxRows = Math.max(earningsRows.length, deductionRows.length);
         for (let i = 0; i < maxRows; i++) {
             const rowY = curY + i * ROW_H;
-            const bg   = i % 2 === 0 ? ROW_WHITE : ROW_ALT;
+            const bg = i % 2 === 0 ? ROW_WHITE : ROW_ALT;
             fillRect(EARN_X, rowY, HALF_W, ROW_H, bg);
             if (earningsRows[i]) {
-                cell(earningsRows[i][0], EARN_X,            rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
+                cell(earningsRows[i][0], EARN_X, rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
                 cell(inrFmt(earningsRows[i][1]), EARN_X + COL_LABEL, rowY, COL_AMT, ROW_H, { fontSize: 9, color: TEXT_DARK, align: "right" });
             }
             strokeRect(EARN_X, rowY, HALF_W, ROW_H, BORDER);
 
             fillRect(DED_X, rowY, HALF_W, ROW_H, bg);
             if (deductionRows[i]) {
-                cell(deductionRows[i][0], DED_X,             rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
+                cell(deductionRows[i][0], DED_X, rowY, COL_LABEL, ROW_H, { fontSize: 9, color: TEXT_DARK });
                 cell(inrFmt(deductionRows[i][1]), DED_X + COL_LABEL, rowY, COL_AMT, ROW_H, { fontSize: 9, color: TEXT_DARK, align: "right" });
             }
             strokeRect(DED_X, rowY, HALF_W, ROW_H, BORDER);
@@ -783,11 +783,11 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
             : (legacyPF + (slip.professionalTax || 0) + (slip.otherDeductions || 0) + (slip.lopDeduction || 0));
 
         fillRect(EARN_X, curY, HALF_W, ROW_H, BRAND_DARK);
-        cell("Gross Pay",       EARN_X,            curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Gross Pay", EARN_X, curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
         cell(inrFmt(slip.grossPay), EARN_X + COL_LABEL, curY, COL_AMT, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
 
         fillRect(DED_X, curY, HALF_W, ROW_H, BRAND_DARK);
-        cell("Total Deductions", DED_X,             curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
+        cell("Total Deductions", DED_X, curY, COL_LABEL, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9 });
         cell(inrFmt(storedTotalDed), DED_X + COL_LABEL, curY, COL_AMT, ROW_H, { bold: true, color: TEXT_LIGHT, fontSize: 9, align: "right" });
         curY += ROW_H + 16;
 
@@ -795,46 +795,46 @@ const renderSalarySlipPdfBuffer = (contact, slip) => {
         const NET_H = 38;
         fillRect(MARGIN, curY, PAGE_W - MARGIN * 2, NET_H, BRAND_ACCENT);
         doc.font("Helvetica-Bold").fontSize(11).fillColor(TEXT_LIGHT)
-           .text("NET PAY", MARGIN + 10, curY + 11, { lineBreak: false });
+            .text("NET PAY", MARGIN + 10, curY + 11, { lineBreak: false });
         doc.font("Helvetica-Bold").fontSize(14).fillColor(TEXT_LIGHT)
-           .text(inrFmt(slip.netPay), 0, curY + 9, { width: PAGE_W - MARGIN, align: "right", lineBreak: false });
+            .text(inrFmt(slip.netPay), 0, curY + 9, { width: PAGE_W - MARGIN, align: "right", lineBreak: false });
         curY += NET_H + 8;
 
         // Net Pay in Words
         doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
-           .text(netPayInWords(slip.netPay), MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
+            .text(netPayInWords(slip.netPay), MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
         curY += 20;
 
         // -- NOTES --------------------------------------------------------------
         const notesText = slip.notes && slip.notes.trim() ? slip.notes.trim() : "-";
         doc.font("Helvetica-Bold").fontSize(9).fillColor(BRAND_ACCENT)
-           .text("NOTES", MARGIN, curY);
+            .text("NOTES", MARGIN, curY);
         curY += 13;
         fillRect(MARGIN, curY, PAGE_W - MARGIN * 2, 0.5, BORDER);
         curY += 6;
         doc.font("Helvetica").fontSize(9).fillColor(TEXT_MUTED)
-           .text(notesText, MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
+            .text(notesText, MARGIN, curY, { width: PAGE_W - MARGIN * 2 });
         curY += 40;
 
         // -- SIGNATURES ---------------------------------------------------------
         const SIG_LINE_W = 140;
-        const EMP_SIG_X  = MARGIN;
-        const HR_SIG_X   = PAGE_W - MARGIN - SIG_LINE_W;
+        const EMP_SIG_X = MARGIN;
+        const HR_SIG_X = PAGE_W - MARGIN - SIG_LINE_W;
 
         fillRect(EMP_SIG_X, curY, SIG_LINE_W, 0.75, TEXT_DARK);
         doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
-           .text("Employee Signature", EMP_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
+            .text("Employee Signature", EMP_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
 
         fillRect(HR_SIG_X, curY, SIG_LINE_W, 0.75, TEXT_DARK);
         doc.font("Helvetica").fontSize(8).fillColor(TEXT_MUTED)
-           .text("Authorised by HR / Management", HR_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
+            .text("Authorised by HR / Management", HR_SIG_X, curY + 4, { width: SIG_LINE_W, align: "center", lineBreak: false });
 
         // -- FOOTER -------------------------------------------------------------
         const FOOTER_Y = doc.page.height - 28;
         fillRect(0, FOOTER_Y, PAGE_W, 28, BRAND_DARK);
         doc.font("Helvetica").fontSize(7.5).fillColor("#888888")
-           .text("This is a computer-generated salary slip and does not require a physical signature.",
-               MARGIN, FOOTER_Y + 9, { width: PAGE_W - MARGIN * 2, align: "center", lineBreak: false });
+            .text("This is a computer-generated salary slip and does not require a physical signature.",
+                MARGIN, FOOTER_Y + 9, { width: PAGE_W - MARGIN * 2, align: "center", lineBreak: false });
 
         doc.end();
     });

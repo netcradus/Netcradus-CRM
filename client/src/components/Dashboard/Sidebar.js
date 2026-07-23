@@ -188,9 +188,11 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       submenu: [
         { label: "Manager Dashboard", path: "/manager/dashboard", icon: <LayoutGrid size={18} />, roles: ["manager"] },
         { label: "My Team", path: "/manager/team", icon: <Users2 size={18} />, roles: ["manager"] },
+        { label: "User Management", path: "/manager/users", icon: <Users size={18} />, roles: ["manager"] },
         { label: "Projects", path: "/manager/projects", icon: <Briefcase size={18} />, roles: ["manager"] },
         { label: "Attendance", path: "/manager/attendance", icon: <Clock size={18} />, roles: ["manager"] },
         { label: "Meetings", path: "/manager/meetings", icon: <Calendar size={18} />, roles: ["manager"] },
+        { label: "Broadcasts", path: "/manager/broadcasts", icon: <Megaphone size={18} />, roles: ["manager"] },
       ]
     });
 

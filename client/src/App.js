@@ -25,6 +25,7 @@ const AdminDevices             = lazy(() => import("./Pages/AdminDevices"));
 const OrgHierarchyPage         = lazy(() => import("./Pages/OrgHierarchyPage"));
 const Dashboard                = lazy(() => import("./components/Dashboard/Dashboard"));
 const UserManagement           = lazy(() => import("./components/Dashboard/UserManagement"));
+const ManagerUserManagement    = lazy(() => import("./components/Dashboard/ManagerUserManagement"));
 const ChatPanel                = lazy(() => import("./components/Chat/ChatPanel"));
 
 const Contacts                 = lazy(() => import("./features/Contacts/Contacts"));
@@ -99,6 +100,7 @@ const ManagerAttendancePage    = lazy(() => import("./features/ManagerPortal/Man
 const ManagerMeetingsPage      = lazy(() => import("./features/ManagerPortal/ManagerMeetingsPage"));
 const ManagerMeetingFormPage    = lazy(() => import("./features/ManagerPortal/ManagerMeetingFormPage"));
 const ManagerMeetingDetailPage  = lazy(() => import("./features/ManagerPortal/ManagerMeetingDetailPage"));
+const ManagerBroadcastsPage    = lazy(() => import("./features/Broadcasts/ManagerBroadcastsPage"));
 
 
 
@@ -260,6 +262,16 @@ const App = () => {
               <Route path="/manager/dashboard" element={
                 <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
                   <ManagerDashboardPage />
+                </RoleRoute>
+              } />
+              <Route path="/manager/users" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerUserManagement />
+                </RoleRoute>
+              } />
+              <Route path="/manager/broadcasts" element={
+                <RoleRoute roles={ACCESS_GROUPS.managerPortal}>
+                  <ManagerBroadcastsPage />
                 </RoleRoute>
               } />
               <Route path="/manager/team" element={
