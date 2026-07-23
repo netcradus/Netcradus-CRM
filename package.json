@@ -9,6 +9,7 @@
   "scripts": {
     "client-start": "npm start --workspace=client",
     "server-start": "npm start --workspace=server",
-    "client-build": "npm run build --workspace=client"
+    "client-build": "npm run build --workspace=client",
+    "start": "node server/index.js"
   }
 }
