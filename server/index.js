@@ -15,6 +15,9 @@ const zohoSyncService = require("./services/zohoSyncService");
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = "super_secret_jwt_key_for_development_12345";
+}
 const checkDriveHealth = async () => {
   if (!isDriveEnabled()) {
     return { status: "maintenance", message: "Drive is temporarily unavailable for maintenance." };
