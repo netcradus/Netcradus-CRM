@@ -1,0 +1,601 @@
+/* NETMAIL Internal Mail Style System */
+
+.netmail-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--topbar-height, 82px) - 40px);
+  background-color: var(--color-bg-base, #09090c);
+  color: var(--color-text-primary, #f7f4ee);
+  font-family: var(--font-sans), sans-serif;
+  border-radius: var(--radius-lg, 18px);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  overflow: hidden;
+  margin: var(--space-4);
+}
+
+/* Three Column Layout */
+.netmail-layout {
+  display: grid;
+  grid-template-columns: 240px 360px 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Sidebar Column */
+.netmail-sidebar {
+  background-color: rgba(12, 12, 18, 0.96);
+  border-right: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  gap: var(--space-4);
+}
+
+.netmail-logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.netmail-compose-btn {
+  background-color: var(--color-accent, #e8420a);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 12px);
+  font-weight: var(--font-semibold, 600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.netmail-compose-btn:hover {
+  background-color: var(--color-accent-hover, #f15b2a);
+}
+
+.netmail-compose-btn:active {
+  transform: scale(0.98);
+}
+
+.netmail-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.netmail-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--color-text-secondary, #b9b3a7);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.netmail-menu-item:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.045));
+  color: var(--color-text-primary, #f7f4ee);
+}
+
+.netmail-menu-item.active {
+  background-color: var(--color-bg-active, rgba(232, 66, 10, 0.12));
+  color: var(--color-accent, #e8420a);
+  font-weight: var(--font-semibold, 600);
+}
+
+.netmail-badge {
+  background-color: var(--color-accent, #e8420a);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--font-bold, 700);
+  padding: 2px 6px;
+  border-radius: var(--radius-full, 9999px);
+}
+
+/* Mail List Column */
+.netmail-list-col {
+  background-color: rgba(16, 16, 22, 0.5);
+  border-right: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.netmail-list-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.netmail-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.netmail-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-bg-input, rgba(19, 19, 28, 0.96));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 8px);
+  padding: 6px var(--space-2);
+  gap: var(--space-2);
+  flex-grow: 1;
+}
+
+.netmail-search-bar input {
+  background: none;
+  border: none;
+  color: #fff;
+  outline: none;
+  font-size: var(--text-xs, 0.75rem);
+  width: 100%;
+}
+
+.netmail-filters {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.netmail-filter-btn {
+  background: none;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-secondary, #b9b3a7);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.netmail-filter-btn:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.045));
+}
+
+.netmail-filter-btn.active {
+  background-color: var(--color-accent, #e8420a);
+  color: #fff;
+  border-color: var(--color-accent, #e8420a);
+}
+
+.netmail-list-scroll {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.netmail-item-card {
+  padding: var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.netmail-item-card:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.045));
+}
+
+.netmail-item-card.selected {
+  background-color: rgba(232, 66, 10, 0.05);
+  border-left: 3px solid var(--color-accent, #e8420a);
+}
+
+.netmail-item-card.unread {
+  font-weight: var(--font-bold, 700);
+}
+
+.netmail-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--color-text-muted, #857d72);
+}
+
+.netmail-card-sender {
+  color: var(--color-text-primary, #f7f4ee);
+  font-weight: var(--font-medium, 500);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.netmail-card-subject {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-primary, #f7f4ee);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.netmail-card-preview {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-secondary, #b9b3a7);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.netmail-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.netmail-star-icon {
+  color: var(--color-text-muted, #857d72);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.netmail-star-icon.starred {
+  color: var(--color-warning, #f5b546);
+}
+
+/* Detail Column */
+.netmail-detail-col {
+  background-color: var(--color-bg-surface, rgba(16, 16, 22, 0.92));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.netmail-detail-header {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.netmail-detail-subject {
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: var(--font-bold, 700);
+  color: #fff;
+  margin-bottom: var(--space-2);
+}
+
+.netmail-detail-participants {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-secondary, #b9b3a7);
+}
+
+.netmail-detail-time {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--color-text-muted, #857d72);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.netmail-detail-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.netmail-action-btn {
+  background: none;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  color: var(--color-text-secondary, #b9b3a7);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.netmail-action-btn:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.045));
+  color: var(--color-text-primary, #f7f4ee);
+}
+
+.netmail-detail-body {
+  padding: var(--space-6);
+  overflow-y: auto;
+  flex-grow: 1;
+  font-size: var(--text-base, 0.95rem);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--color-text-primary, #f7f4ee);
+}
+
+.netmail-attachments {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+.netmail-attachments-title {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-muted, #857d72);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.netmail-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2);
+}
+
+.netmail-attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-input, rgba(19, 19, 28, 0.96));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs, 0.75rem);
+}
+
+.netmail-attachment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.netmail-attachment-name {
+  color: var(--color-text-primary, #f7f4ee);
+  font-weight: var(--font-medium, 500);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.netmail-attachment-size {
+  color: var(--color-text-muted, #857d72);
+}
+
+/* Compose Window */
+.netmail-compose {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-bg-surface, rgba(16, 16, 22, 0.92));
+}
+
+.netmail-compose-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  font-weight: var(--font-bold, 700);
+  font-size: var(--text-md, 1rem);
+}
+
+.netmail-compose-form {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.netmail-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.netmail-form-row label {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-text-secondary, #b9b3a7);
+}
+
+.netmail-form-input,
+.netmail-form-textarea {
+  background-color: var(--color-bg-input, rgba(19, 19, 28, 0.96));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  color: #fff;
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-sm, 8px);
+  outline: none;
+  font-size: var(--text-sm, 0.875rem);
+  font-family: inherit;
+}
+
+.netmail-form-input:focus,
+.netmail-form-textarea:focus {
+  border-color: var(--color-accent, #e8420a);
+}
+
+.netmail-recipient-picker-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background-color: var(--color-bg-input, rgba(19, 19, 28, 0.96));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 8px);
+  padding: 6px var(--space-3);
+  align-items: center;
+}
+
+.netmail-recipient-picker-wrapper:focus-within {
+  border-color: var(--color-accent, #e8420a);
+}
+
+.netmail-recipient-bubble {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(232, 66, 10, 0.15);
+  color: var(--color-accent, #e8420a);
+  border: 1px solid rgba(232, 66, 10, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: var(--font-semibold, 600);
+}
+
+.netmail-recipient-bubble button {
+  background: none;
+  border: none;
+  color: var(--color-accent, #e8420a);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.netmail-recipient-input {
+  background: none;
+  border: none;
+  color: #fff;
+  outline: none;
+  font-size: var(--text-sm, 0.875rem);
+  flex-grow: 1;
+  min-width: 120px;
+}
+
+.netmail-user-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--color-bg-elevated, rgba(28, 28, 39, 0.98));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 8px);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md, 0 18px 42px rgba(0, 0, 0, 0.24));
+  margin-top: 4px;
+}
+
+.netmail-dropdown-item {
+  padding: 8px var(--space-3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-xs, 0.75rem);
+}
+
+.netmail-dropdown-item:hover {
+  background-color: var(--color-bg-hover, rgba(255, 255, 255, 0.045));
+}
+
+.netmail-dropdown-name {
+  color: var(--color-text-primary, #f7f4ee);
+  font-weight: var(--font-semibold, 600);
+}
+
+.netmail-dropdown-email {
+  color: var(--color-text-muted, #857d72);
+}
+
+.netmail-compose-footer {
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+.netmail-attachment-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.netmail-attachment-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-sm, 8px);
+  padding: 6px var(--space-3);
+  font-size: var(--text-xs, 0.75rem);
+}
+
+/* Empty State */
+.netmail-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary, #b9b3a7);
+  text-align: center;
+  padding: var(--space-8);
+  gap: var(--space-3);
+}
+
+.netmail-empty-title {
+  font-size: var(--text-md, 1rem);
+  font-weight: var(--font-bold, 700);
+  color: var(--color-text-primary, #f7f4ee);
+}
+
+/* Tablet & Mobile styles */
+@media (max-width: 1024px) {
+  .netmail-layout {
+    grid-template-columns: 200px 300px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .netmail-container {
+    height: calc(100vh - var(--topbar-height, 82px) - 20px);
+    margin: var(--space-2);
+  }
+
+  .netmail-layout {
+    display: block;
+    height: 100%;
+    position: relative;
+  }
+
+  .netmail-sidebar,
+  .netmail-list-col,
+  .netmail-detail-col {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: none;
+  }
+
+  .netmail-sidebar.active-mobile,
+  .netmail-list-col.active-mobile,
+  .netmail-detail-col.active-mobile {
+    display: flex;
+  }
+}

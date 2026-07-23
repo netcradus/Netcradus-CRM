@@ -83,6 +83,7 @@ const ManagementHub            = lazy(() => import("./features/Management/Manage
 const PasswordManager          = lazy(() => import("./features/PasswordManager/PasswordManager"));
 const OnboardingPage           = lazy(() => import("./features/Onboarding/OnboardingPage"));
 const MailPage                 = lazy(() => import("./features/Mail/MailPage"));
+const InternalMailPage         = lazy(() => import("./features/Mail/InternalMailPage"));
 const ZohoSettingsPanel        = lazy(() => import("./features/Mail/ZohoSettingsPanel"));
 const PartnerDashboard         = lazy(() => import("./features/Partner/PartnerDashboard"));
 const PartnerVendors           = lazy(() => import("./features/Partner/PartnerVendors"));
@@ -232,6 +233,7 @@ const App = () => {
                 }
               />
               <Route path="/mail" element={<MailPage />} />
+              <Route path="/dashboard/mail" element={<RoleRoute roles={ACCESS_GROUPS.personal}><InternalMailPage /></RoleRoute>} />
               <Route path="/tickets" element={<RoleRoute roles={ACCESS_GROUPS.tickets}><TicketsPage /></RoleRoute>} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               <Route path="/broadcasts" element={<RoleRoute roles={ACCESS_GROUPS.personal}><BroadcastsPage /></RoleRoute>} />

@@ -113,6 +113,8 @@ app.use("/api/solutions", require("./routes/solutionRoutes"));
 
 app.use("/api/documents", require("./routes/documentRoutes"));
 
+app.use("/api/internal-mail", require("./routes/internalMailRoutes"));
+
 app.use("/api/forecasts", require("./routes/forecastRoutes"));
 app.use("/api/attendance", require("./routes/attendance"));
 app.use("/api/leave", require("./routes/leave"));
