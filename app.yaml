@@ -3,6 +3,8 @@ region: nyc
 services:
   - name: crm-server
     source_dir: server
+    routes:
+      - path: /api
     instance_size_slug: apps-s-1vcpu-0.5gb
     instance_count: 1
     run_command: npm start
@@ -28,6 +30,8 @@ services:
 static_sites:
   - name: crm-frontend
     source_dir: client
+    routes:
+      - path: /
     build_command: npm run build
     output_dir: build
     envs:
