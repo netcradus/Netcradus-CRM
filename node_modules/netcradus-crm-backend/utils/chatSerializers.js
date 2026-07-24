@@ -17,14 +17,48 @@ function normalizeMessage(messageDoc) {
     _id: String(messageDoc._id),
     conversationId: String(messageDoc.conversationId),
     sender,
-    messageText: messageDoc.isDeleted ? "This message was deleted." : messageDoc.messageText,
-    rawMessageText: messageDoc.messageText,
+    messageText: (() => {
+      if (messageDoc.isDeleted) return "This message was deleted.";
+      if (messageDoc.messageText) return messageDoc.messageText;
+      if (messageDoc.messageType === "image") return "Photo";
+      if (messageDoc.messageType === "archive") return messageDoc.fileName || "Archive";
+      if (messageDoc.fileUrl) return messageDoc.fileName || "Document";
+      return "";
+    })(),
+    rawMessageText: messageDoc.isDeleted ? "This message was deleted." : (messageDoc.messageText || ""),
+    fileUrl: messageDoc.isDeleted ? "" : (messageDoc.fileUrl || ""),
+    fileName: messageDoc.isDeleted ? "" : (messageDoc.fileName || ""),
+    fileSize: messageDoc.isDeleted ? 0 : (messageDoc.fileSize || 0),
+    mimeType: messageDoc.isDeleted ? "" : (messageDoc.mimeType || ""),
+    messageType: messageDoc.isDeleted ? "text" : (messageDoc.messageType || "text"),
     isRead: Boolean(messageDoc.isRead),
     readAt: messageDoc.readAt,
     readBy: Array.isArray(messageDoc.readBy) ? messageDoc.readBy.map(String) : [],
     editedAt: messageDoc.editedAt,
     isDeleted: Boolean(messageDoc.isDeleted),
     deletedAt: messageDoc.deletedAt,
+    isForwarded: Boolean(messageDoc.isForwarded),
+    reactions: Array.isArray(messageDoc.reactions)
+      ? messageDoc.reactions.map(r => ({
+          userId: String(r.userId),
+          emoji: r.emoji,
+          reactedAt: r.reactedAt
+        }))
+      : [],
+    replyTo: messageDoc.replyTo && typeof messageDoc.replyTo === "object"
+      ? {
+          _id: String(messageDoc.replyTo._id),
+          senderName: messageDoc.replyTo.senderId && typeof messageDoc.replyTo.senderId === "object"
+            ? messageDoc.replyTo.senderId.name || "User"
+            : "User",
+          messageText: messageDoc.replyTo.isDeleted
+            ? "This message was deleted."
+            : (messageDoc.replyTo.messageText || ""),
+          fileUrl: messageDoc.replyTo.isDeleted ? "" : (messageDoc.replyTo.fileUrl || ""),
+          fileName: messageDoc.replyTo.isDeleted ? "" : (messageDoc.replyTo.fileName || ""),
+          messageType: messageDoc.replyTo.isDeleted ? "text" : (messageDoc.replyTo.messageType || "text")
+        }
+      : null,
     createdAt: messageDoc.createdAt,
     updatedAt: messageDoc.updatedAt,
   };

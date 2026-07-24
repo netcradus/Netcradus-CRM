@@ -178,9 +178,10 @@ function initializeSocket(server) {
       try {
         const conversationId = String(payload?.conversation_id || payload?.conversationId || "").trim();
         const messageText = String(payload?.message_text || payload?.messageText || "").trim();
+        const hasFile = payload?.fileUrl || payload?.fileName;
 
-        if (!conversationId || !messageText) {
-          callback({ success: false, message: "Conversation and message are required" });
+        if (!conversationId || (!messageText && !hasFile)) {
+          callback({ success: false, message: "Conversation and message/file are required" });
           return;
         }
 
@@ -197,7 +198,13 @@ function initializeSocket(server) {
         const message = await Message.create({
           conversationId: conversation._id,
           senderId: socket.user._id,
-          messageText,
+          messageText: messageText || "",
+          fileUrl: payload?.fileUrl || payload?.file_url || "",
+          fileName: payload?.fileName || payload?.file_name || "",
+          fileSize: payload?.fileSize || payload?.file_size || 0,
+          mimeType: payload?.mimeType || payload?.mime_type || "",
+          messageType: payload?.messageType || payload?.message_type || "text",
+          replyTo: payload?.replyTo || payload?.reply_to || null,
           readBy: [socket.user._id],
         });
 
@@ -208,6 +215,11 @@ function initializeSocket(server) {
 
         const populatedMessage = await Message.findById(message._id)
           .populate("senderId", "_id name email")
+          .populate({
+            path: "replyTo",
+            select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+            populate: { path: "senderId", select: "_id name email" }
+          })
           .lean();
         const normalizedMessage = normalizeMessage(populatedMessage);
         await Promise.all(

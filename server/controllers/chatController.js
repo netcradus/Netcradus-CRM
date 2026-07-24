@@ -4,6 +4,9 @@ const Message = require("../models/Message");
 const User = require("../models/User");
 const { emitToUsers, getPresenceForUsers } = require("../socket");
 const { buildConversationSummary, normalizeMessage } = require("../utils/chatSerializers");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const MESSAGE_LIMIT_DEFAULT = 50;
 
@@ -107,6 +110,11 @@ async function getConversationMessages(req, res) {
     const total = await Message.countDocuments({ conversationId: id });
     const messages = await Message.find({ conversationId: id })
       .populate("senderId", "_id name email")
+      .populate({
+        path: "replyTo",
+        select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+        populate: { path: "senderId", select: "_id name email" }
+      })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -454,6 +462,345 @@ async function getChatDirectory(req, res) {
   }
 }
 
+const chatStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "./uploads/chat/";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const cleanOriginalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(cleanOriginalName).toLowerCase();
+    cb(null, `chat-${uniqueSuffix}${ext}`);
+  }
+});
+
+const ALLOWED_ATTACHMENT_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'application/zip', 'application/x-zip-compressed',
+  'application/vnd.rar', 'application/x-rar-compressed'
+];
+
+const ALLOWED_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.webp',
+  '.pdf',
+  '.doc', '.docx',
+  '.xls', '.xlsx',
+  '.ppt', '.pptx',
+  '.txt',
+  '.zip',
+  '.rar'
+];
+
+const chatFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (ALLOWED_ATTACHMENT_TYPES.includes(file.mimetype) && ALLOWED_EXTENSIONS.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error("File type not supported. Allowed: Images (JPG, PNG, WEBP), PDF, Word, Excel, PowerPoint, TXT, ZIP, RAR."), false);
+  }
+};
+
+const chatMulter = multer({
+  storage: chatStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+  fileFilter: chatFileFilter
+}).single("file");
+
+function getMessageType(mimetype) {
+  if (!mimetype) return "document";
+  if (mimetype.startsWith("image/")) return "image";
+  if ([
+    "application/zip",
+    "application/x-zip-compressed",
+    "application/vnd.rar",
+    "application/x-rar-compressed"
+  ].includes(mimetype)) {
+    return "archive";
+  }
+  return "document";
+}
+
+const uploadChatFile = (req, res) => {
+  chatMulter(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message || "Failed to upload file" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    try {
+      const conversationId = req.body.conversationId;
+      if (!conversationId) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ success: false, message: "conversationId is required" });
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: req.user._id
+      });
+
+      if (!conversation) {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(403).json({ success: false, message: "Unauthorized access to conversation" });
+      }
+
+      const fileUrl = `/api/messages/file/${req.file.filename}`;
+      const msgType = getMessageType(req.file.mimetype);
+
+      return res.json({
+        success: true,
+        data: {
+          fileUrl,
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          messageType: msgType
+        }
+      });
+    } catch (error) {
+      console.error("Upload chat file error:", error);
+      if (req.file && fs.existsSync(req.file.path)) {
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      }
+      return res.status(500).json({ success: false, message: "Failed to save upload info" });
+    }
+  });
+};
+
+const getChatFile = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const safeFilename = path.basename(filename);
+    const resolvedPath = path.resolve("./uploads/chat/", safeFilename);
+
+    if (!fs.existsSync(resolvedPath)) {
+      return res.status(404).json({ success: false, message: "File not found" });
+    }
+
+    const fileUrlPart = `/api/messages/file/${safeFilename}`;
+    const message = await Message.findOne({ fileUrl: fileUrlPart });
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Associated chat message not found" });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: message.conversationId,
+      participants: req.user._id
+    });
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: "You do not have access to this file" });
+    }
+
+    const disposition = req.query.disposition === "inline" ? "inline" : "attachment";
+    
+    res.setHeader("Content-Type", message.mimeType || "application/octet-stream");
+    
+    const escapedFilename = encodeURIComponent(message.fileName).replace(/'/g, "%27");
+    res.setHeader("Content-Disposition", `${disposition}; filename*=UTF-8''${escapedFilename}`);
+
+    return res.sendFile(resolvedPath);
+  } catch (error) {
+    console.error("Get chat file error:", error);
+    return res.status(500).json({ success: false, message: "Failed to download file" });
+  }
+};
+
+async function loadConversationSummaryLocal(conversationId, currentUserId) {
+  const conversation = await Conversation.findById(conversationId)
+    .populate("participants", "_id name email role department lastSeenAt")
+    .populate({
+      path: "lastMessageId",
+      populate: { path: "senderId", select: "_id name email" },
+    })
+    .lean();
+
+  if (!conversation) return null;
+
+  const unreadCount = await Message.countDocuments({
+    conversationId,
+    senderId: { $ne: currentUserId },
+    isDeleted: false,
+    $or: [
+      { readBy: { $ne: currentUserId } },
+      { readBy: { $exists: false }, isRead: false },
+      { readBy: { $size: 0 }, isRead: false },
+    ],
+  });
+
+  const userIds = conversation.participants.map((participant) => String(participant._id));
+  const presenceMap = getPresenceForUsers(userIds);
+
+  return buildConversationSummary(conversation, currentUserId, unreadCount, presenceMap);
+}
+
+const toggleMessageReaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { emoji } = req.body;
+    const currentUserId = req.user._id;
+
+    const trimmedEmoji = String(emoji || "").trim();
+    if (!trimmedEmoji) {
+      return res.status(400).json({ success: false, message: "Emoji is required" });
+    }
+
+    const message = await Message.findById(id);
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: message.conversationId,
+      participants: currentUserId
+    });
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: "You do not have access to this conversation" });
+    }
+
+    const existingReaction = message.reactions.find(r => String(r.userId) === String(currentUserId));
+
+    if (existingReaction) {
+      if (existingReaction.emoji === trimmedEmoji) {
+        await Message.updateOne(
+          { _id: id },
+          { $pull: { reactions: { userId: currentUserId } } }
+        );
+      } else {
+        await Message.updateOne(
+          { _id: id, "reactions.userId": currentUserId },
+          { $set: { "reactions.$.emoji": trimmedEmoji, "reactions.$.reactedAt": new Date() } }
+        );
+      }
+    } else {
+      await Message.updateOne(
+        { _id: id },
+        { $push: { reactions: { userId: currentUserId, emoji: trimmedEmoji, reactedAt: new Date() } } }
+      );
+    }
+
+    const updatedMessage = await Message.findById(id)
+      .populate("senderId", "_id name email")
+      .populate({
+        path: "replyTo",
+        select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+        populate: { path: "senderId", select: "_id name email" }
+      })
+      .lean();
+
+    const normalized = normalizeMessage(updatedMessage);
+
+    const { emitToUsers } = require("../socket");
+    conversation.participants.forEach(participantId => {
+      emitToUsers([String(participantId)], "message:reaction-updated", {
+        conversationId: String(conversation._id),
+        messageId: String(id),
+        reactions: normalized.reactions
+      });
+    });
+
+    return res.json({ success: true, reactions: normalized.reactions });
+  } catch (error) {
+    console.error("Toggle reaction error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update reaction" });
+  }
+};
+
+const forwardMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { conversationIds } = req.body;
+    const currentUserId = req.user._id;
+
+    if (!Array.isArray(conversationIds) || conversationIds.length === 0) {
+      return res.status(400).json({ success: false, message: "Select at least one destination conversation" });
+    }
+
+    const sourceMessage = await Message.findById(id);
+    if (!sourceMessage) {
+      return res.status(404).json({ success: false, message: "Source message not found" });
+    }
+
+    const sourceConversation = await Conversation.findOne({
+      _id: sourceMessage.conversationId,
+      participants: currentUserId
+    });
+    if (!sourceConversation) {
+      return res.status(403).json({ success: false, message: "You do not have access to this conversation" });
+    }
+
+    const targetConversations = await Conversation.find({
+      _id: { $in: conversationIds },
+      participants: currentUserId
+    });
+
+    if (targetConversations.length !== conversationIds.length) {
+      return res.status(403).json({ success: false, message: "One or more target conversations are inaccessible or invalid" });
+    }
+
+    const { emitToUsers } = require("../socket");
+
+    for (const targetConv of targetConversations) {
+      const newMsg = await Message.create({
+        conversationId: targetConv._id,
+        senderId: currentUserId,
+        messageText: sourceMessage.messageText || "",
+        fileUrl: sourceMessage.fileUrl || "",
+        fileName: sourceMessage.fileName || "",
+        fileSize: sourceMessage.fileSize || 0,
+        mimeType: sourceMessage.mimeType || "",
+        messageType: sourceMessage.messageType || "text",
+        isForwarded: true,
+        forwardedFromMessage: sourceMessage._id,
+        readBy: [currentUserId]
+      });
+
+      targetConv.hiddenFor = [];
+      targetConv.lastMessageId = newMsg._id;
+      targetConv.lastMessageAt = newMsg.createdAt;
+      await targetConv.save();
+
+      const populatedNewMsg = await Message.findById(newMsg._id)
+        .populate("senderId", "_id name email")
+        .populate({
+          path: "replyTo",
+          select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+          populate: { path: "senderId", select: "_id name email" }
+        })
+        .lean();
+
+      const normalizedMsg = normalizeMessage(populatedNewMsg);
+
+      await Promise.all(
+        targetConv.participants.map(async (participantId) => {
+          const conversationSummary = await loadConversationSummaryLocal(targetConv._id, participantId);
+          emitToUsers([String(participantId)], "new_message", {
+            conversationId: String(targetConv._id),
+            message: normalizedMsg,
+            conversation: conversationSummary,
+          });
+        })
+      );
+    }
+
+    return res.json({ success: true, message: `Message forwarded successfully to ${conversationIds.length} chat(s)` });
+  } catch (error) {
+    console.error("Forward message error:", error);
+    return res.status(500).json({ success: false, message: "Failed to forward message" });
+  }
+};
+
 module.exports = {
   buildConversationSummary,
   createConversation,
@@ -466,4 +813,8 @@ module.exports = {
   getOnlineStatus,
   hideConversation,
   normalizeMessage,
+  uploadChatFile,
+  getChatFile,
+  toggleMessageReaction,
+  forwardMessage
 };

@@ -106,7 +106,12 @@ export function ChatProvider({ children }) {
   const [onlineUsers, setOnlineUsers] = useState({});
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [directory, setDirectory] = useState([]);
+  const [replyToMessage, setReplyToMessage] = useState(null);
   const [launcherOpen, setLauncherOpen] = useState(false);
+
+  useEffect(() => {
+    setReplyToMessage(null);
+  }, [selectedConversationId]);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
@@ -289,11 +294,22 @@ export function ChatProvider({ children }) {
     }
   }, []);
 
-  const sendMessage = useCallback(async (conversationId, messageText) => {
-    const payload = await emitWithAck("send_message", {
+  const sendMessage = useCallback(async (conversationId, messageText, fileData = null) => {
+    const emitPayload = {
       conversation_id: conversationId,
       message_text: messageText,
-    });
+    };
+    if (fileData) {
+      emitPayload.fileUrl = fileData.fileUrl;
+      emitPayload.fileName = fileData.fileName;
+      emitPayload.fileSize = fileData.fileSize;
+      emitPayload.mimeType = fileData.mimeType;
+      emitPayload.messageType = fileData.messageType;
+    }
+    if (replyToMessage) {
+      emitPayload.replyTo = replyToMessage._id;
+    }
+    const payload = await emitWithAck("send_message", emitPayload);
 
     setMessagesByConversation((current) => ({
       ...current,
@@ -302,8 +318,51 @@ export function ChatProvider({ children }) {
     if (payload.conversation) {
       setConversations((current) => upsertConversation(current, payload.conversation));
     }
+    setReplyToMessage(null);
     return payload.message;
-  }, [emitWithAck]);
+  }, [emitWithAck, replyToMessage]);
+
+  const addReaction = useCallback(async (messageId, emoji) => {
+    const { data } = await axios.patch(
+      apiUrl(`/api/messages/${messageId}/reaction`),
+      { emoji },
+      getAuthConfig()
+    );
+    return data.reactions;
+  }, []);
+
+  const forwardMessage = useCallback(async (messageId, conversationIds) => {
+    const { data } = await axios.post(
+      apiUrl(`/api/messages/${messageId}/forward`),
+      { conversationIds },
+      getAuthConfig()
+    );
+    return data;
+  }, []);
+
+  const uploadChatFile = useCallback(async (file, conversationId, onProgress = () => {}) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("conversationId", conversationId);
+
+    const { data } = await axios.post(
+      apiUrl("/api/messages/upload"),
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "multipart/form-data"
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+          }
+        }
+      }
+    );
+    return data.data;
+  }, []);
 
   const updateMessage = useCallback((messageId, messageText) => {
     return emitWithAck("edit_message", {
@@ -501,6 +560,19 @@ export function ChatProvider({ children }) {
       );
     };
 
+    const handleReactionUpdated = ({ conversationId, messageId, reactions }) => {
+      setMessagesByConversation((current) => {
+        const conversationMessages = current[conversationId] || [];
+        const nextMessages = conversationMessages.map((msg) =>
+          msg._id === messageId ? { ...msg, reactions } : msg
+        );
+        return {
+          ...current,
+          [conversationId]: nextMessages,
+        };
+      });
+    };
+
     socket.on("socket:ready", handleReady);
     socket.on("connect", handleReady);
     socket.on("disconnect", handleDisconnect);
@@ -511,6 +583,7 @@ export function ChatProvider({ children }) {
     socket.on("message_read", handleMessageRead);
     socket.on("user_typing", handleTyping);
     socket.on("user_online", handleUserOnline);
+    socket.on("message:reaction-updated", handleReactionUpdated);
 
     return () => {
       socket.off("socket:ready", handleReady);
@@ -524,6 +597,7 @@ export function ChatProvider({ children }) {
       socket.off("message_read", handleMessageRead);
       socket.off("user_typing", handleTyping);
       socket.off("user_online", handleUserOnline);
+      socket.off("message:reaction-updated", handleReactionUpdated);
       disconnectAppSocket();
       socketRef.current = null;
     };
@@ -552,12 +626,17 @@ export function ChatProvider({ children }) {
     selectedConversation: conversations.find((conversation) => conversation._id === selectedConversationId) || null,
     selectedConversationId,
     sendMessage,
+    uploadChatFile,
     sendTyping,
     setLauncherOpen,
     socketReady,
     typingLabel: selectedConversationId ? typingByConversation[selectedConversationId] || "" : "",
     unreadCount,
     updateMessage,
+    replyToMessage,
+    setReplyToMessage,
+    addReaction,
+    forwardMessage,
   }), [
     conversations,
     createConversation,
@@ -579,11 +658,15 @@ export function ChatProvider({ children }) {
     selectConversation,
     selectedConversationId,
     sendMessage,
+    uploadChatFile,
     sendTyping,
     socketReady,
     typingByConversation,
     unreadCount,
     updateMessage,
+    replyToMessage,
+    addReaction,
+    forwardMessage,
   ]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

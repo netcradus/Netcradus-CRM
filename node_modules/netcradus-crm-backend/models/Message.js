@@ -16,9 +16,30 @@ const messageSchema = new mongoose.Schema(
     },
     messageText: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 5000,
+      default: "",
+    },
+    fileUrl: {
+      type: String,
+      default: "",
+    },
+    fileName: {
+      type: String,
+      default: "",
+    },
+    fileSize: {
+      type: Number,
+      default: 0,
+    },
+    mimeType: {
+      type: String,
+      default: "",
+    },
+    messageType: {
+      type: String,
+      enum: ["text", "image", "document", "archive"],
+      default: "text",
     },
     isRead: {
       type: Boolean,
@@ -47,6 +68,37 @@ const messageSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+    isForwarded: {
+      type: Boolean,
+      default: false,
+    },
+    forwardedFromMessage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+    reactions: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        emoji: {
+          type: String,
+          required: true,
+        },
+        reactedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
