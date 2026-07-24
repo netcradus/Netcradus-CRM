@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { PanelLeft, Search } from "lucide-react";
+import { PanelLeft, Search, Globe } from "lucide-react";
 import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
 import { internalMailApi } from "../../features/Mail/internalMailApi";
 import { getAppSocket } from "../../services/socket";
+import GoogleSearchModal from "./GoogleSearchModal";
 
 const notificationsEnabled = String(process.env.REACT_APP_NOTIFICATIONS_ENABLED || "true").toLowerCase() === "true";
 
@@ -14,6 +15,7 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isGoogleSearchOpen, setIsGoogleSearchOpen] = useState(false);
 
   useEffect(() => {
     const fetchUnreadCount = () => {
@@ -77,6 +79,32 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
           />
         </div>
 
+        <button 
+          type="button"
+          className="topbar-browser-btn" 
+          title="Open Google Search"
+          aria-label="Open Google Search"
+          onClick={() => setIsGoogleSearchOpen(true)}
+          style={{ 
+            background: "none",
+            border: "none",
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            width: "36px", 
+            height: "36px", 
+            borderRadius: "50%", 
+            color: "var(--color-text-secondary)", 
+            transition: "background-color 0.2s",
+            cursor: "pointer",
+            padding: 0
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}
+        >
+          <Globe size={18} />
+        </button>
+
         <ThemeToggle className="topbar-theme-toggle" compact />
         
         {/* Mail entry button */}
@@ -129,6 +157,11 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
           {initials}
         </div>
       </div>
+
+      <GoogleSearchModal 
+        isOpen={isGoogleSearchOpen} 
+        onClose={() => setIsGoogleSearchOpen(false)} 
+      />
     </header>
   );
 };
