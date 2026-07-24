@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Mail, Edit3, Inbox, FileText, Send, Trash2, RefreshCw, 
   Search, Star, Paperclip, ChevronLeft, Download, Eye, 
   Trash, ArrowLeft, Loader2, CornerUpLeft, Plus, FolderOpen,
-  HardDrive, SlidersHorizontal, Moon, Bell, ChevronDown, MoreVertical
+  HardDrive, SlidersHorizontal, Moon, Bell, ChevronDown, MoreVertical,
+  Sun, Menu
 } from "lucide-react";
 import { internalMailApi } from "./internalMailApi";
 import { getAppSocket } from "../../services/socket";
 import axios from "axios";
+import { useTheme } from "../../context/ThemeContext";
 import "./internalMail.css";
 
 // Helper for consistent initials avatar backgrounds
@@ -29,6 +31,21 @@ const getAvatarBg = (name) => {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
   return colors[Math.abs(hash) % colors.length];
+};
+
+const capitalizeFirstLetter = (string) => {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
+const getFileIconBg = (ext) => {
+  const e = (ext || "").toLowerCase();
+  if (e === "pdf") return "#ea4335"; // Red
+  if (["png", "jpg", "jpeg", "gif"].includes(e)) return "#4285f4"; // Blue
+  if (["doc", "docx"].includes(e)) return "#2b579a"; // Word Blue
+  if (["xls", "xlsx"].includes(e)) return "#107c41"; // Excel Green
+  if (["zip", "rar", "7z"].includes(e)) return "#f4b400"; // Yellow
+  return "#757575"; // Grey
 };
 
 export default function InternalMailPage() {
@@ -72,8 +89,120 @@ export default function InternalMailPage() {
   const [mobileView, setMobileView] = useState("list"); // sidebar, list, detail
 
   const socketRef = useRef(null);
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileRef = useRef(null);
   const myUserId = localStorage.getItem("userId") || "";
   const myUserName = localStorage.getItem("userName") || "User";
+  const myUserEmail = localStorage.getItem("userEmail") || "user@netcradus.com";
+  const myUserRole = localStorage.getItem("userRole") || "Member";
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    return typeof window !== "undefined" ? window.innerWidth > 768 : true;
+  });
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsSidebarOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const resolveSenderName = (item) => {
+    if (!item) return "";
+    if (currentFolder === "sent") {
+      const recNames = (item.recipients || []).map(r => r.fullName || r.name).filter(Boolean).join(", ");
+      return recNames ? `To: ${recNames}` : "To: Unknown Recipient";
+    } else if (currentFolder === "drafts") {
+      const recNames = (item.recipients || []).map(r => r.fullName || r.name).filter(Boolean).join(", ");
+      return recNames ? `To: ${recNames}` : "(No Recipient)";
+    } else {
+      // Inbox / Deleted
+      if (!item.sender) {
+        // System mail detection
+        const subj = (item.subject || "").toLowerCase();
+        const bod = (item.body || "").toLowerCase();
+        if (subj.includes("system") || bod.includes("system")) {
+          return "System";
+        }
+        return "Unknown Sender";
+      }
+      
+      const name = item.sender.fullName || item.sender.name;
+      if (name) {
+        if (name.toLowerCase() === "system" || name.toLowerCase() === "system account" || item.sender.role === "system") {
+          return "System";
+        }
+        return name;
+      }
+      
+      if (item.sender.email && item.sender.email.includes("system")) {
+        return "System";
+      }
+      return item.sender.email || "Unknown Sender";
+    }
+  };
+
+  const resolveInitialsSource = (item) => {
+    if (!item) return "";
+    if (currentFolder === "sent" || currentFolder === "drafts") {
+      const recNames = (item.recipients || []).map(r => r.fullName || r.name).filter(Boolean).join(", ");
+      return recNames || "Recipient";
+    } else {
+      if (!item.sender) {
+        const subj = (item.subject || "").toLowerCase();
+        const bod = (item.body || "").toLowerCase();
+        if (subj.includes("system") || bod.includes("system")) {
+          return "System";
+        }
+        return "Deleted User";
+      }
+      const name = item.sender.fullName || item.sender.name;
+      if (name) {
+        if (name.toLowerCase() === "system" || name.toLowerCase() === "system account" || item.sender.role === "system") {
+          return "System";
+        }
+        return name;
+      }
+      if (item.sender.email && item.sender.email.includes("system")) {
+        return "System";
+      }
+      return item.sender.email || "Unknown User";
+    }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const cleanName = name.replace(/^To:\s*/i, "").trim();
+    if (cleanName.toLowerCase() === "hr department") return "HR";
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return cleanName.slice(0, 2).toUpperCase();
+  };
+
+  const formatDetailDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    const datePart = date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+    const timePart = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    return `${datePart}, ${timePart}`;
+  };
 
   // Load user directory
   useEffect(() => {
@@ -416,25 +545,53 @@ export default function InternalMailPage() {
     if (!value) return "";
     const date = new Date(value);
     const today = new Date();
-    if (date.toDateString() === today.toDateString()) {
-      return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    
+    const isToday = date.toDateString() === today.toDateString();
+    
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    } else if (isYesterday) {
+      return "Yesterday";
+    } else {
+      if (date.getFullYear() === today.getFullYear()) {
+        return date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
+      } else {
+        return date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+      }
     }
-    return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
   };
 
-  const getInitials = (name) => {
-    if (!name) return "S";
-    return name.slice(0, 2).toUpperCase();
-  };
+  const currentUserDetail = useMemo(() => {
+    return userDirectory.find(u => u._id === myUserId);
+  }, [userDirectory, myUserId]);
 
   return (
     <div className="netmail-container">
       
       {/* 1. CUSTOM TOPBAR HEADER */}
       <header className="netmail-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-          <img src="/mailLogo.png" alt="NETMAIL" style={{ height: "20px", objectFit: "contain" }} />
-          <Link to="/dashboard" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)", textDecoration: "none", fontWeight: "600" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <button 
+            type="button" 
+            className="netmail-action-btn" 
+            onClick={() => setIsSidebarOpen(prev => !prev)}
+            aria-expanded={isSidebarOpen}
+            aria-controls="netmail-sidebar"
+            title="Toggle Menu"
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "auto", cursor: "pointer" }}
+          >
+            <Menu size={18} />
+          </button>
+          <img 
+            src="/mailLogo.png" 
+            alt="NETMAIL" 
+            className="netmail-brand-logo" 
+          />
+          <Link to="/dashboard" className="netmail-back-crm">
             <ArrowLeft size={14} /> Back to CRM
           </Link>
         </div>
@@ -446,97 +603,129 @@ export default function InternalMailPage() {
             value={searchQuery} 
             onChange={e => setSearchQuery(e.target.value)} 
           />
-          <span style={{ fontSize: "10px", opacity: 0.5, padding: "2px 6px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", fontWeight: "bold" }}>⌘K</span>
+          <span className="search-shortcut">⌘K</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <button className="netmail-action-btn" title="Theme toggler">
-            <Moon size={18} />
+          <button className="netmail-action-btn" title="Theme toggler" onClick={toggleTheme}>
+            {theme === "light" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           
-          <div style={{ position: "relative", cursor: "pointer" }} onClick={() => setCurrentFolder("inbox")}>
-            <Mail size={18} style={{ opacity: 0.8 }} />
-            {inboxUnreadCount > 0 && (
-              <span style={{ position: "absolute", top: "-5px", right: "-5px", backgroundColor: "#ff6363", color: "#fff", fontSize: "9px", fontWeight: "bold", borderRadius: "50%", minWidth: "14px", height: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {inboxUnreadCount}
-              </span>
-            )}
-          </div>
-
-          <div style={{ position: "relative", cursor: "pointer" }}>
-            <Bell size={18} style={{ opacity: 0.8 }} />
-            <span style={{ position: "absolute", top: "-5px", right: "-5px", backgroundColor: "#e8420a", color: "#fff", fontSize: "9px", fontWeight: "bold", borderRadius: "50%", minWidth: "14px", height: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              12
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", borderLeft: "1px solid rgba(255,255,255,0.08)", paddingLeft: "16px" }}>
-            <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "#e8420a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "bold" }}>
+          <div className="netmail-user-profile-menu" ref={profileRef} onClick={() => setShowProfileDropdown(!showProfileDropdown)} style={{ position: "relative" }}>
+            <div className="netmail-user-avatar" style={{ backgroundColor: "#e8420a" }}>
               {getInitials(myUserName)}
             </div>
-            <span style={{ fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+            <span className="netmail-user-name">
               {myUserName} <ChevronDown size={12} style={{ opacity: 0.6 }} />
             </span>
+
+            {showProfileDropdown && (
+              <div className="netmail-profile-dropdown" onClick={(e) => e.stopPropagation()}>
+                <div className="profile-dropdown-header">
+                  <div className="profile-dropdown-avatar" style={{ backgroundColor: "#e8420a" }}>
+                    {getInitials(myUserName)}
+                  </div>
+                  <div className="profile-dropdown-info">
+                    <div className="profile-dropdown-name">{myUserName}</div>
+                    <div className="profile-dropdown-email">{myUserEmail}</div>
+                  </div>
+                </div>
+                <div className="profile-dropdown-divider"></div>
+                <div className="profile-dropdown-item-static">
+                  <span>Role:</span> <span>{capitalizeFirstLetter(myUserRole)}</span>
+                </div>
+                <div className="profile-dropdown-item-static">
+                  <span>Dept:</span> <span>{currentUserDetail?.department || "General"}</span>
+                </div>
+                <div className="profile-dropdown-divider"></div>
+                <button 
+                  type="button" 
+                  className="profile-dropdown-logout-btn" 
+                  onClick={() => {
+                    localStorage.clear();
+                    navigate("/login");
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* 2. THREE COLUMN LAYOUT */}
-      <div className="netmail-layout">
+      <div className={`netmail-layout ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
         
+        {isSidebarOpen && (
+          <div 
+            className="netmail-sidebar-backdrop" 
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         {/* SIDEBAR */}
-        <aside className={`netmail-sidebar ${mobileView === "sidebar" ? "active-mobile" : ""}`}>
-          <button type="button" className="netmail-compose-btn" onClick={handleComposeNew}>
+        <aside 
+          id="netmail-sidebar"
+          className={`netmail-sidebar ${isSidebarOpen ? "open" : "collapsed"} ${mobileView === "sidebar" ? "active-mobile" : ""}`}
+        >
+          <button 
+            type="button" 
+            className="netmail-compose-btn" 
+            onClick={() => {
+              handleComposeNew();
+              if (window.innerWidth <= 768) {
+                setIsSidebarOpen(false);
+              }
+            }}
+          >
             <Plus size={16} />
             <span>Compose</span>
           </button>
 
           <nav className="netmail-menu">
-            <div className={`netmail-menu-item ${currentFolder === "inbox" ? "active" : ""}`} onClick={() => { setCurrentFolder("inbox"); setMobileView("list"); }}>
+            <div className={`netmail-menu-item ${currentFolder === "inbox" ? "active" : ""}`} onClick={() => { setCurrentFolder("inbox"); setMobileView("list"); if (window.innerWidth <= 768) setIsSidebarOpen(false); }}>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}><Inbox size={16} /> <span>Inbox</span></span>
               {inboxUnreadCount > 0 && <span className="netmail-badge">{inboxUnreadCount}</span>}
             </div>
 
-            <div className={`netmail-menu-item ${currentFolder === "drafts" ? "active" : ""}`} onClick={() => { setCurrentFolder("drafts"); setMobileView("list"); }}>
+            <div className={`netmail-menu-item ${currentFolder === "drafts" ? "active" : ""}`} onClick={() => { setCurrentFolder("drafts"); setMobileView("list"); if (window.innerWidth <= 768) setIsSidebarOpen(false); }}>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}><FileText size={16} /> <span>Drafts</span></span>
               {draftsCount > 0 && <span className="netmail-badge">{draftsCount}</span>}
             </div>
 
-            <div className={`netmail-menu-item ${currentFolder === "sent" ? "active" : ""}`} onClick={() => { setCurrentFolder("sent"); setMobileView("list"); }}>
+            <div className={`netmail-menu-item ${currentFolder === "sent" ? "active" : ""}`} onClick={() => { setCurrentFolder("sent"); setMobileView("list"); if (window.innerWidth <= 768) setIsSidebarOpen(false); }}>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}><Send size={16} /> <span>Sent</span></span>
             </div>
 
-            <div className={`netmail-menu-item ${currentFolder === "deleted" ? "active" : ""}`} onClick={() => { setCurrentFolder("deleted"); setMobileView("list"); }}>
+            <div className={`netmail-menu-item ${currentFolder === "deleted" ? "active" : ""}`} onClick={() => { setCurrentFolder("deleted"); setMobileView("list"); if (window.innerWidth <= 768) setIsSidebarOpen(false); }}>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}><Trash2 size={16} /> <span>Deleted</span></span>
             </div>
           </nav>
-
-          <div className="netmail-sidebar-storage">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: "600", color: "var(--color-text-secondary)" }}>
-              <HardDrive size={14} style={{ opacity: 0.6 }} />
-              <span>Storage</span>
-            </div>
-            <div className="netmail-progress-bar-bg">
-              <div className="netmail-progress-bar-fill" style={{ width: "12.4%" }}></div>
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>1.24 GB of 10 GB used</div>
-          </div>
         </aside>
 
         {/* MIDDLE COLUMN: Threads list */}
         <section className={`netmail-list-col ${mobileView === "list" ? "active-mobile" : ""}`}>
           <div className="netmail-list-header">
             <div className="netmail-list-toolbar">
-              <button className="netmail-filter-btn md-hidden" onClick={() => setMobileView("sidebar")} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <button 
+                type="button"
+                className="netmail-filter-btn md-hidden" 
+                onClick={() => setIsSidebarOpen(true)} 
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                aria-expanded={isSidebarOpen}
+                aria-controls="netmail-sidebar"
+              >
                 <ChevronLeft size={14} /> Menu
               </button>
-              <h3 style={{ textTransform: "capitalize" }}>{currentFolder} {currentFolder === "inbox" && inboxUnreadCount > 0 ? `(${inboxUnreadCount})` : ""}</h3>
+              <h3 style={{ textTransform: "capitalize" }}>
+                {capitalizeFirstLetter(currentFolder)}
+                {currentFolder === "inbox" && inboxUnreadCount > 0 ? ` (${inboxUnreadCount})` : ""}
+                {currentFolder === "drafts" && draftsCount > 0 ? ` (${draftsCount})` : ""}
+              </h3>
               <div style={{ display: "flex", gap: "4px" }}>
                 <button type="button" className="netmail-action-btn" onClick={() => fetchFolderList(currentFolder)} title="Refresh folder">
                   <RefreshCw size={14} />
-                </button>
-                <button type="button" className="netmail-action-btn" title="Filters">
-                  <SlidersHorizontal size={14} />
                 </button>
               </div>
             </div>
@@ -581,22 +770,8 @@ export default function InternalMailPage() {
                 const isStarred = item.starredBy?.includes(myUserId);
                 const hasAttachment = item.attachments && item.attachments.length > 0;
 
-                // Sender display resolution
-                let displayUser = "System Account";
-                let initialsSource = "System Account";
-
-                if (currentFolder === "sent") {
-                  const recNames = (item.recipients || []).map(r => r.fullName || r.name || "User").join(", ");
-                  displayUser = recNames ? `To: ${recNames}` : "To: Drafts";
-                  initialsSource = recNames || "Drafts";
-                } else if (currentFolder === "drafts") {
-                  const recNames = (item.recipients || []).map(r => r.fullName || r.name || "User").join(", ");
-                  displayUser = recNames ? `To: ${recNames}` : "(No Recipient)";
-                  initialsSource = recNames || "Drafts";
-                } else {
-                  displayUser = item.sender?._id === myUserId ? "Me" : (item.sender?.fullName || item.sender?.name || "System Account");
-                  initialsSource = item.sender?.fullName || item.sender?.name || "System Account";
-                }
+                const displayUser = resolveSenderName(item);
+                const initialsSource = resolveInitialsSource(item);
 
                 return (
                   <div 
@@ -614,7 +789,7 @@ export default function InternalMailPage() {
                   >
                     {/* Unread small orange dot to the left of the avatar */}
                     {!isRead && currentFolder === "inbox" && (
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "var(--color-accent)", position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)" }}></span>
+                      <span className="netmail-unread-dot"></span>
                     )}
 
                     <div className="netmail-row-avatar" style={{ backgroundColor: getAvatarBg(initialsSource) }}>
@@ -652,13 +827,7 @@ export default function InternalMailPage() {
 
         {/* DETAIL VIEW / COMPOSE WINDOW */}
         <main className={`netmail-detail-col ${mobileView === "detail" ? "active-mobile" : ""}`}>
-          
-          {/* Mobile Back navigation */}
-          <div className="netmail-list-toolbar md-hidden" style={{ padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.03)", minHeight: "44px" }}>
-            <button className="netmail-filter-btn" onClick={() => setMobileView("list")} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <ChevronLeft size={14} /> Back to list
-            </button>
-          </div>
+
 
           {composeMode ? (
             /* COMPOSE / REPLY MODE */
@@ -670,18 +839,20 @@ export default function InternalMailPage() {
               <form onSubmit={(e) => handleSubmitMail(e, true)} className="netmail-compose-form">
                 <div className="netmail-form-row">
                   <label>To</label>
-                  <div className="netmail-recipient-picker-wrapper">
-                    {selectedRecipients.map((rec) => (
-                      <span key={rec._id} className="netmail-recipient-bubble">
-                        {rec.fullName || rec.name}
-                        {!replyToId && (
-                          <button type="button" onClick={() => setSelectedRecipients(prev => prev.filter(p => p._id !== rec._id))} style={{ background: "none", border: "none", color: "var(--color-accent)", cursor: "pointer", marginLeft: "4px", fontSize: "12px", fontWeight: "bold" }}>
+                  {replyToId ? (
+                    <div className="netmail-reply-to-recipient">
+                      {selectedRecipients.map(r => `${r.fullName || r.name} <${r.email || ""}>`).join(", ")}
+                    </div>
+                  ) : (
+                    <div className="netmail-recipient-picker-wrapper">
+                      {selectedRecipients.map((rec) => (
+                        <span key={rec._id} className="netmail-recipient-bubble">
+                          {rec.fullName || rec.name}
+                          <button type="button" onClick={() => setSelectedRecipients(prev => prev.filter(p => p._id !== rec._id))} className="bubble-remove-btn">
                             ×
                           </button>
-                        )}
-                      </span>
-                    ))}
-                    {!replyToId && (
+                        </span>
+                      ))}
                       <input
                         type="text"
                         className="netmail-recipient-input"
@@ -693,10 +864,10 @@ export default function InternalMailPage() {
                         }}
                         onFocus={() => setShowUserDropdown(true)}
                       />
-                    )}
-                  </div>
+                    </div>
+                  )}
 
-                  {showUserDropdown && filteredUserDirectory.length > 0 && (
+                  {!replyToId && showUserDropdown && filteredUserDirectory.length > 0 && (
                     <div className="netmail-user-dropdown">
                       {filteredUserDirectory.map((user) => (
                         <div 
@@ -708,7 +879,7 @@ export default function InternalMailPage() {
                             setShowUserDropdown(false);
                           }}
                         >
-                          <span style={{ fontWeight: "700", color: "#fff" }}>{user.fullName || user.name}</span>
+                          <span style={{ fontWeight: "700", color: "var(--color-text-primary)" }}>{user.fullName || user.name}</span>
                           <span style={{ color: "var(--color-text-muted)" }}>{user.email} ({user.role} | {user.department || "General"})</span>
                         </div>
                       ))}
@@ -736,30 +907,16 @@ export default function InternalMailPage() {
                     value={body}
                     onChange={e => setBody(e.target.value)}
                     maxLength={10000}
-                    style={{ height: "100%", minHeight: "160px" }}
+                    style={{ height: "100%", minHeight: "180px" }}
                   />
                   {originalMailQuote && (
                     /* Separated quoted reference section */
-                    <div style={{ 
-                      marginTop: "16px", 
-                      padding: "12px 16px", 
-                      borderTop: "1px dashed rgba(255, 255, 255, 0.08)",
-                      backgroundColor: "rgba(255, 255, 255, 0.01)",
-                      borderRadius: "8px" 
-                    }}>
-                      <div style={{ fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "6px" }}>
-                        On {new Date(originalMailQuote.createdAt).toLocaleString("en-IN")} at {originalMailQuote.sender?.fullName || originalMailQuote.sender?.name || "System"} wrote:
+                    <div className="netmail-compose-quoted">
+                      <div className="netmail-quoted-title">Quoted Message</div>
+                      <div className="netmail-quoted-meta">
+                        On {formatDetailDate(originalMailQuote.createdAt)}, {originalMailQuote.sender?.fullName || originalMailQuote.sender?.name || "System"} wrote:
                       </div>
-                      <blockquote style={{ 
-                        margin: 0, 
-                        paddingLeft: "12px", 
-                        borderLeft: "2px solid var(--color-accent)", 
-                        color: "var(--color-text-secondary)",
-                        fontSize: "13px",
-                        whiteSpace: "pre-wrap",
-                        fontStyle: "italic",
-                        lineHeight: "1.5"
-                      }}>
+                      <blockquote className="netmail-quoted-body">
                         {originalMailQuote.body || "(No message body)"}
                       </blockquote>
                     </div>
@@ -782,7 +939,7 @@ export default function InternalMailPage() {
                   {files.length > 0 && (
                     <div className="netmail-attachment-preview-list" style={{ marginTop: "8px" }}>
                       {files.map((file, idx) => (
-                        <div key={idx} className="netmail-attachment-preview-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px", background: "rgba(255,255,255,0.01)" }}>
+                        <div key={idx} className="netmail-attachment-preview-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", border: "1px solid var(--mail-border)", borderRadius: "6px", background: "var(--mail-surface-soft)" }}>
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "12px" }}>
                             {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
                           </span>
@@ -820,14 +977,30 @@ export default function InternalMailPage() {
                 selectedMail.status !== "draft" &&
                 !selectedMail.deletedBy?.includes(myUserId);
 
-              const initialsSource = selectedMail.sender?.fullName || selectedMail.sender?.name || "System Account";
+              const senderName = resolveSenderName(selectedMail);
+              const senderEmail = selectedMail.sender?.email;
+              const initialsSource = resolveInitialsSource(selectedMail);
 
               return (
                 <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
                   
                   {/* Toolbar Actions matching reference */}
                   <div className="netmail-detail-toolbar">
-                    <div className="netmail-detail-toolbar-left">
+                    <div className="netmail-detail-toolbar-left" style={{ display: "flex", gap: "8px" }}>
+                      <button 
+                        type="button" 
+                        className="netmail-action-btn-primary" 
+                        onClick={() => {
+                          setSelectedMailId(null);
+                          setSelectedMail(null);
+                          setMobileView("list");
+                        }}
+                        title="Back to list"
+                      >
+                        <ArrowLeft size={14} />
+                        <span>Back to list</span>
+                      </button>
+
                       {showReplyButton && (
                         <button 
                           type="button" 
@@ -843,41 +1016,39 @@ export default function InternalMailPage() {
 
                       <button 
                         type="button"
-                        className="netmail-action-btn"
+                        className="netmail-action-btn-primary"
                         onClick={(e) => handleToggleStar(e, selectedMail._id, selectedMail.starredBy?.includes(myUserId))}
                         title="Star"
                       >
                         <Star 
-                          size={16} 
-                          className={selectedMail.starredBy?.includes(myUserId) ? "starred" : ""} 
+                          size={14} 
+                          className={selectedMail.starredBy?.includes(myUserId) ? "starred" : ""}
+                          style={{ fill: selectedMail.starredBy?.includes(myUserId) ? "#f4b400" : "none", color: selectedMail.starredBy?.includes(myUserId) ? "#f4b400" : "currentColor" }}
                         />
+                        <span>Star</span>
                       </button>
 
                       {currentFolder === "deleted" ? (
                         <button 
                           type="button" 
-                          className="netmail-action-btn" 
+                          className="netmail-action-btn-primary" 
                           onClick={() => handleRestoreMail(selectedMail._id)}
                           title="Restore Mail"
                         >
                           <RefreshCw size={14} />
+                          <span>Restore</span>
                         </button>
                       ) : (
                         <button 
                           type="button" 
-                          className="netmail-action-btn" 
+                          className="netmail-action-btn-primary" 
                           onClick={() => handleDeleteMail(selectedMail._id)}
                           title="Delete"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
+                          <span>Delete</span>
                         </button>
                       )}
-                    </div>
-                    
-                    <div className="netmail-detail-toolbar-right">
-                      <button className="netmail-action-btn" title="More options">
-                        <MoreVertical size={16} />
-                      </button>
                     </div>
                   </div>
 
@@ -885,7 +1056,7 @@ export default function InternalMailPage() {
                   <div className="netmail-reader-scroll">
                     <div className="netmail-detail-subject-row">
                       <h2 className="netmail-detail-subject">{selectedMail.subject || "(No Subject)"}</h2>
-                      <span style={{ fontSize: "10px", textTransform: "uppercase", padding: "2px 6px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", color: "var(--color-text-muted)" }}>{currentFolder}</span>
+                      <span className="netmail-folder-badge">{capitalizeFirstLetter(currentFolder)}</span>
                     </div>
 
                     <div className="netmail-meta-header">
@@ -895,41 +1066,31 @@ export default function InternalMailPage() {
                         </div>
                         <div className="netmail-sender-info">
                           <div className="netmail-sender-name-line">
-                            <strong>{selectedMail.sender?.fullName || selectedMail.sender?.name || "System Account"}</strong>
-                            {selectedMail.sender?.email && <span style={{ opacity: 0.6 }}>&lt;{selectedMail.sender.email}&gt;</span>}
+                            <span style={{ fontWeight: "700", color: "var(--color-text-primary)", fontSize: "14px" }}>{senderName}</span>
+                            {senderEmail && <span className="netmail-sender-email">&lt;{senderEmail}&gt;</span>}
                           </div>
                           <div className="netmail-recipient-line">
-                            To: {selectedMail.recipients?.map(r => r.fullName || r.name || "User").join(", ")}
+                            To: {selectedMail.recipients?.map(r => `${r.fullName || r.name || "User"} <${r.email || ""}>`).join(", ")}
                           </div>
                         </div>
                       </div>
 
                       <div className="netmail-detail-date-col">
-                        <span>
-                          {new Date(selectedMail.createdAt).toLocaleString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
-                        </span>
+                        <span>{formatDetailDate(selectedMail.createdAt)}</span>
                         
-                        <div style={{ display: "flex", gap: "6px" }}>
+                        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                           <Star 
-                            size={14} 
-                            style={{ cursor: "pointer" }}
-                            className={selectedMail.starredBy?.includes(myUserId) ? "starred" : ""}
+                            size={16} 
+                            style={{ cursor: "pointer", fill: selectedMail.starredBy?.includes(myUserId) ? "#f4b400" : "none", color: selectedMail.starredBy?.includes(myUserId) ? "#f4b400" : "currentColor" }}
                             onClick={(e) => handleToggleStar(e, selectedMail._id, selectedMail.starredBy?.includes(myUserId))}
                           />
                           {showReplyButton && (
                             <CornerUpLeft 
-                              size={14} 
+                              size={16} 
                               style={{ cursor: "pointer" }}
                               onClick={() => handleReply(selectedMail)}
                             />
                           )}
-                          <MoreVertical size={14} style={{ cursor: "pointer", opacity: 0.6 }} />
                         </div>
                       </div>
                     </div>
@@ -940,30 +1101,14 @@ export default function InternalMailPage() {
 
                     {/* Collapsed/Visual Quoted Thread context */}
                     {selectedMail.replyTo && (
-                      <div style={{ 
-                        marginTop: "24px", 
-                        padding: "16px", 
-                        borderTop: "1px dashed rgba(255, 255, 255, 0.08)",
-                        backgroundColor: "rgba(255, 255, 255, 0.01)",
-                        borderRadius: "8px",
-                        maxWidth: "820px"
-                      }}>
-                        <div style={{ fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "6px", fontWeight: "700" }}>
+                      <div className="netmail-quoted-thread-box">
+                        <div className="netmail-quoted-thread-header">
                           --- Quoted Message ---
                         </div>
-                        <div style={{ fontSize: "11px", color: "var(--color-text-muted)", marginBottom: "4px" }}>
+                        <div className="netmail-quoted-thread-meta">
                           From: {selectedMail.replyTo.sender?.fullName || selectedMail.replyTo.sender?.name || "System Account"}
                         </div>
-                        <blockquote style={{ 
-                          margin: 0, 
-                          paddingLeft: "12px", 
-                          borderLeft: "2px solid var(--color-accent)", 
-                          color: "var(--color-text-secondary)",
-                          fontSize: "13px",
-                          whiteSpace: "pre-wrap",
-                          fontStyle: "italic",
-                          lineHeight: "1.6"
-                        }}>
+                        <blockquote className="netmail-quoted-thread-blockquote">
                           {selectedMail.replyTo.body || "(No message body)"}
                         </blockquote>
                       </div>
@@ -980,7 +1125,7 @@ export default function InternalMailPage() {
                             const ext = att.originalname?.split(".").pop().toUpperCase() || "FILE";
                             return (
                               <div key={att._id} className="netmail-attachment-tile">
-                                <div className="netmail-file-icon">
+                                <div className="netmail-file-icon" style={{ backgroundColor: getFileIconBg(ext) }}>
                                   {ext}
                                 </div>
                                 <div className="netmail-attachment-detail">
@@ -993,6 +1138,7 @@ export default function InternalMailPage() {
                                     className="netmail-action-btn" 
                                     onClick={() => handleDownloadAttachment(att._id, att.originalname)}
                                     title="Download"
+                                    style={{ border: "1px solid var(--mail-border)" }}
                                   >
                                     <Download size={14} />
                                   </button>
@@ -1001,6 +1147,7 @@ export default function InternalMailPage() {
                                     className="netmail-action-btn" 
                                     onClick={() => handleViewAttachment(att._id)}
                                     title="View"
+                                    style={{ border: "1px solid var(--mail-border)" }}
                                   >
                                     <Eye size={14} />
                                   </button>
@@ -1016,31 +1163,10 @@ export default function InternalMailPage() {
                     {showReplyButton && (
                       <div 
                         onClick={() => handleReply(selectedMail)} 
-                        style={{ 
-                          marginTop: "32px", 
-                          padding: "16px 20px", 
-                          border: "1px solid rgba(255, 255, 255, 0.08)", 
-                          borderRadius: "12px", 
-                          cursor: "pointer", 
-                          display: "flex", 
-                          justifyContent: "space-between", 
-                          alignItems: "center",
-                          color: "var(--color-text-muted)",
-                          backgroundColor: "rgba(255, 255, 255, 0.015)",
-                          maxWidth: "820px",
-                          transition: "all 0.2s ease"
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)";
-                          e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.015)";
-                          e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-                        }}
+                        className="netmail-quick-reply-trigger"
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "24px", height: "24px", borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.08)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: "bold" }}>
+                          <div className="netmail-quick-reply-avatar" style={{ backgroundColor: getAvatarBg(myUserName) }}>
                             {getInitials(myUserName)}
                           </div>
                           <span style={{ fontSize: "13px" }}>Click here to Reply or Forward...</span>
@@ -1064,12 +1190,12 @@ export default function InternalMailPage() {
                 width: "60px", 
                 height: "60px", 
                 borderRadius: "50%", 
-                backgroundColor: "rgba(255,255,255,0.02)", 
+                backgroundColor: "var(--mail-surface-soft)", 
                 display: "flex", 
                 alignItems: "center", 
                 justifyContent: "center",
                 marginBottom: "8px",
-                border: "1px solid rgba(255,255,255,0.04)"
+                border: "1px solid var(--mail-border)"
               }}>
                 <Mail size={24} style={{ opacity: 0.3, color: "var(--color-text-secondary)" }} />
               </div>
