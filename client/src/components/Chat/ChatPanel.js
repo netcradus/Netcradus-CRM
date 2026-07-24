@@ -115,6 +115,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     pagination, selectConversation, selectedConversation, sendMessage,
     sendTyping, typingLabel, updateMessage, uploadChatFile,
     replyToMessage, setReplyToMessage, addReaction, forwardMessage,
+    deleteMessageForMe, deleteMessageForEveryone,
   } = useChat();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -149,6 +150,12 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
 
   // Reactions States
   const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = useState(null);
+
+  // Deletion States
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState(null);
+  const [deleteOption, setDeleteOption] = useState("me");
+  const [isDeletingLoading, setIsDeletingLoading] = useState(false);
 
   // Mobile Action Menu State
   const [activeMobileActionMenuMessageId, setActiveMobileActionMenuMessageId] = useState(null);
@@ -246,6 +253,29 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
     setSelectedForwardConvIds(prev => 
       prev.includes(convId) ? prev.filter(id => id !== convId) : [...prev, convId]
     );
+  };
+
+  const handleDeleteMessageSubmit = async () => {
+    if (!deletingMessage) return;
+
+    try {
+      setIsDeletingLoading(true);
+      if (deleteOption === "me") {
+        await deleteMessageForMe(deletingMessage._id);
+        showToast("Message deleted for you");
+      } else {
+        await deleteMessageForEveryone(deletingMessage._id);
+        showToast("Message deleted for everyone");
+      }
+      setShowDeleteModal(false);
+      setDeletingMessage(null);
+    } catch (err) {
+      console.error("Deletion failed:", err);
+      const msg = err.response?.data?.message || "Failed to delete message";
+      showToast(msg);
+    } finally {
+      setIsDeletingLoading(false);
+    }
   };
 
   const COMMON_EMOJIS = [
@@ -748,6 +778,18 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                           >
                             <Share2 size={12} />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingMessage(m);
+                              setDeleteOption("me");
+                              setShowDeleteModal(true);
+                            }}
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       )}
 
@@ -798,7 +840,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                       )}
 
                       {/* Quoted Quoting Reply */}
-                      {m.replyTo && (
+                      {m.replyTo && !m.isDeleted && (
                         <div 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -838,14 +880,14 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                         </div>
                       )}
 
-                      {m.isForwarded && (
+                      {m.isForwarded && !m.isDeleted && (
                         <span style={{ display: "block", fontSize: "10px", fontStyle: "italic", color: "var(--color-text-muted)", marginBottom: "4px" }}>
                           Forwarded
                         </span>
                       )}
 
                       {selectedConversation.isGroup && !isOwn && <strong className="chat-bubble__sender">{m.sender?.name || "User"}</strong>}
-                      {m.fileUrl && (
+                      {m.fileUrl && !m.isDeleted && (
                         <div className="chat-bubble__file-attachment" style={{ marginBottom: m.rawMessageText ? "8px" : "0px" }}>
                           {m.messageType === "image" ? (
                             <div className="chat-file-image">
@@ -919,10 +961,17 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                           )}
                         </div>
                       )}
-                      {m.rawMessageText && <p>{m.rawMessageText}</p>}
+                      {m.isDeleted ? (
+                        <p style={{ fontStyle: "italic", color: "var(--color-text-muted)", display: "flex", alignItems: "center", gap: "6px", margin: "4px 0" }}>
+                          <span>🗑</span>
+                          This message was deleted.
+                        </p>
+                      ) : (
+                        m.rawMessageText && <p>{m.rawMessageText}</p>
+                      )}
 
                       {/* Reactions Chips Display */}
-                      {Array.isArray(m.reactions) && m.reactions.length > 0 && (
+                      {Array.isArray(m.reactions) && m.reactions.length > 0 && !m.isDeleted && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }} onClick={(e) => e.stopPropagation()}>
                           {(() => {
                             const groups = {};
@@ -1354,6 +1403,10 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
               .chat-reaction-emoji-btn:hover {
                 transform: scale(1.3);
               }
+              @keyframes chatSlideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+              }
             `}</style>
 
             {/* Custom Lightbox Image Viewer Overlay */}
@@ -1537,6 +1590,173 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
                 </div>
               </div>
             )}
+
+            {/* Delete Message Modal */}
+            {showDeleteModal && deletingMessage && (() => {
+              const isSender = (
+                deletingMessage.sender?._id === currentUserId ||
+                deletingMessage.senderId?._id === currentUserId ||
+                deletingMessage.senderId === currentUserId
+              );
+              const isWithinTimeLimit = Date.now() - new Date(deletingMessage.createdAt).getTime() <= 24 * 60 * 60 * 1000;
+              const canDeleteForEveryone = isSender && isWithinTimeLimit;
+
+              return (
+                <div 
+                  style={{
+                    position: "fixed",
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0, 0, 0, 0.6)",
+                    display: "flex",
+                    alignItems: isMobile ? "flex-end" : "center",
+                    justifyContent: "center",
+                    zIndex: 10000,
+                    padding: isMobile ? "0" : "16px"
+                  }}
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  <div 
+                    style={isMobile ? {
+                      background: "var(--color-bg-elevated, #1c1c24)",
+                      borderTop: "1px solid var(--color-border, #2d2d34)",
+                      borderTopLeftRadius: "16px",
+                      borderTopRightRadius: "16px",
+                      width: "100%",
+                      boxShadow: "0 -4px 16px rgba(0, 0, 0, 0.2)",
+                      animation: "chatSlideUp 0.2s ease-out",
+                      padding: "20px 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px"
+                    } : {
+                      background: "var(--color-bg-elevated, #1c1c24)",
+                      border: "1px solid var(--color-border, #2d2d34)",
+                      borderRadius: "12px",
+                      width: "100%",
+                      maxWidth: "340px",
+                      boxShadow: "var(--shadow-lg)",
+                      animation: "chatFadeIn 0.15s ease-out",
+                      padding: "20px"
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", color: "var(--color-text, #ffffff)", fontWeight: "600" }}>
+                      Delete message
+                    </h3>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {canDeleteForEveryone && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm("Delete this message for everyone?")) {
+                                try {
+                                  setIsDeletingLoading(true);
+                                  await deleteMessageForEveryone(deletingMessage._id);
+                                  showToast("Message deleted for everyone");
+                                  setShowDeleteModal(false);
+                                  setDeletingMessage(null);
+                                } catch (err) {
+                                  const msg = err.response?.data?.message || "Failed to delete message";
+                                  showToast(msg);
+                                } finally {
+                                  setIsDeletingLoading(false);
+                                }
+                              }
+                            }}
+                            disabled={isDeletingLoading}
+                            style={{
+                              width: "100%",
+                              padding: "10px 14px 4px 14px",
+                              background: "transparent",
+                              border: "none",
+                              borderRadius: "6px",
+                              color: "#ff4d4f",
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              transition: "background 0.2s"
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 77, 79, 0.08)"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          >
+                            Delete for everyone
+                          </button>
+                          <div style={{ padding: "0 14px 8px 14px", fontSize: "11px", color: "var(--color-text-muted, #8e8e93)", fontStyle: "italic" }}>
+                            Delete for everyone is available for 24 hours.
+                          </div>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsDeletingLoading(true);
+                            await deleteMessageForMe(deletingMessage._id);
+                            showToast("Message deleted for you");
+                            setShowDeleteModal(false);
+                            setDeletingMessage(null);
+                          } catch (err) {
+                            const msg = err.response?.data?.message || "Failed to delete message";
+                            showToast(msg);
+                          } finally {
+                            setIsDeletingLoading(false);
+                          }
+                        }}
+                        disabled={isDeletingLoading}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "6px",
+                          color: "var(--color-text, #ffffff)",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Delete for me
+                      </button>
+
+                      {isSender && !isWithinTimeLimit && (
+                        <div style={{ padding: "4px 14px", fontSize: "11px", color: "var(--color-text-muted, #8e8e93)", fontStyle: "italic" }}>
+                          Delete for everyone is no longer available.
+                        </div>
+                      )}
+
+                      <div style={{ height: "1px", background: "var(--color-border, #2d2d34)", margin: "8px 0" }} />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteModal(false)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "6px",
+                          color: "var(--color-text-muted, #8e8e93)",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          transition: "background 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         ) : (
           <div className="chat-placeholder">

@@ -18,27 +18,32 @@ function normalizeMessage(messageDoc) {
     conversationId: String(messageDoc.conversationId),
     sender,
     messageText: (() => {
-      if (messageDoc.isDeleted) return "This message was deleted.";
+      if (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) return "This message was deleted.";
       if (messageDoc.messageText) return messageDoc.messageText;
       if (messageDoc.messageType === "image") return "Photo";
       if (messageDoc.messageType === "archive") return messageDoc.fileName || "Archive";
       if (messageDoc.fileUrl) return messageDoc.fileName || "Document";
       return "";
     })(),
-    rawMessageText: messageDoc.isDeleted ? "This message was deleted." : (messageDoc.messageText || ""),
-    fileUrl: messageDoc.isDeleted ? "" : (messageDoc.fileUrl || ""),
-    fileName: messageDoc.isDeleted ? "" : (messageDoc.fileName || ""),
-    fileSize: messageDoc.isDeleted ? 0 : (messageDoc.fileSize || 0),
-    mimeType: messageDoc.isDeleted ? "" : (messageDoc.mimeType || ""),
-    messageType: messageDoc.isDeleted ? "text" : (messageDoc.messageType || "text"),
+    rawMessageText: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? "This message was deleted." : (messageDoc.messageText || ""),
+    fileUrl: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? "" : (messageDoc.fileUrl || ""),
+    fileName: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? "" : (messageDoc.fileName || ""),
+    fileSize: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? 0 : (messageDoc.fileSize || 0),
+    mimeType: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? "" : (messageDoc.mimeType || ""),
+    messageType: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone) ? "text" : (messageDoc.messageType || "text"),
     isRead: Boolean(messageDoc.isRead),
     readAt: messageDoc.readAt,
     readBy: Array.isArray(messageDoc.readBy) ? messageDoc.readBy.map(String) : [],
     editedAt: messageDoc.editedAt,
-    isDeleted: Boolean(messageDoc.isDeleted),
+    isDeleted: Boolean(messageDoc.isDeleted || messageDoc.isDeletedForEveryone),
     deletedAt: messageDoc.deletedAt,
     isForwarded: Boolean(messageDoc.isForwarded),
-    reactions: Array.isArray(messageDoc.reactions)
+    isDeletedForEveryone: Boolean(messageDoc.isDeletedForEveryone),
+    deletedBy: messageDoc.deletedBy ? String(messageDoc.deletedBy) : null,
+    deletedFor: Array.isArray(messageDoc.deletedFor) ? messageDoc.deletedFor.map(d => String(d.userId)) : [],
+    reactions: (messageDoc.isDeleted || messageDoc.isDeletedForEveryone)
+      ? []
+      : Array.isArray(messageDoc.reactions)
       ? messageDoc.reactions.map(r => ({
           userId: String(r.userId),
           emoji: r.emoji,
@@ -51,12 +56,12 @@ function normalizeMessage(messageDoc) {
           senderName: messageDoc.replyTo.senderId && typeof messageDoc.replyTo.senderId === "object"
             ? messageDoc.replyTo.senderId.name || "User"
             : "User",
-          messageText: messageDoc.replyTo.isDeleted
+          messageText: (messageDoc.replyTo.isDeleted || messageDoc.replyTo.isDeletedForEveryone)
             ? "This message was deleted."
             : (messageDoc.replyTo.messageText || ""),
-          fileUrl: messageDoc.replyTo.isDeleted ? "" : (messageDoc.replyTo.fileUrl || ""),
-          fileName: messageDoc.replyTo.isDeleted ? "" : (messageDoc.replyTo.fileName || ""),
-          messageType: messageDoc.replyTo.isDeleted ? "text" : (messageDoc.replyTo.messageType || "text")
+          fileUrl: (messageDoc.replyTo.isDeleted || messageDoc.replyTo.isDeletedForEveryone) ? "" : (messageDoc.replyTo.fileUrl || ""),
+          fileName: (messageDoc.replyTo.isDeleted || messageDoc.replyTo.isDeletedForEveryone) ? "" : (messageDoc.replyTo.fileName || ""),
+          messageType: (messageDoc.replyTo.isDeleted || messageDoc.replyTo.isDeletedForEveryone) ? "text" : (messageDoc.replyTo.messageType || "text")
         }
       : null,
     createdAt: messageDoc.createdAt,

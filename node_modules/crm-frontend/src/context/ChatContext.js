@@ -340,6 +340,31 @@ export function ChatProvider({ children }) {
     return data;
   }, []);
 
+  const deleteMessageForMe = useCallback(async (messageId) => {
+    const { data } = await axios.patch(
+      apiUrl(`/api/messages/${messageId}/delete-for-me`),
+      {},
+      getAuthConfig()
+    );
+    setMessagesByConversation((current) => {
+      const nextState = {};
+      Object.keys(current).forEach((convId) => {
+        nextState[convId] = (current[convId] || []).filter((msg) => msg._id !== messageId);
+      });
+      return nextState;
+    });
+    return data;
+  }, []);
+
+  const deleteMessageForEveryone = useCallback(async (messageId) => {
+    const { data } = await axios.patch(
+      apiUrl(`/api/messages/${messageId}/delete-for-everyone`),
+      {},
+      getAuthConfig()
+    );
+    return data;
+  }, []);
+
   const uploadChatFile = useCallback(async (file, conversationId, onProgress = () => {}) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -506,6 +531,52 @@ export function ChatProvider({ children }) {
       }));
     };
 
+    const handleMessageDeletedForEveryone = ({ messageId, deletedForEveryone, deletedBy }) => {
+      setMessagesByConversation((current) => {
+        const nextState = {};
+        Object.keys(current).forEach((convId) => {
+          nextState[convId] = (current[convId] || []).map((msg) => {
+            if (msg._id === messageId) {
+              return {
+                ...msg,
+                messageText: "This message was deleted.",
+                rawMessageText: "This message was deleted.",
+                isDeleted: true,
+                isDeletedForEveryone: true,
+                deletedBy,
+                deletedAt: new Date().toISOString(),
+                fileUrl: "",
+                fileName: "",
+                fileSize: 0,
+                mimeType: "",
+                messageType: "text",
+                reactions: []
+              };
+            }
+            return msg;
+          });
+        });
+        return nextState;
+      });
+
+      setConversations((current) =>
+        current.map((c) => {
+          if (c.lastMessage?._id === messageId) {
+            return {
+              ...c,
+              lastMessage: {
+                ...c.lastMessage,
+                messageText: "This message was deleted.",
+                isDeleted: true,
+                isDeletedForEveryone: true
+              }
+            };
+          }
+          return c;
+        })
+      );
+    };
+
     const handleMessageRead = ({ conversationId, messageIds, readAt }) => {
       const idSet = new Set(messageIds || []);
       setMessagesByConversation((current) => ({
@@ -580,6 +651,7 @@ export function ChatProvider({ children }) {
     socket.on("new_message", handleNewMessage);
     socket.on("message_updated", handleMessageUpdated);
     socket.on("message_deleted", handleMessageDeleted);
+    socket.on("message:deleted", handleMessageDeletedForEveryone);
     socket.on("message_read", handleMessageRead);
     socket.on("user_typing", handleTyping);
     socket.on("user_online", handleUserOnline);
@@ -594,6 +666,7 @@ export function ChatProvider({ children }) {
       socket.off("new_message", handleNewMessage);
       socket.off("message_updated", handleMessageUpdated);
       socket.off("message_deleted", handleMessageDeleted);
+      socket.off("message:deleted", handleMessageDeletedForEveryone);
       socket.off("message_read", handleMessageRead);
       socket.off("user_typing", handleTyping);
       socket.off("user_online", handleUserOnline);
@@ -637,6 +710,8 @@ export function ChatProvider({ children }) {
     setReplyToMessage,
     addReaction,
     forwardMessage,
+    deleteMessageForMe,
+    deleteMessageForEveryone,
   }), [
     conversations,
     createConversation,

@@ -99,6 +99,23 @@ const messageSchema = new mongoose.Schema(
         },
       },
     ],
+    deletedFor: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        }
+      }
+    ],
+    isDeletedForEveryone: {
+      type: Boolean,
+      default: false
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
   },
   { timestamps: true }
 );

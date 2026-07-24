@@ -75,13 +75,37 @@ async function getConversations(req, res) {
     );
     const presenceMap = getPresenceForUsers(userIds);
 
-    const data = conversations.map((conversation) =>
-      buildConversationSummary(
-        conversation,
-        currentUserId,
-        unreadCountMap[String(conversation._id)] || 0,
-        presenceMap
-      )
+    const data = await Promise.all(
+      conversations.map(async (conversation) => {
+        let lastMsg = conversation.lastMessageId;
+        const isDeletedForUser = lastMsg && 
+          Array.isArray(lastMsg.deletedFor) && 
+          lastMsg.deletedFor.some(d => String(d.userId) === String(currentUserId));
+
+        if (isDeletedForUser) {
+          const lastVisibleMsg = await Message.findOne({
+            conversationId: conversation._id,
+            "deletedFor.userId": { $ne: currentUserId }
+          })
+            .populate("senderId", "_id name email")
+            .populate({
+              path: "replyTo",
+              select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+              populate: { path: "senderId", select: "_id name email" }
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+          
+          conversation.lastMessageId = lastVisibleMsg;
+        }
+
+        return buildConversationSummary(
+          conversation,
+          currentUserId,
+          unreadCountMap[String(conversation._id)] || 0,
+          presenceMap
+        );
+      })
     );
 
     return res.json({
@@ -107,8 +131,12 @@ async function getConversationMessages(req, res) {
       return res.status(404).json({ success: false, message: "Conversation not found" });
     }
 
-    const total = await Message.countDocuments({ conversationId: id });
-    const messages = await Message.find({ conversationId: id })
+    const filter = {
+      conversationId: id,
+      "deletedFor.userId": { $ne: currentUserId }
+    };
+    const total = await Message.countDocuments(filter);
+    const messages = await Message.find(filter)
       .populate("senderId", "_id name email")
       .populate({
         path: "replyTo",
@@ -642,6 +670,28 @@ async function loadConversationSummaryLocal(conversationId, currentUserId) {
   const userIds = conversation.participants.map((participant) => String(participant._id));
   const presenceMap = getPresenceForUsers(userIds);
 
+  let lastMsg = conversation.lastMessageId;
+  const isDeletedForUser = lastMsg && 
+    Array.isArray(lastMsg.deletedFor) && 
+    lastMsg.deletedFor.some(d => String(d.userId) === String(currentUserId));
+
+  if (isDeletedForUser) {
+    const lastVisibleMsg = await Message.findOne({
+      conversationId: conversation._id,
+      "deletedFor.userId": { $ne: currentUserId }
+    })
+      .populate("senderId", "_id name email")
+      .populate({
+        path: "replyTo",
+        select: "senderId messageText fileUrl fileName messageType isDeleted messageText rawMessageText",
+        populate: { path: "senderId", select: "_id name email" }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    conversation.lastMessageId = lastVisibleMsg;
+  }
+
   return buildConversationSummary(conversation, currentUserId, unreadCount, presenceMap);
 }
 
@@ -801,10 +851,102 @@ const forwardMessage = async (req, res) => {
   }
 };
 
+async function deleteMessageForMe(req, res) {
+  try {
+    const { id } = req.params;
+    const currentUserId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid message ID" });
+    }
+
+    const message = await Message.findById(id);
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+
+    const conversation = await ensureConversationMember(message.conversationId, currentUserId);
+    if (!conversation) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const alreadyDeleted = message.deletedFor.some(d => String(d.userId) === String(currentUserId));
+    if (!alreadyDeleted) {
+      message.deletedFor.push({ userId: currentUserId });
+      await message.save();
+    }
+
+    return res.json({ success: true, message: "Message deleted for me" });
+  } catch (error) {
+    console.error("Delete message for me error:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete message" });
+  }
+}
+
+async function deleteMessageForEveryone(req, res) {
+  try {
+    const { id } = req.params;
+    const currentUserId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid message ID" });
+    }
+
+    const message = await Message.findById(id);
+    if (!message) {
+      return res.status(404).json({ success: false, message: "Message not found" });
+    }
+
+    if (String(message.senderId) !== String(currentUserId)) {
+      return res.status(403).json({ success: false, message: "Only the original sender may delete for everyone." });
+    }
+
+    const messageAge = Date.now() - new Date(message.createdAt).getTime();
+    if (messageAge > 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: "Delete for everyone is available for 24 hours." });
+    }
+
+    if (message.isDeletedForEveryone) {
+      return res.status(400).json({ success: false, message: "Message is already deleted." });
+    }
+
+    message.isDeleted = true;
+    message.isDeletedForEveryone = true;
+    message.deletedBy = currentUserId;
+    message.deletedAt = new Date();
+    message.messageText = "This message was deleted.";
+    message.fileUrl = "";
+    message.fileName = "";
+    message.fileSize = 0;
+    message.mimeType = "";
+    message.messageType = "text";
+    message.reactions = [];
+
+    await message.save();
+
+    const conversation = await Conversation.findById(message.conversationId);
+    if (conversation) {
+      const { emitToUsers } = require("../socket");
+      emitToUsers(conversation.participants.map(String), "message:deleted", {
+        messageId: String(message._id),
+        deletedForEveryone: true,
+        deletedBy: String(currentUserId)
+      });
+    }
+
+    return res.json({ success: true, message: "Message deleted for everyone" });
+  } catch (error) {
+    console.error("Delete message for everyone error:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete message" });
+  }
+}
+
 module.exports = {
   buildConversationSummary,
   createConversation,
   deleteMessage,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
   editMessage,
   ensureConversationMember,
   getChatDirectory,
