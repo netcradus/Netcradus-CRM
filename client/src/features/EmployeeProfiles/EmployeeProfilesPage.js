@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { User, Briefcase, Mail, Phone, MapPin, Plus, Save, Download, FileText, Search, ShieldAlert, Edit, Trash2, Eye, Clock, X } from "lucide-react";
+import { User, Briefcase, Mail, Phone, MapPin, Plus, Save, Download, FileText, Search, ShieldAlert, Edit, Trash2, Eye, Clock, X, Menu, ChevronRight } from "lucide-react";
 import { apiUrl } from "../../config/api";
 
 const emptyForm = {
@@ -51,7 +51,6 @@ const emptySalarySlipForm = {
   dearnessAllowance: "",
   specialAllowance: "",
   otherEarnings: "",
-  // Sales specific
   travelAllowance: "",
   salesIncentive: "",
   commission: "",
@@ -60,7 +59,6 @@ const emptySalarySlipForm = {
   achievedSales: "",
   targetAchievementBonus: "",
   clientAcquisitionBonus: "",
-  // IT specific
   conveyance: "",
   technicalAllowance: "",
   internetAllowance: "",
@@ -69,16 +67,12 @@ const emptySalarySlipForm = {
   onCallAllowance: "",
   overtimePay: "",
   projectCompletionBonus: "",
-  // Shared
   performanceBonus: "",
-  // Deductions
   professionalTax: "",
   otherDeductions: "",
-  // Attendance
   workingDays: "",
   paidDays: "",
   lopDays: "",
-  // Payment
   paymentMode: "",
   bankAccountLast4: "",
   notes: "",
@@ -94,11 +88,40 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+const maskAccountNumber = (number) => {
+  if (!number) return "Not provided";
+  const numStr = String(number).trim();
+  if (numStr.length <= 4) return numStr;
+  return "*".repeat(numStr.length - 4) + numStr.slice(-4);
+};
+
+const calculateTenure = (joiningDate, leavingDate) => {
+  if (!joiningDate) return "Not provided";
+  const start = new Date(joiningDate);
+  const end = leavingDate ? new Date(leavingDate) : new Date();
+  
+  if (isNaN(start.getTime())) return "Not provided";
+  
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  
+  const yearsStr = years > 0 ? `${years} yr${years > 1 ? "s" : ""}` : "";
+  const monthsStr = months > 0 ? `${months} mo${months > 1 ? "s" : ""}` : "";
+  
+  if (yearsStr && monthsStr) return `${yearsStr} ${monthsStr}`;
+  return yearsStr || monthsStr || "Less than a month";
+};
+
 function EmployeeProfilesPage() {
   const token = localStorage.getItem("token");
   const [profiles, setProfiles] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [activeTab, setActiveTab] = useState("Personal");
+  const [activeTab, setActiveTab] = useState("Overview");
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,8 +132,29 @@ function EmployeeProfilesPage() {
   const [salarySlips, setSalarySlips] = useState([]);
   const [salarySlipsLoading, setSalarySlipsLoading] = useState(false);
   const [salarySlipsError, setSalarySlipsError] = useState("");
+  
+  // Document state
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docsError, setDocsError] = useState("");
+  const [uploadType, setUploadType] = useState("Resume");
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadNotes, setUploadNotes] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  // Responsive Layout States
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showMissingFields, setShowMissingFields] = useState(false);
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const fetchProfiles = useCallback(async () => {
     try {
@@ -132,7 +176,6 @@ function EmployeeProfilesPage() {
     setSalarySlipsError("");
     try {
       const { data } = await axios.get(apiUrl(`/api/contacts/${userId}/salary-slips`), { headers });
-      // Response shape: { success: true, data: { salarySlips: [...] } }
       const slips = data?.data?.salarySlips ?? [];
       setSalarySlips(slips);
     } catch (err) {
@@ -143,14 +186,31 @@ function EmployeeProfilesPage() {
     }
   }, [headers]);
 
-  // Clear stale slips immediately when the employee changes, then fetch fresh ones
+  const fetchEmployeeDocuments = useCallback(async (userId) => {
+    if (!userId) return;
+    setDocsLoading(true);
+    setDocsError("");
+    try {
+      const { data } = await axios.get(apiUrl(`/api/documents/employee/${userId}`), { headers });
+      setDocuments(data || []);
+    } catch (err) {
+      setDocsError("Failed to fetch documents.");
+    } finally {
+      setDocsLoading(false);
+    }
+  }, [headers]);
+
+  // Sync documents and slips when selection changes
   useEffect(() => {
     setSalarySlips([]);
     setSalarySlipsError("");
+    setDocuments([]);
+    setDocsError("");
     if (selectedUserId) {
       fetchSalarySlips(selectedUserId);
+      fetchEmployeeDocuments(selectedUserId);
     }
-  }, [selectedUserId, fetchSalarySlips]);
+  }, [selectedUserId, fetchSalarySlips, fetchEmployeeDocuments]);
 
   const selectedProfile = profiles.find(p => p.linkedUser?._id === selectedUserId) || null;
 
@@ -365,6 +425,47 @@ function EmployeeProfilesPage() {
       fetchEmployeeAssets(selectedUserId);
     }
   }, [selectedUserId, activeTab, fetchEmployeeAssets]);
+
+  // Dynamic Profile Completion Tracker
+  const profileCompletion = useMemo(() => {
+    if (!selectedProfile) return { percentage: 0, missing: [] };
+    const checks = [
+      { label: "Full Name", value: selectedProfile.name },
+      { label: "Work Email", value: selectedProfile.email },
+      { label: "Employee ID", value: selectedProfile.employeeId },
+      { label: "Department", value: selectedProfile.department },
+      { label: "Designation", value: selectedProfile.designation },
+      { label: "Date of Birth", value: selectedProfile.dob },
+      { label: "Blood Group", value: selectedProfile.bloodGroup },
+      { label: "Phone Number", value: selectedProfile.contactNumber },
+      { label: "Personal Email", value: selectedProfile.personalEmail },
+      { label: "Address", value: selectedProfile.address },
+      { label: "Emergency Contact Name", value: selectedProfile.emergencyContact?.name },
+      { label: "Emergency Contact Number", value: selectedProfile.emergencyContact?.contactNumber },
+      { label: "Employment Type", value: selectedProfile.employmentType },
+      { label: "Joining Date", value: selectedProfile.joiningDate },
+      { label: "Reporting Manager", value: selectedProfile.reportsTo },
+      { label: "Aadhaar Number", value: selectedProfile.aadhaarNumber },
+      { label: "PAN Number", value: selectedProfile.panNumber },
+      { label: "Bank Account Number", value: selectedProfile.bankDetails?.accountNumber },
+      { label: "Profile Photo", value: selectedProfile.profilePhoto }
+    ];
+
+    let filled = 0;
+    const missing = [];
+    checks.forEach(c => {
+      if (c.value !== undefined && c.value !== null && String(c.value).trim() !== "") {
+        filled++;
+      } else {
+        missing.push(c.label);
+      }
+    });
+
+    return {
+      percentage: Math.round((filled / checks.length) * 100),
+      missing
+    };
+  }, [selectedProfile]);
 
   const handleAssignAssetSubmit = async (e) => {
     e.preventDefault();
@@ -644,26 +745,22 @@ function EmployeeProfilesPage() {
 
   const handleReturnAssetSubmit = async (e) => {
     e.preventDefault();
-    if (!window.confirm("Confirm returning this asset?")) return;
     setSaving(true);
     setError("");
     setMessage("");
 
-    if (!returnForm.actualReturnDate) {
-      setError("Actual return date is required.");
+    if (!returnForm.actualReturnDate || !returnForm.returnCondition) {
+      setError("Actual Return Date and Return Condition are required.");
       setSaving(false);
       return;
     }
+
     if (new Date(returnForm.actualReturnDate) < new Date(selectedAsset.issueDate)) {
-      setError("Actual return date cannot be before the issue date.");
+      setError("Return Date cannot be before the Issue Date.");
       setSaving(false);
       return;
     }
-    if (!returnForm.returnCondition) {
-      setError("Return condition is required.");
-      setSaving(false);
-      return;
-    }
+
     if (["Damaged", "Lost"].includes(returnForm.returnCondition) && (!returnForm.returnNotes || !returnForm.returnNotes.trim())) {
       setError("Return notes are required when condition is Damaged or Lost.");
       setSaving(false);
@@ -684,7 +781,7 @@ function EmployeeProfilesPage() {
   };
 
   const handleArchiveAsset = async (assetId) => {
-    if (!window.confirm("Are you sure you want to archive this asset?")) return;
+    if (!window.confirm("Are you sure you want to archive this returned asset history record?")) return;
     setError("");
     setMessage("");
     try {
@@ -696,111 +793,17 @@ function EmployeeProfilesPage() {
     }
   };
 
-  const [documents, setDocuments] = useState([]);
-  const [docsLoading, setDocsLoading] = useState(false);
-  const [docsError, setDocsError] = useState("");
-  const [userStorage, setUserStorage] = useState(null);
-
-  const [uploadType, setUploadType] = useState("Resume");
-  const [uploadNotes, setUploadNotes] = useState("");
-  const [uploadFile, setUploadFile] = useState(null);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-
-  const directReports = useMemo(() => {
-    if (!selectedUserId) return [];
-    return profiles.filter(p => p.reportsTo && String(p.reportsTo) === String(selectedUserId));
-  }, [profiles, selectedUserId]);
-
-  const currentManager = useMemo(() => {
-    if (!form.reportsTo) return null;
-    return profiles.find(p => p.linkedUser?._id === form.reportsTo) || null;
-  }, [profiles, form.reportsTo]);
-
-  const fetchEmployeeDocuments = useCallback(async (userId) => {
-    if (!userId) return;
-    setDocsLoading(true);
-    setDocsError("");
-    try {
-      const storageRes = await axios.get(apiUrl(`/api/documents/storage?userId=${userId}`), { headers });
-      if (storageRes.data?.success) {
-        setUserStorage(storageRes.data.data);
-      }
-      const docsRes = await axios.get(apiUrl(`/api/documents/files?userId=${userId}&limit=100`), { headers });
-      if (docsRes.data?.success) {
-        setDocuments(docsRes.data.data);
-      }
-    } catch (err) {
-      setDocsError(err.response?.data?.message || "Failed to load documents");
-    } finally {
-      setDocsLoading(false);
-    }
-  }, [headers]);
-
-  useEffect(() => {
-    if (selectedUserId) {
-      fetchEmployeeDocuments(selectedUserId);
-    } else {
-      setDocuments([]);
-      setUserStorage(null);
-    }
-  }, [selectedUserId, fetchEmployeeDocuments]);
-
-  const handleUploadDocument = async (e) => {
-    e.preventDefault();
-    if (!uploadFile) {
-      setUploadError("Please select a file to upload.");
-      return;
-    }
-
-    const folder = userStorage?.subFolders?.find(f => f.name === 'contracts') || 
-                   userStorage?.subFolders?.find(f => f.name === 'general') ||
-                   userStorage?.subFolders?.[0];
-
-    if (!folder) {
-      setUploadError("Unable to resolve upload folder. Ensure storage is provisioned for this user.");
-      return;
-    }
-
-    setUploadingDoc(true);
-    setUploadError("");
-    const formData = new FormData();
-    formData.append("file", uploadFile);
-    formData.append("folderId", folder.driveFolderId);
-    formData.append("userId", selectedUserId);
-    formData.append("documentType", uploadType);
-    formData.append("notes", uploadNotes);
-
-    try {
-      await axios.post(apiUrl("/api/documents/upload"), formData, {
-        headers: {
-          ...headers,
-          "Content-Type": "multipart/form-data"
-        }
-      });
-      setUploadNotes("");
-      setUploadFile(null);
-      const fileInput = document.getElementById("doc-file-input");
-      if (fileInput) fileInput.value = "";
-      fetchEmployeeDocuments(selectedUserId);
-    } catch (err) {
-      setUploadError(err.response?.data?.message || "Failed to upload document");
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
+  // Profile image photo upload and delete handlers
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate size (2MB max)
-    if (file.size > 2 * 1024 * 1024) {
-      setError("File size exceeds 2 MB limit.");
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      setError("File is too large. Maximum size allowed is 2 MB.");
       return;
     }
 
-    // Validate file type
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       setError("Only JPG, PNG or WEBP files are allowed.");
@@ -917,7 +920,6 @@ function EmployeeProfilesPage() {
   };
 
   const validateForm = (form) => {
-    // 1. Joining Date
     if (form.joiningDate) {
       const now = new Date();
       const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -926,7 +928,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 2. Relieving Date
     if (form.leavingDate) {
       if (!form.joiningDate) {
         return "Joining Date is required before setting a Relieving Date.";
@@ -936,7 +937,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 3. Probation End Date
     if (form.probationEndDate) {
       if (!form.joiningDate) {
         return "Joining Date is required before setting a Probation End Date.";
@@ -946,7 +946,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 4. Employee Status checks
     if (form.employeeStatus === "Ex Employee" || form.employeeStatus === "Terminated") {
       if (!form.leavingDate) {
         return "Relieving Date is required when status is Ex Employee or Terminated.";
@@ -957,7 +956,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 5. Notice Period Days
     if (form.noticePeriodDays !== undefined && form.noticePeriodDays !== "") {
       const npDays = Number(form.noticePeriodDays);
       if (isNaN(npDays) || !Number.isInteger(npDays) || npDays < 0 || npDays > 365) {
@@ -965,7 +963,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 6. Offered Salary
     if (form.offeredSalary !== undefined && form.offeredSalary !== "" && form.offeredSalary !== "********") {
       const sal = Number(form.offeredSalary);
       if (isNaN(sal) || sal < 0) {
@@ -973,7 +970,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 7. Current Salary
     if (form.salary !== undefined && form.salary !== "" && form.salary !== "********") {
       const sal = Number(form.salary);
       if (isNaN(sal) || sal < 0) {
@@ -981,7 +977,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 8. Aadhaar Validation
     if (form.aadhaarNumber && !form.aadhaarNumber.includes("X") && !form.aadhaarNumber.includes("*")) {
       const cleanAadhaar = String(form.aadhaarNumber).replace(/\s/g, "");
       if (!/^[0-9]{12}$/.test(cleanAadhaar)) {
@@ -989,7 +984,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 9. PAN Validation
     if (form.panNumber && !form.panNumber.includes("X") && !form.panNumber.includes("*")) {
       const cleanPan = String(form.panNumber).trim().toUpperCase();
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
@@ -997,7 +991,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 10. UAN Validation
     if (form.uanNumber && !form.uanNumber.includes("X") && !form.uanNumber.includes("*")) {
       const cleanUan = String(form.uanNumber).trim();
       if (!/^[0-9]{12}$/.test(cleanUan)) {
@@ -1005,7 +998,6 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 11. ESIC Validation
     if (form.esicNumber && !form.esicNumber.includes("X") && !form.esicNumber.includes("*")) {
       const cleanEsic = String(form.esicNumber).trim();
       if (!/^[0-9]{10,17}$/.test(cleanEsic)) {
@@ -1013,14 +1005,12 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // 12. Reporting Manager (reportsTo)
     if (form.reportsTo && selectedUserId) {
       if (String(form.reportsTo) === String(selectedUserId)) {
         return "Employee cannot report to themselves.";
       }
     }
 
-    // 13. Bank Details Validation
     if (form.bankDetails) {
       const acc = String(form.bankDetails.accountNumber || "").trim();
       const conf = String(form.confirmAccountNumber || "").trim();
@@ -1044,7 +1034,7 @@ function EmployeeProfilesPage() {
   };
 
   const onUpdate = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError("");
     setMessage("");
 
@@ -1073,7 +1063,6 @@ function EmployeeProfilesPage() {
         }
       });
 
-      // Strip frontend-only field
       delete payload.confirmAccountNumber;
 
       if (payload.bankDetails) {
@@ -1115,7 +1104,6 @@ function EmployeeProfilesPage() {
       return;
     }
 
-    // Working Days Validation
     const workingRaw = salarySlipForm.workingDays;
     const workingVal = Number(workingRaw);
     if (workingRaw === undefined || workingRaw === null || workingRaw === "" || isNaN(workingVal) || !Number.isInteger(workingVal) || workingVal < 1 || workingVal > 31) {
@@ -1123,7 +1111,6 @@ function EmployeeProfilesPage() {
       return;
     }
 
-    // Paid Days Validation
     const paidRaw = salarySlipForm.paidDays;
     const paidVal = Number(paidRaw);
     if (paidRaw === undefined || paidRaw === null || paidRaw === "" || isNaN(paidVal) || !Number.isInteger(paidVal) || paidVal <= 0) {
@@ -1135,7 +1122,6 @@ function EmployeeProfilesPage() {
       return;
     }
 
-    // LWP/LOP Days Validation
     const lopDaysRaw = salarySlipForm.lopDays !== undefined && salarySlipForm.lopDays !== null && salarySlipForm.lopDays !== "" ? salarySlipForm.lopDays : 0;
     const lopDaysVal = Number(lopDaysRaw);
     if (isNaN(lopDaysVal) || !Number.isInteger(lopDaysVal) || lopDaysVal < 0) {
@@ -1147,13 +1133,11 @@ function EmployeeProfilesPage() {
       return;
     }
 
-    // Combined validation
     if (paidVal + lopDaysVal > workingVal) {
       setError("Paid Days and LWP/LOP Days cannot exceed total Working Days.");
       return;
     }
 
-    // Monetary values check (no negative values)
     const monetaryFields = [
       "basicSalary", "hra", "dearnessAllowance", "specialAllowance", "otherEarnings",
       "travelAllowance", "salesIncentive", "commission", "commissionRate",
@@ -1172,14 +1156,12 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // Commission rate must be between 0 and 100
     const commRateVal = Number(salarySlipForm.commissionRate) || 0;
     if (commRateVal < 0 || commRateVal > 100) {
       setError("Commission rate must be between 0 and 100");
       return;
     }
 
-    // Bank account last digits must contain exactly 4 digits when provided
     if (salarySlipForm.bankAccountLast4 && salarySlipForm.bankAccountLast4.trim()) {
       if (!/^[0-9]{4}$/.test(salarySlipForm.bankAccountLast4.trim())) {
         setError("Bank account last digits must contain exactly 4 digits");
@@ -1187,66 +1169,9 @@ function EmployeeProfilesPage() {
       }
     }
 
-    // Calculate net pay preview to validate it is non-negative
-    const dept = selectedDepartment;
-    const basic = basicVal;
-    const hra = Number(salarySlipForm.hra) || 0;
-    const dearness = Number(salarySlipForm.dearnessAllowance) || 0;
-    const spec = Number(salarySlipForm.specialAllowance) || 0;
-    const otherEarn = Number(salarySlipForm.otherEarnings) || 0;
-
-    let gross = basic + hra + dearness + spec + otherEarn;
-
-    if (dept === "sales") {
-      const achSales = Number(salarySlipForm.achievedSales) || 0;
-      const calculatedComm = achSales > 0 && commRateVal > 0
-        ? parseFloat((achSales * commRateVal / 100).toFixed(2))
-        : 0;
-      const commission = salarySlipForm.commission !== ""
-        ? (Number(salarySlipForm.commission) || 0)
-        : calculatedComm;
-
-      gross += (Number(salarySlipForm.travelAllowance) || 0) +
-               (Number(salarySlipForm.salesIncentive) || 0) +
-               commission +
-               (Number(salarySlipForm.targetAchievementBonus) || 0) +
-               (Number(salarySlipForm.clientAcquisitionBonus) || 0) +
-               (Number(salarySlipForm.performanceBonus) || 0);
-    } else if (dept === "it") {
-      gross += (Number(salarySlipForm.conveyance) || 0) +
-               (Number(salarySlipForm.technicalAllowance) || 0) +
-               (Number(salarySlipForm.internetAllowance) || 0) +
-               (Number(salarySlipForm.wfhAllowance) || 0) +
-               (Number(salarySlipForm.nightShiftAllowance) || 0) +
-               (Number(salarySlipForm.onCallAllowance) || 0) +
-               (Number(salarySlipForm.overtimePay) || 0) +
-               (Number(salarySlipForm.projectCompletionBonus) || 0) +
-               (Number(salarySlipForm.performanceBonus) || 0);
-    } else {
-      gross += (Number(salarySlipForm.conveyance) || 0);
-    }
-
-    const profTax = Number(salarySlipForm.professionalTax) || 0;
-    const otherDed = Number(salarySlipForm.otherDeductions) || 0;
-    const lopDeduction = (workingVal > 0 && lopDaysVal > 0)
-      ? parseFloat(((basic / workingVal) * lopDaysVal).toFixed(2))
-      : 0;
-    const totalDed = parseFloat((profTax + otherDed + lopDeduction).toFixed(2));
-    const net = parseFloat((gross - totalDed).toFixed(2));
-
-    if (net < 0) {
-      setError("Net Pay cannot be negative");
-      return;
-    }
-
     try {
-      await axios.post(
-        apiUrl(`/api/contacts/profiles/${selectedUserId}/salary-slips`),
-        { ...salarySlipForm, department: form.department || "" },
-        { headers }
-      );
+      await axios.post(apiUrl(`/api/contacts/${selectedUserId}/salary-slips`), salarySlipForm, { headers });
       setMessage("Salary slip generated successfully");
-      fetchProfiles();
       fetchSalarySlips(selectedUserId);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to generate salary slip");
@@ -1259,7 +1184,6 @@ function EmployeeProfilesPage() {
         headers,
         responseType: "blob",
       });
-
       const url = window.URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
@@ -1271,448 +1195,424 @@ function EmployeeProfilesPage() {
     }
   };
 
+  const handleUploadDocument = async (e) => {
+    e.preventDefault();
+    if (!uploadFile) {
+      setUploadError("Please select a file to upload.");
+      return;
+    }
+    setUploadError("");
+    setUploadingDoc(true);
+
+    const formData = new FormData();
+    formData.append("document", uploadFile);
+    formData.append("documentType", uploadType);
+    formData.append("notes", uploadNotes);
+
+    try {
+      await axios.post(apiUrl(`/api/documents/upload/${selectedUserId}`), formData, {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      setUploadFile(null);
+      setUploadNotes("");
+      const docInput = document.getElementById("doc-file-input");
+      if (docInput) docInput.value = "";
+      fetchEmployeeDocuments(selectedUserId);
+    } catch (err) {
+      setUploadError(err.response?.data?.message || "Failed to upload document.");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const selectedDepartment = String(
     selectedProfile?.department ||
     form?.department ||
     selectedProfile?.linkedUser?.department ||
     ""
-  )
-    .trim()
-    .toLowerCase();
+  ).trim().toLowerCase();
 
   const filteredProfiles = profiles.filter(p => (p.name || "").toLowerCase().includes(search.toLowerCase()) || (p.email || "").toLowerCase().includes(search.toLowerCase()));
+  const currentManager = profiles.find(p => p.linkedUser?._id === form.reportsTo) || null;
+  const directReports = profiles.filter(p => p.reportsTo === selectedUserId);
+
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1200;
+
+  // SVG circular properties
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (profileCompletion.percentage / 100) * circumference;
 
   return (
-    <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
-      <div className="page-header">
-        <div className="page-header-left">
-          <h1 className="title">Employee Profiles</h1>
-          <p className="subtitle">Central directory for staff records and payroll.</p>
+    <div className="dashboard-container" style={{ padding: "var(--space-6)" }}>
+      {/* Mobile Selector Header Bar */}
+      {isMobile && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--color-bg-surface)", padding: "12px 16px", borderRadius: "var(--border-radius)", border: "1px solid var(--color-border)", marginBottom: "var(--space-4)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Menu size={18} style={{ color: "var(--color-accent)" }} onClick={() => setIsSidebarOpen(true)} />
+            <span style={{ fontSize: "var(--text-sm)", fontWeight: "bold" }}>
+              {selectedProfile ? selectedProfile.name : "Select Employee"}
+            </span>
+          </div>
+          <button type="button" className="btn btn-ghost" style={{ fontSize: "12px", minHeight: "auto", minWidth: "auto", padding: "4px 8px" }} onClick={() => setIsSidebarOpen(true)}>
+            Directory
+          </button>
         </div>
-      </div>
+      )}
 
-      <div className="employee-profiles-layout" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 'var(--space-6)' }}>
-        <div className="nc-card" style={{ display: 'flex', flexDirection: 'column', padding: 'var(--space-4)' }}>
-          <div className="form-field" style={{ marginBottom: 'var(--space-4)' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-              <input className="form-input" style={{ paddingLeft: '36px' }} placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Main Grid Wrapper */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : isTablet ? "240px 1fr" : "280px 1fr 340px",
+        gap: "var(--space-6)",
+        alignItems: "start"
+      }}>
+
+        {/* Sidebar / Left Directory Column */}
+        <div className={`nc-card ${isMobile ? "mobile-sidebar" : ""}`} style={{
+          display: isMobile && !isSidebarOpen ? "none" : "flex",
+          flexDirection: "column",
+          padding: "var(--space-4)",
+          height: isMobile ? "100%" : "calc(82vh - 20px)",
+          position: isMobile ? "fixed" : "sticky",
+          top: isMobile ? 0 : "20px",
+          left: isMobile ? 0 : "auto",
+          width: isMobile ? "280px" : "auto",
+          zIndex: isMobile ? 1200 : 10,
+          boxShadow: isMobile ? "10px 0 30px rgba(0,0,0,0.5)" : "none",
+          border: "1px solid var(--color-border)"
+        }}>
+          {isMobile && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)" }}>
+              <span style={{ fontWeight: "bold", fontSize: "14px" }}>Directory List</span>
+              <button type="button" className="btn btn-ghost" onClick={() => setIsSidebarOpen(false)} style={{ padding: 4, minHeight: "auto", minWidth: "auto" }}>
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          <div className="form-field" style={{ marginBottom: "var(--space-4)" }}>
+            <div style={{ position: "relative" }}>
+              <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+              <input className="form-input" style={{ paddingLeft: "36px", fontSize: "var(--text-xs)" }} placeholder="Search name, email..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
             {filteredProfiles.map(p => (
-              <button key={p._id} className={`btn btn-ghost`} style={{
-                justifyContent: 'flex-start', textAlign: 'left', padding: 'var(--space-3)',
-                background: selectedUserId === p.linkedUser?._id ? 'var(--color-accent-muted)' : 'transparent',
-                border: '1px solid', borderColor: selectedUserId === p.linkedUser?._id ? 'var(--color-accent-soft)' : 'transparent'
-              }} onClick={() => setSelectedUserId(p.linkedUser?._id)}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--color-text-primary)' }}>{p.name}</span>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{p.designation} • {p.department}</span>
+              <button key={p._id} className="btn btn-ghost" style={{
+                justifyContent: "flex-start", textAlign: "left", padding: "10px 12px",
+                background: selectedUserId === p.linkedUser?._id ? "var(--color-accent-soft, rgba(255, 107, 0, 0.15))" : "transparent",
+                border: "1px solid", borderColor: selectedUserId === p.linkedUser?._id ? "var(--color-accent)" : "transparent",
+                display: "flex", alignItems: "center", gap: "10px"
+              }} onClick={() => {
+                setSelectedUserId(p.linkedUser?._id);
+                if (isMobile) setIsSidebarOpen(false);
+              }}>
+                {p.profilePhoto ? (
+                  <img
+                    src={`${apiUrl(p.profilePhoto)}?token=${localStorage.getItem("token") || ""}`}
+                    alt={p.name}
+                    style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }}
+                    onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                  />
+                ) : null}
+                <div style={{
+                  display: p.profilePhoto ? "none" : "flex",
+                  width: "32px", height: "32px", borderRadius: "50%",
+                  backgroundColor: "var(--color-bg-alt, #2a2a2a)", color: "var(--color-text-primary, #ffffff)",
+                  alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "bold"
+                }}>
+                  {getInitials(p.name)}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  <span style={{ fontWeight: "var(--font-semibold)", fontSize: "var(--text-xs)", color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+                  <span style={{ fontSize: "9px", color: "var(--color-text-muted)" }}>{p.designation || "Employee"} • {p.department || "Staff"}</span>
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="employee-profiles-detail-pane" style={{ overflowY: 'auto', paddingRight: 'var(--space-2)' }}>
+        {/* Backdrop for mobile directory */}
+        {isMobile && isSidebarOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1100 }} onClick={() => setIsSidebarOpen(false)}></div>
+        )}
+
+        {/* Center Main Profile Column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", width: "100%" }}>
           {selectedProfile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <>
+              {/* Premium Summary Header Card */}
+              <div className="nc-card" style={{ padding: "var(--space-5)", display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--space-5)", alignItems: "center", position: "relative", border: "1px solid var(--color-border)" }}>
+                {/* Photo container */}
+                <div style={{ position: "relative", width: "110px", height: "110px" }}>
+                  {form.profilePhoto ? (
+                    <img
+                      src={`${apiUrl(form.profilePhoto)}?token=${localStorage.getItem("token") || ""}`}
+                      alt={form.name}
+                      style={{ width: "110px", height: "110px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--color-border)" }}
+                      onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                    />
+                  ) : null}
+                  <div style={{
+                    display: form.profilePhoto ? "none" : "flex",
+                    width: "110px", height: "110px", borderRadius: "50%",
+                    backgroundColor: "var(--color-bg-alt, #2a2a2a)", color: "var(--color-text-primary)",
+                    alignItems: "center", justifyContent: "center", fontSize: "36px", fontWeight: "bold",
+                    border: "3px solid var(--color-border)"
+                  }}>
+                    {getInitials(form.name)}
+                  </div>
 
-
-              {/* Sticky Header with Tabs and Save Button */}
-              <div style={{
-                position: 'sticky',
-                top: '20px',
-                zIndex: 100,
-                background: 'var(--color-bg)',
-                padding: 'var(--space-3) 0',
-                borderBottom: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 'var(--space-4)',
-                flexWrap: 'nowrap',
-                marginBottom: 'var(--space-4)'
-              }}>
-                {/* Tabs Selector */}
-                <div style={{
-                  display: 'flex',
-                  gap: 'var(--space-2)',
-                  overflowX: 'auto',
-                  whiteSpace: 'nowrap',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                }}>
-                  {["Personal", "Employment", "Banking", "Documents", "Assets", "Payroll"].map(tab => (
-                    <button
-                      key={tab}
-                      type="button"
-                      className="btn"
-                      style={{
-                        background: activeTab === tab ? 'var(--color-accent)' : 'var(--color-bg-alt)',
-                        color: activeTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                        border: '1px solid',
-                        borderColor: activeTab === tab ? 'var(--color-accent)' : 'var(--color-border)',
-                        padding: 'var(--space-2) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        fontWeight: 'var(--font-semibold)',
-                        borderRadius: 'var(--border-radius)',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => setActiveTab(tab)}
-                    >
-                      {tab}
-                    </button>
-                  ))}
+                  {/* Photo Edit actions overlay button */}
+                  {isHRorSuperUser && (
+                    <div style={{ display: "flex", gap: "4px", position: "absolute", bottom: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        style={{ padding: "4px 8px", fontSize: "9px", minHeight: "auto", minWidth: "auto", height: "auto", borderRadius: "10px", background: "var(--color-bg-surface)", border: "1px solid var(--color-border)" }}
+                        onClick={() => document.getElementById("avatar-upload-input-header").click()}
+                      >
+                        Edit
+                      </button>
+                      {form.profilePhoto && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-danger"
+                          style={{ padding: "4px 8px", fontSize: "9px", minHeight: "auto", minWidth: "auto", height: "auto", borderRadius: "10px", background: "var(--color-bg-surface)", border: "1px solid var(--color-danger)" }}
+                          onClick={handleRemovePhoto}
+                        >
+                          Del
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    id="avatar-upload-input-header"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: "none" }}
+                    onChange={handlePhotoUpload}
+                  />
                 </div>
 
-                {/* Save Changes Button (Sticky and visible at all times) */}
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={saving}
-                  onClick={onUpdate}
-                  style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 'var(--font-semibold)',
-                    flexShrink: 0
-                  }}
-                >
-                  <Save size={16} style={{ marginRight: '8px' }} /> {saving ? "Saving..." : "Save Changes"}
-                </button>
+                {/* Profile header metadata fields */}
+                <div style={{ flex: 1, textAlign: isMobile ? "center" : "left", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: isMobile ? "center" : "flex-start", flexWrap: "wrap" }}>
+                    <h2 style={{ fontSize: "var(--text-lg)", fontWeight: "bold", margin: 0 }}>{form.name}</h2>
+                    <span className="badge badge-warning" style={{ fontSize: "10px", padding: "2px 8px" }}>{form.employeeStatus || "Active"}</span>
+                    <span className="badge badge-info" style={{ fontSize: "10px", padding: "2px 8px", background: "rgba(255, 107, 0, 0.2)", color: "var(--color-accent)" }}>
+                      {formatRole(selectedProfile.linkedUser?.role)}
+                    </span>
+                  </div>
+                  
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", margin: 0 }}>
+                    {form.designation || "Staff"} • {form.department || "Administration"}
+                  </p>
+                  
+                  <div style={{ display: "flex", gap: "12px", fontSize: "11px", color: "var(--color-text-muted)", flexWrap: "wrap", justifyContent: isMobile ? "center" : "flex-start", marginTop: "4px" }}>
+                    <span><strong>ID:</strong> {form.employeeId || "N/A"}</span>
+                    <span>•</span>
+                    <span><strong>Joined:</strong> {form.joiningDate ? new Date(form.joiningDate).toLocaleDateString("en-IN") : "N/A"}</span>
+                    <span>•</span>
+                    <span><strong>Blood:</strong> {form.bloodGroup || "Not provided"}</span>
+                  </div>
+                </div>
+
+                {/* Save Changes button positioned on header */}
+                <div style={{ width: isMobile ? "100%" : "auto", display: "flex", justifyContent: "center" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={saving}
+                    onClick={onUpdate}
+                    style={{ padding: "var(--space-2) var(--space-4)", fontSize: "var(--text-sm)", width: isMobile ? "100%" : "auto" }}
+                  >
+                    <Save size={14} style={{ marginRight: "6px" }} /> {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
               </div>
 
-              {/* Success / Error Messages */}
-              {error && (
-                <div className="badge badge-error" style={{ marginBottom: "var(--space-4)", padding: "var(--space-2) var(--space-4)", width: "100%", display: "block", textAlign: "left" }}>
-                  {error}
-                </div>
-              )}
-              {message && (
-                <div className="badge badge-success" style={{ marginBottom: "var(--space-4)", padding: "var(--space-2) var(--space-4)", width: "100%", display: "block", textAlign: "left" }}>
-                  {message}
+              {/* Navigation Tabs Bar */}
+              <div style={{
+                display: "flex",
+                gap: "var(--space-2)",
+                overflowX: "auto",
+                whiteSpace: "nowrap",
+                paddingBottom: "8px",
+                borderBottom: "1px solid var(--color-border)",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none"
+              }}>
+                {["Overview", "Personal", "Employment", "Contact", "Emergency", "Banking", "Documents", "Assets", "Payroll"].map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className="btn"
+                    style={{
+                      background: activeTab === tab ? "var(--color-accent)" : "var(--color-bg-alt)",
+                      color: activeTab === tab ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                      border: "1px solid",
+                      borderColor: activeTab === tab ? "var(--color-accent)" : "var(--color-border)",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      borderRadius: "var(--border-radius)",
+                      cursor: "pointer"
+                    }}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setError("");
+                      setMessage("");
+                    }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status messages indicator */}
+              {error && <div className="badge badge-error" style={{ padding: "var(--space-3)", display: "block" }}>{error}</div>}
+              {message && <div className="badge badge-success" style={{ padding: "var(--space-3)", display: "block" }}>{message}</div>}
+
+              {/* 1. Overview Dashboard Pane (READ-ONLY) */}
+              {activeTab === "Overview" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--space-5)" }}>
+                    {/* Basic details */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><User size={14} style={{ color: "var(--color-accent)" }} /> Basic details</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Full Name:</span> <strong>{form.name || "N/A"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Date of Birth:</span> <strong>{form.dob ? new Date(form.dob).toLocaleDateString("en-IN") : "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Blood Group:</span> <strong>{form.bloodGroup || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Employee ID:</span> <strong>{form.employeeId || "N/A"}</strong>
+                      </div>
+                    </div>
+
+                    {/* Employment */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><Briefcase size={14} style={{ color: "var(--color-accent)" }} /> Employment Status</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Status:</span> <strong>{form.employeeStatus || "N/A"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Type:</span> <strong>{form.employmentType || "N/A"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Joining Date:</span> <strong>{form.joiningDate ? new Date(form.joiningDate).toLocaleDateString("en-IN") : "N/A"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Tenure:</span> <strong>{calculateTenure(form.joiningDate, form.leavingDate)}</strong>
+                      </div>
+                    </div>
+
+                    {/* Contact details */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><Mail size={14} style={{ color: "var(--color-accent)" }} /> Contact details</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Phone:</span> <strong>{form.contactNumber || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Personal Email:</span> <strong style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{form.personalEmail || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Address:</span> <strong style={{ whiteSpace: "pre-line" }}>{form.address || "Not provided"}</strong>
+                      </div>
+                    </div>
+
+                    {/* Emergency details */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><ShieldAlert size={14} style={{ color: "var(--color-accent)" }} /> Emergency contact</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Contact Person:</span> <strong>{form.emergencyContact?.name || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Relationship:</span> <strong>{form.emergencyContact?.relationship || "Father"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Number:</span> <strong>{form.emergencyContact?.contactNumber || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Address:</span> <strong style={{ whiteSpace: "pre-line" }}>{form.emergencyContact?.address || "Not provided"}</strong>
+                      </div>
+                    </div>
+
+                    {/* Bank details summary */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><FileText size={14} style={{ color: "var(--color-accent)" }} /> Bank summary</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Bank Name:</span> <strong>{form.bankDetails?.bankName || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Account Number:</span> <strong>{maskAccountNumber(form.bankDetails?.accountNumber)}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>IFSC Code:</span> <strong>{form.bankDetails?.ifscCode || "Not provided"}</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Payment Mode:</span> <strong>{form.bankDetails?.paymentMode || "Not provided"}</strong>
+                      </div>
+                    </div>
+
+                    {/* Quick overview of documents and payroll slips */}
+                    <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}><FileText size={14} style={{ color: "var(--color-accent)" }} /> Documents & slips summary</h4>
+                      <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "8px 4px", fontSize: "var(--text-xs)" }}>
+                        <span style={{ color: "var(--color-text-muted)" }}>Total Documents:</span> <strong>{documents.length} ({documents.filter(d => d.status === "Verified").length} verified)</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>Salary Slips:</span> <strong>{salarySlips.length} generated</strong>
+                        <span style={{ color: "var(--color-text-muted)" }}>CTC (Annual CTC):</span> <strong>₹{(Number(form.salary) || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic list of active assets */}
+                  <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                    <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "4px", margin: "0 0 10px 0", display: "flex", alignItems: "center", gap: "6px" }}><Briefcase size={14} style={{ color: "var(--color-accent)" }} /> Assigned Assets ({assetsData.activeAssets?.length || 0})</h4>
+                    {assetsData.activeAssets && assetsData.activeAssets.length > 0 ? (
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        {assetsData.activeAssets.map(a => (
+                          <div key={a._id} style={{ background: "var(--color-bg-alt)", padding: "6px 12px", borderRadius: "var(--border-radius)", fontSize: "11px", border: "1px solid var(--color-border)" }}>
+                            <strong>{a.assetName}</strong> <span style={{ color: "var(--color-text-muted)" }}>({a.category === "Other" && a.customAssetType ? a.customAssetType : a.category})</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>No active assets assigned.</p>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Conditional Tab Rendering */}
-              {activeTab !== "Documents" && activeTab !== "Assets" && (
-                <form className="nc-card form" onSubmit={onUpdate}>
+              {/* Editable form components */}
+              {activeTab !== "Documents" && activeTab !== "Assets" && activeTab !== "Overview" && (
+                <form className="form" onSubmit={onUpdate} style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+                  
+                  {/* 2. Personal Tab Card sections */}
                   {activeTab === "Personal" && (
                     <>
-                      <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-4)' }}>Personal Details</h3>
-
-                      {/* Profile Photo Section */}
-                      <div className="profile-photo-section" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-5)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-4)' }}>
-                        {form.profilePhoto ? (
-                          <div style={{ position: 'relative', width: '96px', height: '96px' }}>
-                            <img
-                              src={`${apiUrl(form.profilePhoto)}?token=${localStorage.getItem("token") || ""}`}
-                              alt={form.name}
-                              style={{
-                                width: '96px',
-                                height: '96px',
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                border: '2px solid var(--color-border)'
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div
-                              style={{
-                                display: 'none',
-                                width: '96px',
-                                height: '96px',
-                                borderRadius: '50%',
-                                backgroundColor: 'var(--color-bg-alt, #2a2a2a)',
-                                color: 'var(--color-text-primary, #ffffff)',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '32px',
-                                fontWeight: 'var(--font-bold, 700)',
-                                border: '2px solid var(--color-border)'
-                              }}
-                            >
-                              {getInitials(form.name)}
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              width: '96px',
-                              height: '96px',
-                              borderRadius: '50%',
-                              backgroundColor: 'var(--color-bg-alt, #2a2a2a)',
-                              color: 'var(--color-text-primary, #ffffff)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '32px',
-                              fontWeight: 'var(--font-bold, 700)',
-                              border: '2px solid var(--color-border)'
-                            }}
-                          >
-                            {getInitials(form.name)}
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius-sm)' }}
-                              onClick={() => document.getElementById('avatar-upload-input').click()}
-                            >
-                              {form.profilePhoto ? "Change Photo" : "Upload Photo"}
-                            </button>
-                            {form.profilePhoto && (
-                              <button
-                                type="button"
-                                className="btn btn-ghost btn-danger"
-                                style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', border: '1px solid var(--color-danger, #ef4444)', color: 'var(--color-danger, #ef4444)', borderRadius: 'var(--border-radius-sm)' }}
-                                onClick={handleRemovePhoto}
-                              >
-                                Remove Photo
-                              </button>
-                            )}
-                          </div>
-                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted, #888888)' }}>
-                            JPG, PNG or WEBP. Max 2 MB.
-                          </span>
-                          <input
-                            id="avatar-upload-input"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            style={{ display: 'none' }}
-                            onChange={handlePhotoUpload}
-                          />
-                        </div>
-                      </div>
-
-                      <h4 style={{ marginBottom: 'var(--space-3)' }}>Basic Details</h4>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                        <div className="form-field">
-                          <label className="form-label">Full Name</label>
-                          <input className="form-input" value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Work Email</label>
-                          <input className="form-input" value={form.email || ""} readOnly style={{ opacity: 0.7 }} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Employee ID</label>
-                          <input className="form-input" value={form.employeeId || selectedProfile?.employeeId || "N/A"} readOnly style={{ opacity: 0.7 }} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Department</label>
-                          <input className="form-input" value={form.department || ""} onChange={e => setForm({ ...form, department: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Designation</label>
-                          <input className="form-input" value={form.designation || ""} onChange={e => setForm({ ...form, designation: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Date of Birth</label>
-                          <input className="form-input" type="date" value={form.dob || ""} onChange={e => setForm({ ...form, dob: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Blood Group</label>
-                          <select className="form-select" value={form.bloodGroup || ""} onChange={e => setForm({ ...form, bloodGroup: e.target.value })}>
-                            <option value="">Select Blood Group</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                        <h4 style={{ marginBottom: 'var(--space-3)' }}>Contact Details</h4>
-                        <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                      <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                        <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Basic details</h4>
+                        <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
                           <div className="form-field">
-                            <label className="form-label">Phone</label>
-                            <input className="form-input" value={form.contactNumber || ""} onChange={e => setForm({ ...form, contactNumber: e.target.value })} />
+                            <label className="form-label">Full Name</label>
+                            <input className="form-input" value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} />
                           </div>
                           <div className="form-field">
-                            <label className="form-label">Personal Email</label>
-                            <input className="form-input" value={form.personalEmail || ""} onChange={e => setForm({ ...form, personalEmail: e.target.value })} />
-                          </div>
-                          <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                            <label className="form-label">Address</label>
-                            <textarea className="form-input" rows={2} value={form.address || ""} onChange={e => setForm({ ...form, address: e.target.value })} />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                        <h4 style={{ marginBottom: 'var(--space-3)' }}>Emergency Contact Details</h4>
-                        <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                          <div className="form-field">
-                            <label className="form-label">Emergency Contact Name</label>
-                            <input
-                              className="form-input"
-                              placeholder="Enter emergency contact name"
-                              value={form.emergencyContact?.name || ""}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), name: e.target.value }
-                              })}
-                            />
+                            <label className="form-label">Work Email</label>
+                            <input className="form-input" value={form.email || ""} readOnly style={{ opacity: 0.7 }} />
                           </div>
                           <div className="form-field">
-                            <label className="form-label">Relationship</label>
-                            <select
-                              className="form-select"
-                              value={form.emergencyContact?.relationship || "Father"}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), relationship: e.target.value }
-                              })}
-                            >
-                              <option value="Father">Father</option>
-                              <option value="Mother">Mother</option>
-                              <option value="Brother">Brother</option>
-                              <option value="Sister">Sister</option>
-                              <option value="Spouse">Spouse</option>
-                              <option value="Friend">Friend</option>
-                              <option value="Guardian">Guardian</option>
-                              <option value="Other">Other</option>
+                            <label className="form-label">Employee ID</label>
+                            <input className="form-input" value={form.employeeId || selectedProfile?.employeeId || "N/A"} readOnly style={{ opacity: 0.7 }} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Date of Birth</label>
+                            <input className="form-input" type="date" value={form.dob || ""} onChange={e => setForm({ ...form, dob: e.target.value })} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Blood Group</label>
+                            <select className="form-select" value={form.bloodGroup || ""} onChange={e => setForm({ ...form, bloodGroup: e.target.value })}>
+                              <option value="">Select Blood Group</option>
+                              <option value="A+">A+</option>
+                              <option value="A-">A-</option>
+                              <option value="B+">B+</option>
+                              <option value="B-">B-</option>
+                              <option value="AB+">AB+</option>
+                              <option value="AB-">AB-</option>
+                              <option value="O+">O+</option>
+                              <option value="O-">O-</option>
                             </select>
                           </div>
-                          <div className="form-field">
-                            <label className="form-label">Contact Number</label>
-                            <input
-                              className="form-input"
-                              type="tel"
-                              maxLength={10}
-                              pattern="[0-9]{10}"
-                              placeholder="Enter emergency contact number"
-                              value={form.emergencyContact?.contactNumber || ""}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), contactNumber: e.target.value.replace(/\D/g, '') }
-                              })}
-                            />
-                          </div>
-                          <div className="form-field">
-                            <label className="form-label">Alternate Contact Number</label>
-                            <input
-                              className="form-input"
-                              type="tel"
-                              maxLength={10}
-                              pattern="[0-9]{10}"
-                              placeholder="Enter alternate contact number"
-                              value={form.emergencyContact?.alternateContactNumber || ""}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), alternateContactNumber: e.target.value.replace(/\D/g, '') }
-                              })}
-                            />
-                          </div>
-                          <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                            <label className="form-label">Address</label>
-                            <textarea
-                              className="form-input"
-                              rows={2}
-                              placeholder="Enter emergency contact address"
-                              value={form.emergencyContact?.address || ""}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), address: e.target.value }
-                              })}
-                            />
-                          </div>
-                          <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                            <label className="form-label">Notes</label>
-                            <textarea
-                              className="form-input"
-                              rows={2}
-                              placeholder="Additional information (medical conditions, availability, etc.)"
-                              value={form.emergencyContact?.notes || ""}
-                              onChange={e => setForm({
-                                ...form,
-                                emergencyContact: { ...(form.emergencyContact || {}), notes: e.target.value }
-                              })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {activeTab === "Employment" && (
-                    <>
-                      <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-4)' }}>Employment Information</h3>
-                      <h4 style={{ marginBottom: 'var(--space-3)' }}>Employment Details</h4>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                        <div className="form-field">
-                          <label className="form-label">Employee Status</label>
-                          <select className="form-select" value={form.employeeStatus || "Active"} onChange={e => setForm({ ...form, employeeStatus: e.target.value })}>
-                            <option value="Active">Active</option>
-                            <option value="Notice Period">Notice Period</option>
-                            <option value="Ex Employee">Ex Employee</option>
-                            <option value="Terminated">Terminated</option>
-                            <option value="Suspended">Suspended</option>
-                            <option value="On Leave">On Leave</option>
-                          </select>
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Employment Type</label>
-                          <select className="form-select" value={form.employmentType || "Full Time"} onChange={e => setForm({ ...form, employmentType: e.target.value })}>
-                            <option value="Full Time">Full Time</option>
-                            <option value="Part Time">Part Time</option>
-                            <option value="Contract">Contract</option>
-                            <option value="Consultant">Consultant</option>
-                            <option value="Paid Intern">Paid Intern</option>
-                            <option value="Unpaid Intern">Unpaid Intern</option>
-                            <option value="Trainee">Trainee</option>
-                            <option value="Probation">Probation</option>
-                          </select>
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Joining Date</label>
-                          <input className="form-input" type="date" value={form.joiningDate || ""} onChange={e => setForm({ ...form, joiningDate: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Relieving Date (Optional)</label>
-                          <input className="form-input" type="date" value={form.leavingDate || ""} onChange={e => setForm({ ...form, leavingDate: e.target.value })} />
-                        </div>
-                        <div className="form-field">
-                          <label className="form-label">Probation End Date (Optional)</label>
-                          <input className="form-input" type="date" value={form.probationEndDate || ""} onChange={e => setForm({ ...form, probationEndDate: e.target.value })} />
-                        </div>
-                        {form.employeeStatus === "Notice Period" && (
-                          <div className="form-field">
-                            <label className="form-label">Notice Period Days</label>
-                            <input className="form-input" type="number" min="0" max="365" step="1" value={form.noticePeriodDays || 0} onChange={e => setForm({ ...form, noticePeriodDays: e.target.value })} />
-                          </div>
-                        )}
-                        <div className="form-field">
-                          <label className="form-label">Reporting Manager</label>
-                          <select className="form-select" value={form.reportsTo || ""} onChange={e => setForm({ ...form, reportsTo: e.target.value })}>
-                            <option value="">No Reporting Manager</option>
-                            {activeManagerOptions.map(m => (
-                              <option key={m.linkedUser?._id} value={m.linkedUser?._id}>
-                                {m.name} ({m.designation || "Employee"})
-                              </option>
-                            ))}
-                          </select>
                         </div>
                       </div>
 
-                      <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                        <h4 style={{ marginBottom: 'var(--space-3)' }}>Government Details</h4>
-                        <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                      <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                        <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Government IDs & Credentials</h4>
+                        <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
                           <div className="form-field">
                             <label className="form-label">Aadhaar Number</label>
                             <input className="form-input" type="text" inputMode="numeric" maxLength={12} placeholder={form.aadhaarNumber && form.aadhaarNumber.includes("X") ? form.aadhaarNumber : "Enter 12-digit Aadhaar"} value={form.aadhaarNumber || ""} onChange={e => setForm({ ...form, aadhaarNumber: e.target.value.replace(/\D/g, "") })} />
@@ -1731,45 +1631,166 @@ function EmployeeProfilesPage() {
                           </div>
                         </div>
                       </div>
+                    </>
+                  )}
 
-                      <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-                        <h4 style={{ marginBottom: 'var(--space-3)' }}>Reporting Hierarchy</h4>
-                        <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  {/* 3. Employment Tab Card sections */}
+                  {activeTab === "Employment" && (
+                    <>
+                      <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                        <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Employment details</h4>
+                        <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
                           <div className="form-field">
-                            <label className="form-label">Current Manager Summary</label>
-                            <div className="form-input" style={{ background: 'var(--color-bg-alt)', opacity: 0.85, height: 'auto', minHeight: '38px', display: 'flex', alignItems: 'center' }}>
-                              {currentManager ? (
-                                <span>{currentManager.name} ({currentManager.designation || "N/A"} - {currentManager.department || "N/A"})</span>
-                              ) : (
-                                <span style={{ color: 'var(--color-text-muted)' }}>No Reporting Manager</span>
-                              )}
-                            </div>
+                            <label className="form-label">Employee Status</label>
+                            <select className="form-select" value={form.employeeStatus || "Active"} onChange={e => setForm({ ...form, employeeStatus: e.target.value })}>
+                              <option value="Active">Active</option>
+                              <option value="Notice Period">Notice Period</option>
+                              <option value="Ex Employee">Ex Employee</option>
+                              <option value="Terminated">Terminated</option>
+                              <option value="Suspended">Suspended</option>
+                              <option value="On Leave">On Leave</option>
+                            </select>
                           </div>
-                          <div className="form-field" style={{ gridColumn: 'span 2' }}>
-                            <label className="form-label">Direct Reports ({directReports.length})</label>
-                            <div style={{ background: 'var(--color-bg-alt)', borderRadius: 'var(--border-radius)', padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', maxHeight: '150px', overflowY: 'auto' }}>
-                              {directReports.length > 0 ? (
-                                directReports.map(rep => (
-                                  <div key={rep._id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', borderBottom: '1px solid var(--color-border-soft)', paddingBottom: '4px' }}>
-                                    <span style={{ fontWeight: 'var(--font-semibold)' }}>{rep.name}</span>
-                                    <span style={{ color: 'var(--color-text-muted)' }}>{rep.designation} • {rep.department}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>No direct reports.</div>
-                              )}
-                            </div>
+                          <div className="form-field">
+                            <label className="form-label">Employment Type</label>
+                            <select className="form-select" value={form.employmentType || "Full Time"} onChange={e => setForm({ ...form, employmentType: e.target.value })}>
+                              <option value="Full Time">Full Time</option>
+                              <option value="Part Time">Part Time</option>
+                              <option value="Contract">Contract</option>
+                              <option value="Consultant">Consultant</option>
+                              <option value="Paid Intern">Paid Intern</option>
+                              <option value="Unpaid Intern">Unpaid Intern</option>
+                              <option value="Trainee">Trainee</option>
+                              <option value="Probation">Probation</option>
+                            </select>
                           </div>
+                          <div className="form-field">
+                            <label className="form-label">Joining Date</label>
+                            <input className="form-input" type="date" value={form.joiningDate || ""} onChange={e => setForm({ ...form, joiningDate: e.target.value })} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Relieving Date (Optional)</label>
+                            <input className="form-input" type="date" value={form.leavingDate || ""} onChange={e => setForm({ ...form, leavingDate: e.target.value })} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Probation End Date (Optional)</label>
+                            <input className="form-input" type="date" value={form.probationEndDate || ""} onChange={e => setForm({ ...form, probationEndDate: e.target.value })} />
+                          </div>
+                          {form.employeeStatus === "Notice Period" && (
+                            <div className="form-field">
+                              <label className="form-label">Notice Period Days</label>
+                              <input className="form-input" type="number" min="0" max="365" step="1" value={form.noticePeriodDays || 0} onChange={e => setForm({ ...form, noticePeriodDays: e.target.value })} />
+                            </div>
+                          )}
+                          <div className="form-field">
+                            <label className="form-label">Department</label>
+                            <input className="form-input" value={form.department || ""} onChange={e => setForm({ ...form, department: e.target.value })} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Designation</label>
+                            <input className="form-input" value={form.designation || ""} onChange={e => setForm({ ...form, designation: e.target.value })} />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Reporting Manager</label>
+                            <select className="form-select" value={form.reportsTo || ""} onChange={e => setForm({ ...form, reportsTo: e.target.value })}>
+                              <option value="">No Reporting Manager</option>
+                              {activeManagerOptions.map(m => (
+                                <option key={m.linkedUser?._id} value={m.linkedUser?._id}>
+                                  {m.name} ({m.designation || "Employee"})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Direct Reports card */}
+                      <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                        <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Direct Reports ({directReports.length})</h4>
+                        <div style={{ background: "var(--color-bg-alt)", borderRadius: "var(--border-radius)", padding: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-2)", maxHeight: "150px", overflowY: "auto" }}>
+                          {directReports.length > 0 ? (
+                            directReports.map(rep => (
+                              <div key={rep._id} style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border-soft)", paddingBottom: "4px" }}>
+                                <span style={{ fontWeight: "var(--font-semibold)" }}>{rep.name}</span>
+                                <span style={{ color: "var(--color-text-muted)" }}>{rep.designation} • {rep.department}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)" }}>No direct reports.</div>
+                          )}
                         </div>
                       </div>
                     </>
                   )}
 
+                  {/* 4. Contact Tab Card sections */}
+                  {activeTab === "Contact" && (
+                    <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Personal contact info</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                        <div className="form-field">
+                          <label className="form-label">Phone Number</label>
+                          <input className="form-input" value={form.contactNumber || ""} onChange={e => setForm({ ...form, contactNumber: e.target.value })} />
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Personal Email</label>
+                          <input className="form-input" value={form.personalEmail || ""} onChange={e => setForm({ ...form, personalEmail: e.target.value })} />
+                        </div>
+                        <div className="form-field" style={{ gridColumn: "span 2" }}>
+                          <label className="form-label">Residential Address</label>
+                          <textarea className="form-input" rows={3} value={form.address || ""} onChange={e => setForm({ ...form, address: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Emergency Tab Card sections */}
+                  {activeTab === "Emergency" && (
+                    <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Emergency contact coordinates</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                        <div className="form-field">
+                          <label className="form-label">Emergency Contact Name</label>
+                          <input className="form-input" placeholder="Name" value={form.emergencyContact?.name || ""} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), name: e.target.value } })} />
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Relationship</label>
+                          <select className="form-select" value={form.emergencyContact?.relationship || "Father"} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), relationship: e.target.value } })}>
+                            <option value="Father">Father</option>
+                            <option value="Mother">Mother</option>
+                            <option value="Brother">Brother</option>
+                            <option value="Sister">Sister</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Guardian">Guardian</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Contact Number</label>
+                          <input className="form-input" type="tel" maxLength={10} placeholder="Contact phone" value={form.emergencyContact?.contactNumber || ""} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), contactNumber: e.target.value.replace(/\D/g, "") } })} />
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Alternate Contact Number</label>
+                          <input className="form-input" type="tel" maxLength={10} placeholder="Alternate phone" value={form.emergencyContact?.alternateContactNumber || ""} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), alternateContactNumber: e.target.value.replace(/\D/g, "") } })} />
+                        </div>
+                        <div className="form-field" style={{ gridColumn: "span 2" }}>
+                          <label className="form-label">Address</label>
+                          <textarea className="form-input" rows={2} placeholder="Address" value={form.emergencyContact?.address || ""} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), address: e.target.value } })} />
+                        </div>
+                        <div className="form-field" style={{ gridColumn: "span 2" }}>
+                          <label className="form-label">Notes</label>
+                          <textarea className="form-input" rows={2} placeholder="E.g. medical comments" value={form.emergencyContact?.notes || ""} onChange={e => setForm({ ...form, emergencyContact: { ...(form.emergencyContact || {}), notes: e.target.value } })} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6. Banking Tab Card sections */}
                   {activeTab === "Banking" && (
-                    <>
-                      <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-4)' }}>Banking Information</h3>
-                      <h4 style={{ marginBottom: 'var(--space-3)' }}>Bank Details</h4>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                    <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Bank credentials</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
                         <div className="form-field">
                           <label className="form-label">Payment Mode</label>
                           <select className="form-select" value={form.bankDetails?.paymentMode || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, paymentMode: e.target.value } })}>
@@ -1782,15 +1803,15 @@ function EmployeeProfilesPage() {
                         </div>
                         <div className="form-field">
                           <label className="form-label">Bank Name</label>
-                          <input className="form-input" placeholder="e.g. State Bank of India" value={form.bankDetails?.bankName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, bankName: e.target.value } })} />
+                          <input className="form-input" placeholder="Bank Name" value={form.bankDetails?.bankName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, bankName: e.target.value } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Account Holder Name</label>
-                          <input className="form-input" placeholder="e.g. John Doe" value={form.bankDetails?.accountHolderName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, accountHolderName: e.target.value } })} />
+                          <input className="form-input" placeholder="Holder Name" value={form.bankDetails?.accountHolderName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, accountHolderName: e.target.value } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Account Number</label>
-                          <input className="form-input" type="text" maxLength={18} placeholder={form.bankDetails?.accountNumber && form.bankDetails.accountNumber.includes("X") ? form.bankDetails.accountNumber : "Enter Account Number"} value={form.bankDetails?.accountNumber || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, accountNumber: e.target.value.replace(/\D/g, "") } })} />
+                          <input className="form-input" type="text" maxLength={18} placeholder={form.bankDetails?.accountNumber && form.bankDetails.accountNumber.includes("X") ? form.bankDetails.accountNumber : "Account Number"} value={form.bankDetails?.accountNumber || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, accountNumber: e.target.value.replace(/\D/g, "") } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Confirm Account Number</label>
@@ -1798,15 +1819,15 @@ function EmployeeProfilesPage() {
                         </div>
                         <div className="form-field">
                           <label className="form-label">IFSC Code</label>
-                          <input className="form-input" placeholder="e.g. SBIN0001234" value={form.bankDetails?.ifscCode || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, ifscCode: e.target.value.toUpperCase() } })} />
+                          <input className="form-input" placeholder="SBIN0001234" value={form.bankDetails?.ifscCode || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, ifscCode: e.target.value.toUpperCase() } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Branch Name</label>
-                          <input className="form-input" placeholder="e.g. Mumbai Main Branch" value={form.bankDetails?.branchName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, branchName: e.target.value } })} />
+                          <input className="form-input" placeholder="Branch Name" value={form.bankDetails?.branchName || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, branchName: e.target.value } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">UPI ID (Optional)</label>
-                          <input className="form-input" placeholder="e.g. name@upi" value={form.bankDetails?.upiId || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, upiId: e.target.value } })} />
+                          <input className="form-input" placeholder="name@upi" value={form.bankDetails?.upiId || ""} onChange={e => setForm({ ...form, bankDetails: { ...form.bankDetails, upiId: e.target.value } })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Account Type</label>
@@ -1817,14 +1838,14 @@ function EmployeeProfilesPage() {
                           </select>
                         </div>
                       </div>
-                    </>
+                    </div>
                   )}
 
+                  {/* 7. Payroll Tab Card sections */}
                   {activeTab === "Payroll" && (
-                    <>
-                      <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--space-4)' }}>Salary Information</h3>
-                      <h4 style={{ marginBottom: 'var(--space-3)' }}>Salary Details</h4>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                    <div className="nc-card" style={{ padding: "var(--space-4)" }}>
+                      <h4 style={{ fontSize: "var(--text-sm)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px", marginBottom: "var(--space-4)" }}>Salary details</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
                         <div className="form-field">
                           <label className="form-label">Offered Salary (Annual CTC - ₹)</label>
                           <input className="form-input" type="number" min="0" step="0.01" value={form.offeredSalary || ""} onChange={e => setForm({ ...form, offeredSalary: e.target.value })} />
@@ -1834,15 +1855,16 @@ function EmployeeProfilesPage() {
                           <input className="form-input" type="number" min="0" step="0.01" value={form.salary || ""} onChange={e => setForm({ ...form, salary: e.target.value })} />
                         </div>
                       </div>
-                    </>
+                    </div>
                   )}
                 </form>
               )}
 
+              {/* 8. Documents Tab (Original verifying/verification layout maintained) */}
               {activeTab === "Documents" && (
-                <div className="nc-card" style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  <h3 style={{ fontSize: 'var(--text-lg)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-2)' }}>Employee Documents</h3>
-                  <form onSubmit={handleUploadDocument} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', background: 'var(--color-bg-alt)', padding: 'var(--space-4)', borderRadius: 'var(--border-radius)' }}>
+                <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)", border: "1px solid var(--color-border)" }}>
+                  <h3 style={{ fontSize: "var(--text-md)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)" }}>Employee Documents</h3>
+                  <form onSubmit={handleUploadDocument} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", background: "var(--color-bg-alt)", padding: "var(--space-4)", borderRadius: "var(--border-radius)" }}>
                     <div className="form-field">
                       <label className="form-label">Document Type</label>
                       <select className="form-select" value={uploadType} onChange={e => setUploadType(e.target.value)}>
@@ -1861,83 +1883,83 @@ function EmployeeProfilesPage() {
                       <label className="form-label">Choose File</label>
                       <input id="doc-file-input" type="file" className="form-input" onChange={e => setUploadFile(e.target.files[0])} />
                     </div>
-                    <div className="form-field" style={{ gridColumn: 'span 2' }}>
+                    <div className="form-field" style={{ gridColumn: "span 2" }}>
                       <label className="form-label">Optional Notes</label>
                       <input className="form-input" placeholder="Add any comments or notes here..." value={uploadNotes} onChange={e => setUploadNotes(e.target.value)} />
                     </div>
-                    <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+                    <div style={{ gridColumn: "span 2", display: "flex", justifyContent: "flex-end", gap: "var(--space-3)" }}>
                       <button type="submit" className="btn btn-primary" disabled={uploadingDoc}>
                         {uploadingDoc ? "Uploading..." : "Upload Document"}
                       </button>
                     </div>
                     {uploadError && (
-                      <div className="badge badge-error" style={{ gridColumn: 'span 2', textAlign: 'left', display: 'block', padding: 'var(--space-2)' }}>
+                      <div className="badge badge-error" style={{ gridColumn: "span 2", textAlign: "left", display: "block", padding: "var(--space-2)" }}>
                         {uploadError}
                       </div>
                     )}
                   </form>
 
-                  <div style={{ marginTop: 'var(--space-2)' }}>
-                    <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-3)' }}>Uploaded Documents</h4>
+                  <div style={{ marginTop: "var(--space-2)" }}>
+                    <h4 style={{ fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>Uploaded Documents</h4>
                     {docsLoading ? (
-                      <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', padding: 'var(--space-4)', textAlign: 'center' }}>
+                      <div style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)", padding: "var(--space-4)", textAlign: "center" }}>
                         Loading documents...
                       </div>
                     ) : docsError ? (
-                      <div style={{ color: 'var(--color-danger)', fontSize: 'var(--text-sm)', padding: 'var(--space-4)', textAlign: 'center' }}>
+                      <div style={{ color: "var(--color-danger)", fontSize: "var(--text-sm)", padding: "var(--space-4)", textAlign: "center" }}>
                         {docsError}
                       </div>
                     ) : documents.length === 0 ? (
-                      <div style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', padding: 'var(--space-4)', textAlign: 'center', border: '1px dashed var(--color-border)', borderRadius: 'var(--border-radius)' }}>
+                      <div style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)", padding: "var(--space-4)", textAlign: "center", border: "1px dashed var(--color-border)", borderRadius: "var(--border-radius)" }}>
                         No documents uploaded yet.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
                         {documents.map(doc => (
-                          <div key={doc._id} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius)', padding: 'var(--space-3)', background: 'var(--color-bg-alt)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div key={doc._id} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius)", padding: "var(--space-3)", background: "var(--color-bg-alt)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div>
-                                <strong style={{ fontSize: 'var(--text-sm)' }}>{doc.documentType || "Other"}</strong>
-                                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginLeft: 'var(--space-2)' }}>
+                                <strong style={{ fontSize: "var(--text-sm)" }}>{doc.documentType || "Other"}</strong>
+                                <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginLeft: "var(--space-2)" }}>
                                   ({doc.originalName})
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                                 <span className={`badge ${
-                                  doc.status === 'Verified' ? 'badge-success' :
-                                  doc.status === 'Rejected' ? 'badge-error' : 'badge-warning'
-                                }`} style={{ fontSize: '10px', padding: '2px 8px' }}>
-                                  {doc.status || 'Pending'}
+                                  doc.status === "Verified" ? "badge-success" :
+                                  doc.status === "Rejected" ? "badge-error" : "badge-warning"
+                                }`} style={{ fontSize: "10px", padding: "2px 8px" }}>
+                                  {doc.status || "Pending"}
                                 </span>
                               </div>
                             </div>
 
                             {doc.notes && (
-                              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '4px 0' }}>
+                              <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", margin: "4px 0" }}>
                                 <strong>Notes:</strong> {doc.notes}
                               </p>
                             )}
 
-                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                            <div style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
                               Uploaded on: {new Date(doc.uploadedAt).toLocaleDateString("en-IN")} at {new Date(doc.uploadedAt).toLocaleTimeString("en-IN")}
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-2)', borderTop: '1px solid var(--color-border-soft)', paddingTop: 'var(--space-2)' }}>
-                              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }} onClick={() => handleDownloadDocument(doc._id)}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--space-2)", borderTop: "1px solid var(--color-border-soft)", paddingTop: "var(--space-2)" }}>
+                              <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                                <button type="button" className="btn btn-ghost" style={{ padding: "4px 8px", fontSize: "var(--text-xs)" }} onClick={() => handleDownloadDocument(doc._id)}>
                                   Download
                                 </button>
-                                <button type="button" className="btn btn-ghost btn-danger" style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }} onClick={() => handleDeleteDocument(doc._id)}>
+                                <button type="button" className="btn btn-ghost btn-danger" style={{ padding: "4px 8px", fontSize: "var(--text-xs)" }} onClick={() => handleDeleteDocument(doc._id)}>
                                   Delete
                                 </button>
                               </div>
 
-                              {canVerifyDocuments && doc.status === 'Pending' && (
-                                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                                  <button type="button" className="btn btn-success" style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }} onClick={() => handleVerifyDocument(doc._id, 'Verified')}>
+                              {canVerifyDocuments && doc.status === "Pending" && (
+                                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                                  <button type="button" className="btn btn-success" style={{ padding: "4px 8px", fontSize: "var(--text-xs)" }} onClick={() => handleVerifyDocument(doc._id, "Verified")}>
                                     Verify
                                   </button>
-                                  <button type="button" className="btn btn-danger" style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }} onClick={() => handleVerifyDocument(doc._id, 'Rejected')}>
+                                  <button type="button" className="btn btn-danger" style={{ padding: "4px 8px", fontSize: "var(--text-xs)" }} onClick={() => handleVerifyDocument(doc._id, "Rejected")}>
                                     Reject
                                   </button>
                                 </div>
@@ -1951,9 +1973,9 @@ function EmployeeProfilesPage() {
                 </div>
               )}
 
+              {/* 9. Assets Tab (Multiple items dynamic assignment layout maintained) */}
               {activeTab === "Assets" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
-                  {/* Summary Cards */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-4)" }}>
                     <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "4px" }}>
                       <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>Total Assets</span>
@@ -1975,7 +1997,6 @@ function EmployeeProfilesPage() {
                     </div>
                   </div>
 
-                  {/* Header Actions */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <h3 style={{ fontSize: "var(--text-md)", fontWeight: "var(--font-semibold)" }}>Active Assets</h3>
                     {isHRorSuperUser && (
@@ -1985,23 +2006,6 @@ function EmployeeProfilesPage() {
                         onClick={() => {
                           setError("");
                           setMessage("");
-                          setAssetForm({
-                            category: "Laptop",
-                            customAssetType: "",
-                            assetName: "",
-                            serialNumber: "",
-                            assetTag: "",
-                            brand: "",
-                            model: "",
-                            imeiNumber: "",
-                            mobileNumber: "",
-                            accessoriesDescription: "",
-                            issueDate: new Date().toISOString().slice(0, 10),
-                            expectedReturnDate: "",
-                            conditionAtIssue: "Good",
-                            notes: "",
-                            status: "Assigned"
-                          });
                           setBulkAssets([
                             {
                               category: "Laptop",
@@ -2134,7 +2138,7 @@ function EmployeeProfilesPage() {
                                           setIsReturnModalOpen(true);
                                         }}
                                       >
-                                        <Clock size={12} style={{ marginRight: "4px" }} /> Return
+                                        Return
                                       </button>
                                     </>
                                   )}
@@ -2147,14 +2151,14 @@ function EmployeeProfilesPage() {
                     )}
                   </div>
 
-                  {/* History Section */}
+                  {/* Return History Table */}
                   <div>
                     <h3 style={{ fontSize: "var(--text-md)", fontWeight: "var(--font-semibold)", marginBottom: "var(--space-3)" }}>Returned History</h3>
                     <div className="nc-card" style={{ padding: "var(--space-4)", overflowX: "auto" }}>
                       {assetsData.returnedAssets?.length === 0 ? (
-                        <p style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)", textAlign: "center", padding: "10px" }}>No returned assets history found.</p>
+                        <p style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)", textAlign: "center", padding: "10px" }}>No returned asset records found.</p>
                       ) : (
-                        <table className="table" style={{ width: "100%", minWidth: "950px" }}>
+                        <table className="table" style={{ width: "100%", minWidth: "900px" }}>
                           <thead>
                             <tr>
                               <th>Asset</th>
@@ -2254,722 +2258,17 @@ function EmployeeProfilesPage() {
                       )}
                     </div>
                   </div>
-
-                  {/* Assign Asset Modal */}
-                  {isAssignModalOpen && (
-                    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
-                      <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
-                        <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
-                          <span>Assign Multiple Assets</span>
-                          <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsAssignModalOpen(false)}>
-                            <X size={16} />
-                          </button>
-                        </h3>
-                        <form onSubmit={handleAssignAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                          {/* Apply Common Details Checkbox */}
-                          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", background: "var(--color-bg-alt)", padding: "10px 14px", borderRadius: "var(--border-radius)" }}>
-                            <input
-                              type="checkbox"
-                              id="apply-common"
-                              checked={applyCommonDetails}
-                              onChange={(e) => setApplyCommonDetails(e.target.checked)}
-                              style={{ transform: "scale(1.1)", cursor: "pointer" }}
-                            />
-                            <label htmlFor="apply-common" style={{ fontSize: "var(--text-sm)", cursor: "pointer", fontWeight: 500, userSelect: "none" }}>
-                              Apply common issue details to all assets
-                            </label>
-                          </div>
-
-                          {/* Common Details Fields */}
-                          {applyCommonDetails && (
-                            <div style={{ border: "1px dashed var(--color-border)", padding: "16px", borderRadius: "var(--border-radius)", background: "var(--color-bg-alt)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                              <h4 style={{ fontSize: "var(--text-xs)", color: "var(--color-accent)", margin: 0, textTransform: "uppercase", letterSpacing: "0.5px" }}>Common Issue Details</h4>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                <div className="form-field">
-                                  <label className="form-label">Issue Date</label>
-                                  <input className="form-input" type="date" value={commonDetails.issueDate} onChange={(e) => setCommonDetails({ ...commonDetails, issueDate: e.target.value })} />
-                                </div>
-                                <div className="form-field">
-                                  <label className="form-label">Expected Return Date</label>
-                                  <input className="form-input" type="date" value={commonDetails.expectedReturnDate} onChange={(e) => setCommonDetails({ ...commonDetails, expectedReturnDate: e.target.value })} />
-                                </div>
-                              </div>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                <div className="form-field">
-                                  <label className="form-label">Condition at Issue</label>
-                                  <select className="form-select" value={commonDetails.conditionAtIssue} onChange={(e) => setCommonDetails({ ...commonDetails, conditionAtIssue: e.target.value })}>
-                                    <option value="New">New</option>
-                                    <option value="Good">Good</option>
-                                    <option value="Fair">Fair</option>
-                                    <option value="Damaged">Damaged</option>
-                                  </select>
-                                </div>
-                                <div className="form-field">
-                                  <label className="form-label">Notes</label>
-                                  <input className="form-input" placeholder="e.g. Issued on onboarding" value={commonDetails.notes} onChange={(e) => setCommonDetails({ ...commonDetails, notes: e.target.value })} />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Assets Rows */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", maxHeight: "45vh", overflowY: "auto", paddingRight: "4px" }}>
-                            {bulkAssets.map((asset, index) => (
-                              <div key={index} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--border-radius)", padding: "16px", background: "var(--color-bg-surface)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)" }}>
-                                  <span style={{ fontSize: "var(--text-sm)", fontWeight: "bold" }}>Asset #{index + 1}</span>
-                                  <div style={{ display: "flex", gap: "8px" }}>
-                                    <button
-                                      type="button"
-                                      className="btn btn-ghost"
-                                      style={{ padding: "2px 8px", fontSize: "11px", minHeight: "auto", minWidth: "auto", height: "auto" }}
-                                      onClick={() => {
-                                        const duplicated = { ...asset };
-                                        duplicated.serialNumber = ""; 
-                                        duplicated.assetTag = ""; 
-                                        const newBulk = [...bulkAssets];
-                                        newBulk.splice(index + 1, 0, duplicated);
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    >
-                                      Duplicate
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn btn-ghost btn-danger"
-                                      style={{ padding: "2px 8px", fontSize: "11px", minHeight: "auto", minWidth: "auto", height: "auto" }}
-                                      disabled={bulkAssets.length === 1}
-                                      onClick={() => {
-                                        const newBulk = bulkAssets.filter((_, idx) => idx !== index);
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                  <div className="form-field">
-                                    <label className="form-label">Category</label>
-                                    <select
-                                      className="form-select"
-                                      value={asset.category}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].category = e.target.value;
-                                        if (e.target.value !== "Other") {
-                                          newBulk[index].customAssetType = "";
-                                        }
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    >
-                                      <option value="Laptop">Laptop</option>
-                                      <option value="Desktop">Desktop</option>
-                                      <option value="Monitor">Monitor</option>
-                                      <option value="Mobile">Mobile</option>
-                                      <option value="Tablet">Tablet</option>
-                                      <option value="Keyboard">Keyboard</option>
-                                      <option value="Mouse">Mouse</option>
-                                      <option value="Headphones">Headphones</option>
-                                      <option value="Charger">Charger</option>
-                                      <option value="Webcam">Webcam</option>
-                                      <option value="Pendrive">Pendrive</option>
-                                      <option value="Docking Station">Docking Station</option>
-                                      <option value="SIM">SIM</option>
-                                      <option value="ID Card">ID Card</option>
-                                      <option value="Accessories">Accessories</option>
-                                      <option value="Other">Other</option>
-                                    </select>
-                                  </div>
-                                  <div className="form-field">
-                                    <label className="form-label">Asset Name</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="e.g. HP EliteBook"
-                                      value={asset.assetName}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].assetName = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                  <div className="form-field">
-                                    <label className="form-label">Serial Number</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="Enter serial"
-                                      value={asset.serialNumber}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].serialNumber = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="form-field">
-                                    <label className="form-label">Asset Tag / Inventory ID</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="Enter tag ID"
-                                      value={asset.assetTag}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].assetTag = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                  <div className="form-field">
-                                    <label className="form-label">Brand</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="e.g. Dell"
-                                      value={asset.brand}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].brand = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="form-field">
-                                    <label className="form-label">Model</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="e.g. Latitude"
-                                      value={asset.model}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].model = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-
-                                {asset.category === "Mobile" && (
-                                  <div className="form-field">
-                                    <label className="form-label">IMEI Number</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="15 digits"
-                                      value={asset.imeiNumber}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].imeiNumber = e.target.value.replace(/\D/g, "");
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {asset.category === "SIM" && (
-                                  <div className="form-field">
-                                    <label className="form-label">SIM/Mobile Number</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="10 digits"
-                                      value={asset.mobileNumber}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].mobileNumber = e.target.value.replace(/\D/g, "");
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {asset.category === "Accessories" && (
-                                  <div className="form-field">
-                                    <label className="form-label">Accessories Description</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="Charger, Cable, case..."
-                                      value={asset.accessoriesDescription}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].accessoriesDescription = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {asset.category === "Other" && (
-                                  <div className="form-field">
-                                    <label className="form-label">Custom Asset Type</label>
-                                    <input
-                                      className="form-input"
-                                      placeholder="Enter custom asset type"
-                                      value={asset.customAssetType || ""}
-                                      onChange={(e) => {
-                                        const newBulk = [...bulkAssets];
-                                        newBulk[index].customAssetType = e.target.value;
-                                        setBulkAssets(newBulk);
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {!applyCommonDetails && (
-                                  <>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                      <div className="form-field">
-                                        <label className="form-label">Issue Date</label>
-                                        <input
-                                          className="form-input"
-                                          type="date"
-                                          value={asset.issueDate}
-                                          onChange={(e) => {
-                                            const newBulk = [...bulkAssets];
-                                            newBulk[index].issueDate = e.target.value;
-                                            setBulkAssets(newBulk);
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="form-field">
-                                        <label className="form-label">Expected Return Date</label>
-                                        <input
-                                          className="form-input"
-                                          type="date"
-                                          value={asset.expectedReturnDate}
-                                          onChange={(e) => {
-                                            const newBulk = [...bulkAssets];
-                                            newBulk[index].expectedReturnDate = e.target.value;
-                                            setBulkAssets(newBulk);
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
-                                      <div className="form-field">
-                                        <label className="form-label">Condition at Issue</label>
-                                        <select
-                                          className="form-select"
-                                          value={asset.conditionAtIssue}
-                                          onChange={(e) => {
-                                            const newBulk = [...bulkAssets];
-                                            newBulk[index].conditionAtIssue = e.target.value;
-                                            setBulkAssets(newBulk);
-                                          }}
-                                        >
-                                          <option value="New">New</option>
-                                          <option value="Good">Good</option>
-                                          <option value="Fair">Fair</option>
-                                          <option value="Damaged">Damaged</option>
-                                        </select>
-                                      </div>
-                                    </div>
-                                    <div className="form-field">
-                                      <label className="form-label">Notes</label>
-                                      <input
-                                        className="form-input"
-                                        placeholder="Row notes"
-                                        value={asset.notes}
-                                        onChange={(e) => {
-                                          const newBulk = [...bulkAssets];
-                                          newBulk[index].notes = e.target.value;
-                                          setBulkAssets(newBulk);
-                                        }}
-                                      />
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Add row action */}
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            style={{ border: "1px dashed var(--color-border)", width: "100%", padding: "var(--space-2)" }}
-                            onClick={() => {
-                              setBulkAssets([
-                                ...bulkAssets,
-                                {
-                                  category: "Laptop",
-                                  assetName: "",
-                                  serialNumber: "",
-                                  assetTag: "",
-                                  brand: "",
-                                  model: "",
-                                  imeiNumber: "",
-                                  mobileNumber: "",
-                                  accessoriesDescription: "",
-                                  issueDate: new Date().toISOString().slice(0, 10),
-                                  expectedReturnDate: "",
-                                  conditionAtIssue: "Good",
-                                  notes: ""
-                                }
-                              ]);
-                            }}
-                          >
-                            + Add Another Asset
-                          </button>
-
-                          {/* Summary text */}
-                          <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-accent)", textAlign: "center", fontWeight: "bold" }}>
-                            {bulkAssets.length} {bulkAssets.length === 1 ? "asset" : "assets"} will be assigned to {selectedProfile?.name || "the employee"}.
-                          </p>
-
-                          {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
-
-                          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
-                            <button type="button" className="btn btn-ghost" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Assign Assets"}</button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Edit Asset Modal */}
-                  {isEditModalOpen && selectedAsset && (
-                    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
-                      <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
-                        <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
-                          <span>Edit Asset Details</span>
-                          <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsEditModalOpen(false)}>
-                            <X size={16} />
-                          </button>
-                        </h3>
-                        <form onSubmit={handleEditAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-                            <div className="form-field">
-                              <label className="form-label">Category</label>
-                              <select className="form-select" value={assetForm.category} onChange={e => setAssetForm({ ...assetForm, category: e.target.value, customAssetType: e.target.value === "Other" ? assetForm.customAssetType : "" })} disabled={selectedAsset.status === "Returned"}>
-                                <option value="Laptop">Laptop</option>
-                                <option value="Desktop">Desktop</option>
-                                <option value="Monitor">Monitor</option>
-                                <option value="Mobile">Mobile</option>
-                                <option value="Tablet">Tablet</option>
-                                <option value="Keyboard">Keyboard</option>
-                                <option value="Mouse">Mouse</option>
-                                <option value="Headphones">Headphones</option>
-                                <option value="Charger">Charger</option>
-                                <option value="Webcam">Webcam</option>
-                                <option value="Pendrive">Pendrive</option>
-                                <option value="Docking Station">Docking Station</option>
-                                <option value="SIM">SIM</option>
-                                <option value="ID Card">ID Card</option>
-                                <option value="Accessories">Accessories</option>
-                                <option value="Other">Other</option>
-                              </select>
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Asset Name</label>
-                              <input className="form-input" placeholder="e.g. Macbook Pro" value={assetForm.assetName} onChange={e => setAssetForm({ ...assetForm, assetName: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          </div>
-
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-                            <div className="form-field">
-                              <label className="form-label">Serial Number</label>
-                              <input className="form-input" placeholder="e.g. C02PT123ABCD" value={assetForm.serialNumber} onChange={e => setAssetForm({ ...assetForm, serialNumber: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Asset Tag / Inventory ID</label>
-                              <input className="form-input" placeholder="e.g. NT-LP-045" value={assetForm.assetTag} onChange={e => setAssetForm({ ...assetForm, assetTag: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          </div>
-
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-                            <div className="form-field">
-                              <label className="form-label">Brand</label>
-                              <input className="form-input" placeholder="e.g. Apple" value={assetForm.brand} onChange={e => setAssetForm({ ...assetForm, brand: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Model</label>
-                              <input className="form-input" placeholder="e.g. A2442" value={assetForm.model} onChange={e => setAssetForm({ ...assetForm, model: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          </div>
-
-                          {assetForm.category === "Mobile" && (
-                            <div className="form-field">
-                              <label className="form-label">IMEI Number</label>
-                              <input className="form-input" placeholder="Enter 15-digit IMEI" value={assetForm.imeiNumber} onChange={e => setAssetForm({ ...assetForm, imeiNumber: e.target.value.replace(/\D/g, "") })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          )}
-
-                          {assetForm.category === "SIM" && (
-                            <div className="form-field">
-                              <label className="form-label">Mobile Number</label>
-                              <input className="form-input" placeholder="Enter 10-digit number" value={assetForm.mobileNumber} onChange={e => setAssetForm({ ...assetForm, mobileNumber: e.target.value.replace(/\D/g, "") })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          )}
-
-                          {assetForm.category === "Accessories" && (
-                            <div className="form-field">
-                              <label className="form-label">Accessories Description</label>
-                              <input className="form-input" placeholder="e.g. Charger, USB-C Cable" value={assetForm.accessoriesDescription} onChange={e => setAssetForm({ ...assetForm, accessoriesDescription: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          )}
-
-                          {assetForm.category === "Other" && (
-                            <div className="form-field">
-                              <label className="form-label">Custom Asset Type</label>
-                              <input className="form-input" placeholder="Enter custom asset type" value={assetForm.customAssetType || ""} onChange={e => setAssetForm({ ...assetForm, customAssetType: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          )}
-
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-                            <div className="form-field">
-                              <label className="form-label">Issue Date</label>
-                              <input className="form-input" type="date" value={assetForm.issueDate} onChange={e => setAssetForm({ ...assetForm, issueDate: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Expected Return Date</label>
-                              <input className="form-input" type="date" value={assetForm.expectedReturnDate} onChange={e => setAssetForm({ ...assetForm, expectedReturnDate: e.target.value })} disabled={selectedAsset.status === "Returned"} />
-                            </div>
-                          </div>
-
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
-                            <div className="form-field">
-                              <label className="form-label">Condition at Issue</label>
-                              <select className="form-select" value={assetForm.conditionAtIssue} onChange={e => setAssetForm({ ...assetForm, conditionAtIssue: e.target.value })} disabled={selectedAsset.status === "Returned"}>
-                                <option value="New">New</option>
-                                <option value="Good">Good</option>
-                                <option value="Fair">Fair</option>
-                                <option value="Damaged">Damaged</option>
-                              </select>
-                            </div>
-                            {selectedAsset.status !== "Returned" && (
-                              <div className="form-field">
-                                <label className="form-label">Status</label>
-                                <select className="form-select" value={assetForm.status} onChange={e => setAssetForm({ ...assetForm, status: e.target.value })}>
-                                  <option value="Assigned">Assigned</option>
-                                  <option value="Under Repair">Under Repair</option>
-                                  <option value="Damaged">Damaged</option>
-                                  <option value="Lost">Lost</option>
-                                </select>
-                              </div>
-                            )}
-                          </div>
-
-                          {selectedAsset.status === "Returned" && (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", borderTop: "1px dashed var(--color-border)", paddingTop: "12px" }}>
-                              <div className="form-field">
-                                <label className="form-label">Actual Return Date</label>
-                                <input className="form-input" type="date" value={assetForm.actualReturnDate ? toDateInput(assetForm.actualReturnDate) : ""} onChange={e => setAssetForm({ ...assetForm, actualReturnDate: e.target.value })} />
-                              </div>
-                              <div className="form-field">
-                                <label className="form-label">Return Condition</label>
-                                <select className="form-select" value={assetForm.returnCondition || "Good"} onChange={e => setAssetForm({ ...assetForm, returnCondition: e.target.value })}>
-                                  <option value="New">New</option>
-                                  <option value="Good">Good</option>
-                                  <option value="Fair">Fair</option>
-                                  <option value="Damaged">Damaged</option>
-                                  <option value="Lost">Lost</option>
-                                </select>
-                              </div>
-                              <div className="form-field" style={{ gridColumn: "span 2" }}>
-                                <label className="form-label">Return Notes</label>
-                                <textarea className="form-input" rows={2} value={assetForm.returnNotes || ""} onChange={e => setAssetForm({ ...assetForm, returnNotes: e.target.value })} />
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="form-field">
-                            <label className="form-label">Notes</label>
-                            <textarea className="form-input" rows={2} placeholder="Optional remarks" value={assetForm.notes} onChange={e => setAssetForm({ ...assetForm, notes: e.target.value })} />
-                          </div>
-
-                          {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
-
-                          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
-                            <button type="button" className="btn btn-ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Return Asset Modal */}
-                  {isReturnModalOpen && selectedAsset && (
-                    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
-                      <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "450px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
-                        <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
-                          <span>Return Asset</span>
-                          <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsReturnModalOpen(false)}>
-                            <X size={16} />
-                          </button>
-                        </h3>
-                        <form onSubmit={handleReturnAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-                          <div className="form-field">
-                            <label className="form-label">Actual Return Date</label>
-                            <input className="form-input" type="date" value={returnForm.actualReturnDate} onChange={e => setReturnForm({ ...returnForm, actualReturnDate: e.target.value })} />
-                          </div>
-                          <div className="form-field">
-                            <label className="form-label">Return Condition</label>
-                            <select className="form-select" value={returnForm.returnCondition} onChange={e => setReturnForm({ ...returnForm, returnCondition: e.target.value })}>
-                              <option value="New">New</option>
-                              <option value="Good">Good</option>
-                              <option value="Fair">Fair</option>
-                              <option value="Damaged">Damaged</option>
-                              <option value="Lost">Lost</option>
-                            </select>
-                          </div>
-                          <div className="form-field">
-                            <label className="form-label">Return Notes</label>
-                            <textarea className="form-input" rows={2} placeholder="Mandatory for Damaged or Lost condition" value={returnForm.returnNotes} onChange={e => setReturnForm({ ...returnForm, returnNotes: e.target.value })} />
-                          </div>
-
-                          {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
-
-                          <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
-                            <button type="button" className="btn btn-ghost" onClick={() => setIsReturnModalOpen(false)}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Processing..." : "Complete Return"}</button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* View Asset Modal */}
-                  {selectedAsset && !isEditModalOpen && !isReturnModalOpen && (
-                    <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
-                      <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
-                        <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
-                          <span>Asset Details</span>
-                          <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setSelectedAsset(null)}>
-                            <X size={16} />
-                          </button>
-                        </h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 12px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Category</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.category}</span>
-                          </div>
-                          {selectedAsset.category === "Other" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                              <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Custom Asset Type</span>
-                              <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.customAssetType || "N/A"}</span>
-                            </div>
-                          )}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Asset Name</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.assetName}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Serial Number</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.serialNumber || "N/A"}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Asset Tag</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.assetTag || "N/A"}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Brand / Model</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.brand || selectedAsset.model ? `${selectedAsset.brand} ${selectedAsset.model}`.trim() : "N/A"}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Status</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
-                              <span className={`badge badge-${
-                                selectedAsset.status === "Returned" ? "success" :
-                                selectedAsset.status === "Assigned" ? "warning" : "error"
-                              }`}>{selectedAsset.status}</span>
-                            </span>
-                          </div>
-                          {selectedAsset.category === "Mobile" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                              <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>IMEI Number</span>
-                              <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.imeiNumber || "N/A"}</span>
-                            </div>
-                          )}
-                          {selectedAsset.category === "SIM" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                              <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Mobile Number</span>
-                              <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.mobileNumber || "N/A"}</span>
-                            </div>
-                          )}
-                          {selectedAsset.category === "Accessories" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
-                              <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Accessories Description</span>
-                              <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.accessoriesDescription || "N/A"}</span>
-                            </div>
-                          )}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Issue Date</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{toDateInput(selectedAsset.issueDate)}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Expected Return</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.expectedReturnDate ? toDateInput(selectedAsset.expectedReturnDate) : "N/A"}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Condition at Issue</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.conditionAtIssue}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Assigned By</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
-                              {(() => {
-                                const creator = profiles.find(p => p.linkedUser?._id === selectedAsset.assignedBy);
-                                return creator ? creator.name : "System";
-                              })()}
-                            </span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
-                            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Notes</span>
-                            <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500, whiteSpace: "pre-line" }}>{selectedAsset.notes || "No remarks provided."}</span>
-                          </div>
-
-                          {selectedAsset.status === "Returned" && (
-                            <>
-                              <div style={{ gridColumn: "span 2", borderTop: "1px dashed var(--color-border)", margin: "8px 0" }}></div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Actual Return Date</span>
-                                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{toDateInput(selectedAsset.actualReturnDate)}</span>
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Return Condition</span>
-                                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.returnCondition}</span>
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Returned To</span>
-                                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
-                                  {(() => {
-                                    const receiver = profiles.find(p => p.linkedUser?._id === selectedAsset.returnedTo);
-                                    return receiver ? receiver.name : "System";
-                                  })()}
-                                </span>
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
-                                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Return Notes</span>
-                                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500, whiteSpace: "pre-line" }}>{selectedAsset.returnNotes || "No return notes."}</span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
-                          <button type="button" className="btn btn-primary" onClick={() => setSelectedAsset(null)}>Close</button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
+              {/* 10. Payroll Slip Generator & Slips History tab */}
               {activeTab === "Payroll" && (
-                <div className="nc-card">
-                  <h3 style={{ marginBottom: 'var(--space-4)' }}>Payroll & Salary Slips</h3>
-                  <div className="employee-profile-payroll-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
-                    <div className="form">
-                      <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-3)' }}>Generate New Slip</h4>
-
-                      {/* Period, Attendance & Payment */}
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)", border: "1px solid var(--color-border)" }}>
+                  <h3 style={{ fontSize: "var(--text-md)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)" }}>Payroll Details</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 0.8fr", gap: "var(--space-5)" }}>
+                    <div style={{ borderRight: isMobile ? "none" : "1px solid var(--color-border)", paddingRight: isMobile ? 0 : "var(--space-4)" }}>
+                      <h4 style={{ fontSize: "var(--text-xs)", color: "var(--color-accent)", margin: "0 0 12px 0", textTransform: "uppercase" }}>Generate New Salary Slip</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                         <div className="form-field">
                           <label className="form-label">Month</label>
                           <input className="form-input" placeholder="e.g. May" value={salarySlipForm.month || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, month: e.target.value })} />
@@ -2993,270 +2292,938 @@ function EmployeeProfilesPage() {
                         </div>
                         <div className="form-field">
                           <label className="form-label">Working Days</label>
-                          <input className="form-input" type="number" min="1" max="31" step="1" placeholder="e.g. 30" value={salarySlipForm.workingDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, workingDays: e.target.value })} />
+                          <input className="form-input" type="number" min="1" max="31" value={salarySlipForm.workingDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, workingDays: e.target.value })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Paid Days</label>
-                          <input className="form-input" type="number" min="0" max="31" step="1" placeholder="e.g. 28" value={salarySlipForm.paidDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, paidDays: e.target.value })} />
+                          <input className="form-input" type="number" min="0" max="31" value={salarySlipForm.paidDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, paidDays: e.target.value })} />
                         </div>
                         <div className="form-field">
-                          <label className="form-label">LWP / LOP Days (Leave Without Pay)</label>
-                          <input className="form-input" type="number" min="0" max="31" step="1" placeholder="e.g. 2" value={salarySlipForm.lopDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, lopDays: e.target.value })} />
+                          <label className="form-label">LOP Days</label>
+                          <input className="form-input" type="number" min="0" max="31" value={salarySlipForm.lopDays || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, lopDays: e.target.value })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Bank Account Last 4 Digits</label>
-                          <input className="form-input" maxLength={4} placeholder="e.g. 1234" value={salarySlipForm.bankAccountLast4 || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, bankAccountLast4: e.target.value.replace(/\D/g, '') })} />
+                          <input className="form-input" maxLength={4} placeholder="e.g. 5678" value={salarySlipForm.bankAccountLast4 || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, bankAccountLast4: e.target.value.replace(/\D/g, "") })} />
                         </div>
                       </div>
 
-                      {/* Earnings */}
-                      <p style={{ fontSize: '10px', fontWeight: 'var(--font-semibold)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-2)' }}>
-                        Earnings ({form.department || "Other"} Department)
-                      </p>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                        {/* Common Earnings */}
+                      {/* CTC breakdown dynamically matched by department */}
+                      <h4 style={{ fontSize: "11px", color: "var(--color-text-muted)", margin: "16px 0 8px 0", textTransform: "uppercase" }}>Earnings breakdown ({form.department || "Other"})</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                         <div className="form-field">
                           <label className="form-label">Basic Salary (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.basicSalary || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, basicSalary: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.basicSalary || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, basicSalary: e.target.value })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">HRA (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.hra || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, hra: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.hra || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, hra: e.target.value })} />
                         </div>
                         <div className="form-field">
-                          <label className="form-label">Dearness Allowance (DA) (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.dearnessAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, dearnessAllowance: e.target.value })} />
+                          <label className="form-label">DA (₹)</label>
+                          <input className="form-input" type="number" value={salarySlipForm.dearnessAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, dearnessAllowance: e.target.value })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Special Allowance (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.specialAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, specialAllowance: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.specialAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, specialAllowance: e.target.value })} />
                         </div>
                         <div className="form-field">
                           <label className="form-label">Other Earnings (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.otherEarnings || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, otherEarnings: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.otherEarnings || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, otherEarnings: e.target.value })} />
                         </div>
 
-                        {/* Sales Department Earnings */}
                         {selectedDepartment === "sales" && (
                           <>
                             <div className="form-field">
                               <label className="form-label">Travel Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.travelAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, travelAllowance: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.travelAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, travelAllowance: e.target.value })} />
                             </div>
                             <div className="form-field">
                               <label className="form-label">Sales Incentive (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.salesIncentive || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, salesIncentive: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.salesIncentive || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, salesIncentive: e.target.value })} />
                             </div>
                             <div className="form-field">
                               <label className="form-label">Achieved Sales (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.achievedSales || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, achievedSales: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.achievedSales || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, achievedSales: e.target.value })} />
                             </div>
                             <div className="form-field">
                               <label className="form-label">Commission Rate (%)</label>
-                              <input className="form-input" type="number" min="0" max="100" step="any" placeholder="0" value={salarySlipForm.commissionRate || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, commissionRate: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Commission (₹) [Calculated / Override]</label>
-                              <input
-                                className="form-input"
-                                type="number"
-                                min="0"
-                                step="any"
-                                placeholder={
-                                  (Number(salarySlipForm.achievedSales) || 0) > 0 && (Number(salarySlipForm.commissionRate) || 0) > 0
-                                    ? ((Number(salarySlipForm.achievedSales) * Number(salarySlipForm.commissionRate)) / 100).toFixed(2)
-                                    : "0"
-                                }
-                                value={salarySlipForm.commission || ""}
-                                onChange={e => setSalarySlipForm({ ...salarySlipForm, commission: e.target.value })}
-                              />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Target Achievement Bonus (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.targetAchievementBonus || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, targetAchievementBonus: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Client Acquisition Bonus (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.clientAcquisitionBonus || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, clientAcquisitionBonus: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Performance Bonus (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.performanceBonus || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, performanceBonus: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.commissionRate || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, commissionRate: e.target.value })} />
                             </div>
                           </>
                         )}
 
-                        {/* IT Department Earnings */}
                         {selectedDepartment === "it" && (
                           <>
                             <div className="form-field">
                               <label className="form-label">Conveyance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.conveyance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, conveyance: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.conveyance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, conveyance: e.target.value })} />
                             </div>
                             <div className="form-field">
                               <label className="form-label">Technical Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.technicalAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, technicalAllowance: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Internet Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.internetAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, internetAllowance: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Work From Home Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.wfhAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, wfhAllowance: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Night Shift Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.nightShiftAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, nightShiftAllowance: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">On-call Allowance (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.onCallAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, onCallAllowance: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Overtime Pay (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.overtimePay || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, overtimePay: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Project Completion Bonus (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.projectCompletionBonus || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, projectCompletionBonus: e.target.value })} />
-                            </div>
-                            <div className="form-field">
-                              <label className="form-label">Performance Bonus (₹)</label>
-                              <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.performanceBonus || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, performanceBonus: e.target.value })} />
+                              <input className="form-input" type="number" value={salarySlipForm.technicalAllowance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, technicalAllowance: e.target.value })} />
                             </div>
                           </>
                         )}
-
-                        {/* Other / Default Department Earnings */}
-                        {selectedDepartment !== "sales" && selectedDepartment !== "it" && (
-                          <div className="form-field">
-                            <label className="form-label">Conveyance (₹)</label>
-                            <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.conveyance || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, conveyance: e.target.value })} />
-                          </div>
-                        )}
                       </div>
 
-                      {/* Deductions */}
-                      <p style={{ fontSize: '10px', fontWeight: 'var(--font-semibold)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 'var(--space-2)' }}>Deductions</p>
-                      <div className="employee-profile-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                      <h4 style={{ fontSize: "11px", color: "var(--color-text-muted)", margin: "16px 0 8px 0", textTransform: "uppercase" }}>Deductions</h4>
+                      <div className="employee-profile-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
                         <div className="form-field">
                           <label className="form-label">Professional Tax (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.professionalTax || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, professionalTax: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.professionalTax || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, professionalTax: e.target.value })} />
                         </div>
-                        <div className="form-field" style={{ gridColumn: 'span 2' }}>
+                        <div className="form-field">
                           <label className="form-label">Other Deductions (₹)</label>
-                          <input className="form-input" type="number" min="0" step="any" placeholder="0" value={salarySlipForm.otherDeductions || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, otherDeductions: e.target.value })} />
+                          <input className="form-input" type="number" value={salarySlipForm.otherDeductions || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, otherDeductions: e.target.value })} />
                         </div>
                       </div>
 
-                      {/* Notes */}
-                      <div className="form-field" style={{ marginBottom: 'var(--space-3)' }}>
-                        <label className="form-label">Notes</label>
-                        <textarea className="form-input" rows={2} placeholder="Additional notes (optional)" value={salarySlipForm.notes || ""} onChange={e => setSalarySlipForm({ ...salarySlipForm, notes: e.target.value })} />
+                      <div style={{ marginTop: "16px" }}>
+                        <button type="button" className="btn btn-primary" style={{ width: "100%" }} onClick={generateSalarySlip}>Generate Slip</button>
                       </div>
-
-                      {/* Live Gross / Net preview */}
-                      {(() => {
-                        const dept = selectedDepartment;
-                        const basic = Number(salarySlipForm.basicSalary) || 0;
-                        const hra = Number(salarySlipForm.hra) || 0;
-                        const dearness = Number(salarySlipForm.dearnessAllowance) || 0;
-                        const spec = Number(salarySlipForm.specialAllowance) || 0;
-                        const otherEarn = Number(salarySlipForm.otherEarnings) || 0;
-
-                        let gross = basic + hra + dearness + spec + otherEarn;
-
-                        if (dept === "sales") {
-                          const achSales = Number(salarySlipForm.achievedSales) || 0;
-                          const commRate = Number(salarySlipForm.commissionRate) || 0;
-                          const calculatedComm = achSales > 0 && commRate > 0
-                            ? parseFloat((achSales * commRate / 100).toFixed(2))
-                            : 0;
-                          const commission = salarySlipForm.commission !== ""
-                            ? (Number(salarySlipForm.commission) || 0)
-                            : calculatedComm;
-
-                          gross += (Number(salarySlipForm.travelAllowance) || 0) +
-                                   (Number(salarySlipForm.salesIncentive) || 0) +
-                                   commission +
-                                   (Number(salarySlipForm.targetAchievementBonus) || 0) +
-                                   (Number(salarySlipForm.clientAcquisitionBonus) || 0) +
-                                   (Number(salarySlipForm.performanceBonus) || 0);
-                        } else if (dept === "it") {
-                          gross += (Number(salarySlipForm.conveyance) || 0) +
-                                   (Number(salarySlipForm.technicalAllowance) || 0) +
-                                   (Number(salarySlipForm.internetAllowance) || 0) +
-                                   (Number(salarySlipForm.wfhAllowance) || 0) +
-                                   (Number(salarySlipForm.nightShiftAllowance) || 0) +
-                                   (Number(salarySlipForm.onCallAllowance) || 0) +
-                                   (Number(salarySlipForm.overtimePay) || 0) +
-                                   (Number(salarySlipForm.projectCompletionBonus) || 0) +
-                                   (Number(salarySlipForm.performanceBonus) || 0);
-                        } else {
-                          gross += (Number(salarySlipForm.conveyance) || 0);
-                        }
-
-                        const profTax = Number(salarySlipForm.professionalTax) || 0;
-                        const otherDed = Number(salarySlipForm.otherDeductions) || 0;
-                        
-                        const workingDays = Number(salarySlipForm.workingDays) || 0;
-                        const lopDays = Number(salarySlipForm.lopDays) || 0;
-                        const lopDeduction = (workingDays > 0 && lopDays > 0)
-                          ? parseFloat(((basic / workingDays) * lopDays).toFixed(2))
-                          : 0;
-
-                        const totalDed = parseFloat((profTax + otherDed + lopDeduction).toFixed(2));
-                        const net = parseFloat((gross - totalDed).toFixed(2));
-                        return (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                            <div>
-                              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Gross Pay</div>
-                              <div style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-sm)', color: 'var(--color-text-primary)' }}>₹{gross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Net Pay</div>
-                              <div style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-sm)', color: net >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={generateSalarySlip}>Generate Slip</button>
                     </div>
 
-
-                  <div>
-                    <h4 style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-3)' }}>History</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                      {salarySlipsLoading ? (
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>Loading salary slips...</p>
-                      ) : salarySlipsError ? (
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>{salarySlipsError}</p>
-                      ) : salarySlips.length > 0 ? salarySlips.map((s, i) => (
-                        <div key={s._id || i} className="nc-card" style={{ padding: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-bg-surface)' }}>
-                          <div>
-                            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-bold)' }}>{s.month} {s.year}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Net: ₹{s.netPay?.toLocaleString('en-IN')}</div>
-                          </div>
-                          <button className="btn btn-ghost" style={{ padding: 'var(--space-2)' }} onClick={() => downloadSalarySlip(s._id, s.filename)}><Download size={14} /></button>
-                        </div>
-                      )) : (
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>No slips generated yet.</p>
-                      )}
+                    {/* History side panel */}
+                    <div>
+                      <h4 style={{ fontSize: "var(--text-xs)", color: "var(--color-accent)", margin: "0 0 12px 0", textTransform: "uppercase" }}>Salary Slip History</h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {salarySlipsLoading ? (
+                          <p style={{ color: "var(--color-text-muted)", fontSize: "11px" }}>Loading slips...</p>
+                        ) : salarySlips.length > 0 ? (
+                          salarySlips.map(s => (
+                            <div key={s._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--color-bg-alt)", padding: "10px", borderRadius: "var(--border-radius)", border: "1px solid var(--color-border)" }}>
+                              <div>
+                                <div style={{ fontSize: "var(--text-xs)", fontWeight: "bold" }}>{s.month} {s.year}</div>
+                                <div style={{ fontSize: "9px", color: "var(--color-text-muted)" }}>Net: ₹{s.netPay?.toLocaleString("en-IN")}</div>
+                              </div>
+                              <button type="button" className="btn btn-ghost" style={{ padding: "4px", minHeight: "auto", minWidth: "auto" }} onClick={() => downloadSalarySlip(s._id, s.filename)}>
+                                <Download size={14} />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={{ color: "var(--color-text-muted)", fontSize: "11px" }}>No salary slips generated.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ) : (
-            <div className="nc-card" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}>
-              Select an employee profile to view and manage details.
+              )}
+            </>
+          ) : (
+            <div className="nc-card" style={{ padding: "40px", textAlign: "center", color: "var(--color-text-muted)" }}>
+              Please select an employee profile from the directory search to begin.
             </div>
           )}
         </div>
+
+        {/* Right Sidebar - Summary & Profile Analytics Column */}
+        {selectedProfile && (!isMobile && !isTablet) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)", position: "sticky", top: "20px" }}>
+            {/* 1. Dynamic Profile Completion Card */}
+            <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)", border: "1px solid var(--color-border)" }}>
+              <h4 style={{ fontSize: "var(--text-sm)", margin: 0, borderBottom: "1px solid var(--color-border)", paddingBottom: "4px" }}>Profile Completion</h4>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <svg width="68" height="68" style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx="34" cy="34" r={radius} stroke="var(--color-border)" strokeWidth="5" fill="transparent" />
+                  <circle
+                    cx="34"
+                    cy="34"
+                    r={radius}
+                    stroke="var(--color-accent)"
+                    strokeWidth="5"
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    style={{ transition: "stroke-dashoffset 0.35s" }}
+                  />
+                  <text
+                    x="50%"
+                    y="52%"
+                    textAnchor="middle"
+                    dy=".3em"
+                    style={{ transform: "rotate(90deg)", transformOrigin: "center", fontSize: "12px", fontWeight: "bold", fill: "var(--color-text-primary)" }}
+                  >
+                    {profileCompletion.percentage}%
+                  </text>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>
+                    {profileCompletion.missing.length === 0 ? "All critical fields completed! Good job." : `${profileCompletion.missing.length} fields missing`}
+                  </span>
+                  {profileCompletion.missing.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => setShowMissingFields(!showMissingFields)}
+                      style={{ padding: 0, fontSize: "10px", minHeight: "auto", minWidth: "auto", display: "flex", alignItems: "center", color: "var(--color-accent)", marginTop: "4px" }}
+                    >
+                      {showMissingFields ? "Hide details" : "View missing details"} <ChevronRight size={10} style={{ transform: showMissingFields ? "rotate(90deg)" : "none", transition: "transform 0.2s" }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {showMissingFields && profileCompletion.missing.length > 0 && (
+                <div style={{ background: "var(--color-bg-alt)", borderRadius: "var(--border-radius)", padding: "8px 12px", maxHeight: "120px", overflowY: "auto", fontSize: "10px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {profileCompletion.missing.map((item, idx) => (
+                    <div key={idx} style={{ color: "var(--color-text-secondary)" }}>• {item}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Current Reporting Manager Card */}
+            <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)", border: "1px solid var(--color-border)" }}>
+              <h4 style={{ fontSize: "var(--text-sm)", margin: 0, borderBottom: "1px solid var(--color-border)", paddingBottom: "4px" }}>Reporting Manager</h4>
+              {currentManager ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{
+                    width: "36px", height: "36px", borderRadius: "50%",
+                    backgroundColor: "var(--color-bg-alt)", color: "var(--color-text-primary)",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold"
+                  }}>
+                    {getInitials(currentManager.name)}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                    <span style={{ fontWeight: "bold", fontSize: "var(--text-xs)", color: "var(--color-text-primary)" }}>{currentManager.name}</span>
+                    <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{currentManager.designation || "Manager"} • {currentManager.department || "HR"}</span>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>No manager assigned.</p>
+              )}
+            </div>
+
+            {/* 3. Quick Stats Metric Board */}
+            <div className="nc-card" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)", border: "1px solid var(--color-border)" }}>
+              <h4 style={{ fontSize: "var(--text-sm)", margin: 0, borderBottom: "1px solid var(--color-border)", paddingBottom: "4px" }}>Quick Metrics</h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "var(--text-xs)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>Documents:</span>
+                  <strong>{documents.length} ({documents.filter(d => d.status === "Verified").length} verified)</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>Active Assigned Assets:</span>
+                  <strong>{assetsData.activeAssets?.length || 0}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>Slips Generated:</span>
+                  <strong>{salarySlips.length}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--color-text-muted)" }}>Tenure Duration:</span>
+                  <strong>{calculateTenure(form.joiningDate, form.leavingDate)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* MODALS SECTION (Assign modal, edit modal, view details modal) maintained exactly */}
+
+      {/* Assign Asset Modal */}
+      {isAssignModalOpen && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
+          <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
+              <span>Assign Multiple Assets</span>
+              <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsAssignModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </h3>
+            <form onSubmit={handleAssignAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", background: "var(--color-bg-alt)", padding: "10px 14px", borderRadius: "var(--border-radius)" }}>
+                <input
+                  type="checkbox"
+                  id="apply-common"
+                  checked={applyCommonDetails}
+                  onChange={(e) => setApplyCommonDetails(e.target.checked)}
+                  style={{ transform: "scale(1.1)", cursor: "pointer" }}
+                />
+                <label htmlFor="apply-common" style={{ fontSize: "var(--text-sm)", cursor: "pointer", fontWeight: 500, userSelect: "none" }}>
+                  Apply common issue details to all assets
+                </label>
+              </div>
+
+              {applyCommonDetails && (
+                <div style={{ border: "1px dashed var(--color-border)", padding: "16px", borderRadius: "var(--border-radius)", background: "var(--color-bg-alt)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                  <h4 style={{ fontSize: "var(--text-xs)", color: "var(--color-accent)", margin: 0, textTransform: "uppercase", letterSpacing: "0.5px" }}>Common Issue Details</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                    <div className="form-field">
+                      <label className="form-label">Issue Date</label>
+                      <input className="form-input" type="date" value={commonDetails.issueDate} onChange={(e) => setCommonDetails({ ...commonDetails, issueDate: e.target.value })} />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label">Expected Return Date</label>
+                      <input className="form-input" type="date" value={commonDetails.expectedReturnDate} onChange={(e) => setCommonDetails({ ...commonDetails, expectedReturnDate: e.target.value })} />
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                    <div className="form-field">
+                      <label className="form-label">Condition at Issue</label>
+                      <select className="form-select" value={commonDetails.conditionAtIssue} onChange={(e) => setCommonDetails({ ...commonDetails, conditionAtIssue: e.target.value })}>
+                        <option value="New">New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Damaged">Damaged</option>
+                      </select>
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label">Notes</label>
+                      <input className="form-input" placeholder="e.g. Issued on onboarding" value={commonDetails.notes} onChange={(e) => setCommonDetails({ ...commonDetails, notes: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", maxHeight: "45vh", overflowY: "auto", paddingRight: "4px" }}>
+                {bulkAssets.map((asset, index) => (
+                  <div key={index} style={{ border: "1px solid var(--color-border)", borderRadius: "var(--border-radius)", padding: "16px", background: "var(--color-bg-surface)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)" }}>
+                      <span style={{ fontSize: "var(--text-sm)", fontWeight: "bold" }}>Asset #{index + 1}</span>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ padding: "2px 8px", fontSize: "11px", minHeight: "auto", minWidth: "auto", height: "auto" }}
+                          onClick={() => {
+                            const duplicated = { ...asset };
+                            duplicated.serialNumber = ""; 
+                            duplicated.assetTag = ""; 
+                            const newBulk = [...bulkAssets];
+                            newBulk.splice(index + 1, 0, duplicated);
+                            setBulkAssets(newBulk);
+                          }}
+                        >
+                          Duplicate
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-danger"
+                          style={{ padding: "2px 8px", fontSize: "11px", minHeight: "auto", minWidth: "auto", height: "auto" }}
+                          disabled={bulkAssets.length === 1}
+                          onClick={() => {
+                            const newBulk = bulkAssets.filter((_, idx) => idx !== index);
+                            setBulkAssets(newBulk);
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                      <div className="form-field">
+                        <label className="form-label">Category</label>
+                        <select
+                          className="form-select"
+                          value={asset.category}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].category = e.target.value;
+                            if (e.target.value !== "Other") {
+                              newBulk[index].customAssetType = "";
+                            }
+                            setBulkAssets(newBulk);
+                          }}
+                        >
+                          <option value="Laptop">Laptop</option>
+                          <option value="Desktop">Desktop</option>
+                          <option value="Monitor">Monitor</option>
+                          <option value="Mobile">Mobile</option>
+                          <option value="Tablet">Tablet</option>
+                          <option value="Keyboard">Keyboard</option>
+                          <option value="Mouse">Mouse</option>
+                          <option value="Headphones">Headphones</option>
+                          <option value="Charger">Charger</option>
+                          <option value="Webcam">Webcam</option>
+                          <option value="Pendrive">Pendrive</option>
+                          <option value="Docking Station">Docking Station</option>
+                          <option value="SIM">SIM</option>
+                          <option value="ID Card">ID Card</option>
+                          <option value="Accessories">Accessories</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">Asset Name</label>
+                        <input
+                          className="form-input"
+                          placeholder="e.g. HP EliteBook"
+                          value={asset.assetName}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].assetName = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                      <div className="form-field">
+                        <label className="form-label">Serial Number</label>
+                        <input
+                          className="form-input"
+                          placeholder="Enter serial"
+                          value={asset.serialNumber}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].serialNumber = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">Asset Tag / Inventory ID</label>
+                        <input
+                          className="form-input"
+                          placeholder="Enter tag ID"
+                          value={asset.assetTag}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].assetTag = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                      <div className="form-field">
+                        <label className="form-label">Brand</label>
+                        <input
+                          className="form-input"
+                          placeholder="e.g. Dell"
+                          value={asset.brand}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].brand = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label className="form-label">Model</label>
+                        <input
+                          className="form-input"
+                          placeholder="e.g. Latitude"
+                          value={asset.model}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].model = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {asset.category === "Mobile" && (
+                      <div className="form-field">
+                        <label className="form-label">IMEI Number</label>
+                        <input
+                          className="form-input"
+                          placeholder="15 digits"
+                          value={asset.imeiNumber}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].imeiNumber = e.target.value.replace(/\D/g, "");
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {asset.category === "SIM" && (
+                      <div className="form-field">
+                        <label className="form-label">SIM/Mobile Number</label>
+                        <input
+                          className="form-input"
+                          placeholder="10 digits"
+                          value={asset.mobileNumber}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].mobileNumber = e.target.value.replace(/\D/g, "");
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {asset.category === "Accessories" && (
+                      <div className="form-field">
+                        <label className="form-label">Accessories Description</label>
+                        <input
+                          className="form-input"
+                          placeholder="Charger, Cable, case..."
+                          value={asset.accessoriesDescription}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].accessoriesDescription = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {asset.category === "Other" && (
+                      <div className="form-field">
+                        <label className="form-label">Custom Asset Type</label>
+                        <input
+                          className="form-input"
+                          placeholder="Enter custom asset type"
+                          value={asset.customAssetType || ""}
+                          onChange={(e) => {
+                            const newBulk = [...bulkAssets];
+                            newBulk[index].customAssetType = e.target.value;
+                            setBulkAssets(newBulk);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {!applyCommonDetails && (
+                      <>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                          <div className="form-field">
+                            <label className="form-label">Issue Date</label>
+                            <input
+                              className="form-input"
+                              type="date"
+                              value={asset.issueDate}
+                              onChange={(e) => {
+                                const newBulk = [...bulkAssets];
+                                newBulk[index].issueDate = e.target.value;
+                                setBulkAssets(newBulk);
+                              }}
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label className="form-label">Expected Return Date</label>
+                            <input
+                              className="form-input"
+                              type="date"
+                              value={asset.expectedReturnDate}
+                              onChange={(e) => {
+                                const newBulk = [...bulkAssets];
+                                newBulk[index].expectedReturnDate = e.target.value;
+                                setBulkAssets(newBulk);
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3)" }}>
+                          <div className="form-field">
+                            <label className="form-label">Condition at Issue</label>
+                            <select
+                              className="form-select"
+                              value={asset.conditionAtIssue}
+                              onChange={(e) => {
+                                const newBulk = [...bulkAssets];
+                                newBulk[index].conditionAtIssue = e.target.value;
+                                setBulkAssets(newBulk);
+                              }}
+                            >
+                              <option value="New">New</option>
+                              <option value="Good">Good</option>
+                              <option value="Fair">Fair</option>
+                              <option value="Damaged">Damaged</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="form-field">
+                          <label className="form-label">Notes</label>
+                          <input
+                            className="form-input"
+                            placeholder="Row notes"
+                            value={asset.notes}
+                            onChange={(e) => {
+                              const newBulk = [...bulkAssets];
+                              newBulk[index].notes = e.target.value;
+                              setBulkAssets(newBulk);
+                            }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ border: "1px dashed var(--color-border)", width: "100%", padding: "var(--space-2)" }}
+                onClick={() => {
+                  setBulkAssets([
+                    ...bulkAssets,
+                    {
+                      category: "Laptop",
+                      customAssetType: "",
+                      assetName: "",
+                      serialNumber: "",
+                      assetTag: "",
+                      brand: "",
+                      model: "",
+                      imeiNumber: "",
+                      mobileNumber: "",
+                      accessoriesDescription: "",
+                      issueDate: new Date().toISOString().slice(0, 10),
+                      expectedReturnDate: "",
+                      conditionAtIssue: "Good",
+                      notes: ""
+                    }
+                  ]);
+                }}
+              >
+                + Add Another Asset
+              </button>
+
+              <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--color-accent)", textAlign: "center", fontWeight: "bold" }}>
+                {bulkAssets.length} {bulkAssets.length === 1 ? "asset" : "assets"} will be assigned to {selectedProfile?.name || "the employee"}.
+              </p>
+
+              {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Assign Assets"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Asset Modal */}
+      {isEditModalOpen && selectedAsset && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
+          <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
+              <span>Edit Asset Details</span>
+              <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsEditModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </h3>
+            <form onSubmit={handleEditAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Category</label>
+                  <select className="form-select" value={assetForm.category} onChange={e => setAssetForm({ ...assetForm, category: e.target.value, customAssetType: e.target.value === "Other" ? assetForm.customAssetType : "" })} disabled={selectedAsset.status === "Returned"}>
+                    <option value="Laptop">Laptop</option>
+                    <option value="Desktop">Desktop</option>
+                    <option value="Monitor">Monitor</option>
+                    <option value="Mobile">Mobile</option>
+                    <option value="Tablet">Tablet</option>
+                    <option value="Keyboard">Keyboard</option>
+                    <option value="Mouse">Mouse</option>
+                    <option value="Headphones">Headphones</option>
+                    <option value="Charger">Charger</option>
+                    <option value="Webcam">Webcam</option>
+                    <option value="Pendrive">Pendrive</option>
+                    <option value="Docking Station">Docking Station</option>
+                    <option value="SIM">SIM</option>
+                    <option value="ID Card">ID Card</option>
+                    <option value="Accessories">Accessories</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Asset Name</label>
+                  <input className="form-input" placeholder="e.g. Macbook Pro" value={assetForm.assetName} onChange={e => setAssetForm({ ...assetForm, assetName: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Serial Number</label>
+                  <input className="form-input" placeholder="e.g. C02PT123ABCD" value={assetForm.serialNumber} onChange={e => setAssetForm({ ...assetForm, serialNumber: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Asset Tag / Inventory ID</label>
+                  <input className="form-input" placeholder="e.g. NT-LP-045" value={assetForm.assetTag} onChange={e => setAssetForm({ ...assetForm, assetTag: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Brand</label>
+                  <input className="form-input" placeholder="e.g. Apple" value={assetForm.brand} onChange={e => setAssetForm({ ...assetForm, brand: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Model</label>
+                  <input className="form-input" placeholder="e.g. A2442" value={assetForm.model} onChange={e => setAssetForm({ ...assetForm, model: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              </div>
+
+              {assetForm.category === "Mobile" && (
+                <div className="form-field">
+                  <label className="form-label">IMEI Number</label>
+                  <input className="form-input" placeholder="Enter 15-digit IMEI" value={assetForm.imeiNumber} onChange={e => setAssetForm({ ...assetForm, imeiNumber: e.target.value.replace(/\D/g, "") })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              )}
+
+              {assetForm.category === "SIM" && (
+                <div className="form-field">
+                  <label className="form-label">Mobile Number</label>
+                  <input className="form-input" placeholder="Enter 10-digit number" value={assetForm.mobileNumber} onChange={e => setAssetForm({ ...assetForm, mobileNumber: e.target.value.replace(/\D/g, "") })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              )}
+
+              {assetForm.category === "Accessories" && (
+                <div className="form-field">
+                  <label className="form-label">Accessories Description</label>
+                  <input className="form-input" placeholder="e.g. Charger, USB-C Cable" value={assetForm.accessoriesDescription} onChange={e => setAssetForm({ ...assetForm, accessoriesDescription: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              )}
+
+              {assetForm.category === "Other" && (
+                <div className="form-field">
+                  <label className="form-label">Custom Asset Type</label>
+                  <input className="form-input" placeholder="Enter custom asset type" value={assetForm.customAssetType || ""} onChange={e => setAssetForm({ ...assetForm, customAssetType: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Issue Date</label>
+                  <input className="form-input" type="date" value={assetForm.issueDate} onChange={e => setAssetForm({ ...assetForm, issueDate: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Expected Return Date</label>
+                  <input className="form-input" type="date" value={assetForm.expectedReturnDate} onChange={e => setAssetForm({ ...assetForm, expectedReturnDate: e.target.value })} disabled={selectedAsset.status === "Returned"} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)" }}>
+                <div className="form-field">
+                  <label className="form-label">Condition at Issue</label>
+                  <select className="form-select" value={assetForm.conditionAtIssue} onChange={e => setAssetForm({ ...assetForm, conditionAtIssue: e.target.value })} disabled={selectedAsset.status === "Returned"}>
+                    <option value="New">New</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Damaged">Damaged</option>
+                  </select>
+                </div>
+                {selectedAsset.status !== "Returned" && (
+                  <div className="form-field">
+                    <label className="form-label">Status</label>
+                    <select className="form-select" value={assetForm.status} onChange={e => setAssetForm({ ...assetForm, status: e.target.value })}>
+                      <option value="Assigned">Assigned</option>
+                      <option value="Under Repair">Under Repair</option>
+                      <option value="Damaged">Damaged</option>
+                      <option value="Lost">Lost</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {selectedAsset.status === "Returned" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", borderTop: "1px dashed var(--color-border)", paddingTop: "12px" }}>
+                  <div className="form-field">
+                    <label className="form-label">Actual Return Date</label>
+                    <input className="form-input" type="date" value={assetForm.actualReturnDate ? toDateInput(assetForm.actualReturnDate) : ""} onChange={e => setAssetForm({ ...assetForm, actualReturnDate: e.target.value })} />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Return Condition</label>
+                    <select className="form-select" value={assetForm.returnCondition || "Good"} onChange={e => setAssetForm({ ...assetForm, returnCondition: e.target.value })}>
+                      <option value="New">New</option>
+                      <option value="Good">Good</option>
+                      <option value="Fair">Fair</option>
+                      <option value="Damaged">Damaged</option>
+                      <option value="Lost">Lost</option>
+                    </select>
+                  </div>
+                  <div className="form-field" style={{ gridColumn: "span 2" }}>
+                    <label className="form-label">Return Notes</label>
+                    <textarea className="form-input" rows={2} value={assetForm.returnNotes || ""} onChange={e => setAssetForm({ ...assetForm, returnNotes: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              <div className="form-field">
+                <label className="form-label">Notes</label>
+                <textarea className="form-input" rows={2} placeholder="Optional remarks" value={assetForm.notes} onChange={e => setAssetForm({ ...assetForm, notes: e.target.value })} />
+              </div>
+
+              {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Return Asset Modal */}
+      {isReturnModalOpen && selectedAsset && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
+          <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "450px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
+              <span>Return Asset</span>
+              <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setIsReturnModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </h3>
+            <form onSubmit={handleReturnAssetSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+              <div className="form-field">
+                <label className="form-label">Actual Return Date</label>
+                <input className="form-input" type="date" value={returnForm.actualReturnDate} onChange={e => setReturnForm({ ...returnForm, actualReturnDate: e.target.value })} />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Return Condition</label>
+                <select className="form-select" value={returnForm.returnCondition} onChange={e => setReturnForm({ ...returnForm, returnCondition: e.target.value })}>
+                  <option value="New">New</option>
+                  <option value="Good">Good</option>
+                  <option value="Fair">Fair</option>
+                  <option value="Damaged">Damaged</option>
+                  <option value="Lost">Lost</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="form-label">Return Notes</label>
+                <textarea className="form-input" rows={2} placeholder="Mandatory for Damaged or Lost condition" value={returnForm.returnNotes} onChange={e => setReturnForm({ ...returnForm, returnNotes: e.target.value })} />
+              </div>
+
+              {error && <div className="badge badge-error" style={{ padding: "8px", display: "block", textAlign: "left" }}>{error}</div>}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-3)", marginTop: "12px" }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setIsReturnModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Processing..." : "Complete Return"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Asset Modal */}
+      {selectedAsset && !isEditModalOpen && !isReturnModalOpen && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(3px)" }}>
+          <div style={{ backgroundColor: "var(--color-bg-surface, #1e1e28)", border: "1px solid var(--color-border)", borderRadius: "var(--border-radius, 12px)", width: "100%", maxWidth: "600px", display: "flex", flexDirection: "column", gap: "var(--space-4)", padding: "24px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: "var(--text-lg)", borderBottom: "1px solid var(--color-border)", paddingBottom: "var(--space-2)", display: "flex", justifyContent: "space-between", alignItems: "center", margin: 0 }}>
+              <span>Asset Details</span>
+              <button type="button" className="btn btn-ghost" style={{ padding: 4, minHeight: "auto", minWidth: "auto" }} onClick={() => setSelectedAsset(null)}>
+                <X size={16} />
+              </button>
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Category</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.category}</span>
+              </div>
+              {selectedAsset.category === "Other" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Custom Asset Type</span>
+                  <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.customAssetType || "N/A"}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Asset Name</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.assetName}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Serial Number</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.serialNumber || "N/A"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Asset Tag</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.assetTag || "N/A"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Brand / Model</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.brand || selectedAsset.model ? `${selectedAsset.brand} ${selectedAsset.model}`.trim() : "N/A"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Status</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
+                  <span className={`badge badge-${
+                    selectedAsset.status === "Returned" ? "success" :
+                    selectedAsset.status === "Assigned" ? "warning" : "error"
+                  }`}>{selectedAsset.status}</span>
+                </span>
+              </div>
+              {selectedAsset.category === "Mobile" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>IMEI Number</span>
+                  <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.imeiNumber || "N/A"}</span>
+                </div>
+              )}
+              {selectedAsset.category === "SIM" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Mobile Number</span>
+                  <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.mobileNumber || "N/A"}</span>
+                </div>
+              )}
+              {selectedAsset.category === "Accessories" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
+                  <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Accessories Description</span>
+                  <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.accessoriesDescription || "N/A"}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Issue Date</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{toDateInput(selectedAsset.issueDate)}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Expected Return</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.expectedReturnDate ? toDateInput(selectedAsset.expectedReturnDate) : "N/A"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Condition at Issue</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.conditionAtIssue}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Assigned By</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
+                  {(() => {
+                    const creator = profiles.find(p => p.linkedUser?._id === selectedAsset.assignedBy);
+                    return creator ? creator.name : "System";
+                  })()}
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
+                <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Notes</span>
+                <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500, whiteSpace: "pre-line" }}>{selectedAsset.notes || "No remarks provided."}</span>
+              </div>
+
+              {selectedAsset.status === "Returned" && (
+                <>
+                  <div style={{ gridColumn: "span 2", borderTop: "1px dashed var(--color-border)", margin: "8px 0" }}></div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Actual Return Date</span>
+                    <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{toDateInput(selectedAsset.actualReturnDate)}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Return Condition</span>
+                    <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>{selectedAsset.returnCondition}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Returned To</span>
+                    <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500 }}>
+                      {(() => {
+                        const receiver = profiles.find(p => p.linkedUser?._id === selectedAsset.returnedTo);
+                        return receiver ? receiver.name : "System";
+                      })()}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px", gridColumn: "span 2" }}>
+                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)", textTransform: "uppercase" }}>Return Notes</span>
+                    <span style={{ fontSize: "14px", color: "var(--color-text-primary)", fontWeight: 500, whiteSpace: "pre-line" }}>{selectedAsset.returnNotes || "No return notes."}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+              <button type="button" className="btn btn-primary" onClick={() => setSelectedAsset(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
