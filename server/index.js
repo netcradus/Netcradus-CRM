@@ -115,6 +115,7 @@ app.use("/api/meetings", require("./routes/meetingsRoutes"));
 app.use("/api/solutions", require("./routes/solutionRoutes"));
 
 app.use("/api/documents", require("./routes/documentRoutes"));
+app.use("/api/employee-assets", require("./routes/employeeAssetRoutes"));
 
 app.use("/api/internal-mail", require("./routes/internalMailRoutes"));
 
