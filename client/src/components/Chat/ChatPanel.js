@@ -976,7 +976,7 @@ export default function ChatPanel({ mode = "page", onClose, onExpand }) {
             <form className="chat-composer" onSubmit={handleSubmit} style={{ position: "relative" }}>
               {/* Reply Preview Area */}
               {replyToMessage && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-bg-alt, #18181c)", borderBottom: "1px solid var(--color-border, #2d2d34)", borderTopLeftRadius: "8px", borderTopRightRadius: "8px" }}>
+                <div className="chat-composer-reply-preview" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--color-bg-alt, #18181c)", borderBottom: "1px solid var(--color-border, #2d2d34)", borderTopLeftRadius: "8px", borderTopRightRadius: "8px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px", overflow: "hidden" }}>
                     <span style={{ fontSize: "11px", color: "var(--color-accent, #ff8c00)", fontWeight: "600" }}>
                       Replying to {replyToMessage.sender?.name || "User"}
