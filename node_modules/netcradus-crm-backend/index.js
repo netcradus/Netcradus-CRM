@@ -132,6 +132,27 @@ app.use("/api/manager/meetings", require("./routes/teamMeetingRoutes"));
 app.use("/api/password-manager", require("./routes/passwordManagerRoutes"));
 app.use("/api/workspace", require("./routes/workspaceRoutes"));
 
+// Serve static files from the React frontend build
+const path = require("path");
+app.use(express.static(path.join(__dirname, "../client/build")));
+
+// SPA fallback: Serve index.html for any request that doesn't match an API route, socket.io, or static file
+app.get(/.*/, (req, res, next) => {
+  // Do not intercept API routes, socket.io, or uploaded files
+  if (req.path.startsWith("/api") || req.path.startsWith("/socket.io") || req.path.startsWith("/uploads")) {
+    return next();
+  }
+  // Do not intercept files with extensions (static assets, uploaded files, etc.)
+  if (path.extname(req.path)) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, "../client/build", "index.html"), (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
