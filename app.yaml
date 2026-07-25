@@ -5,6 +5,7 @@ services:
     source_dir: server
     routes:
       - path: /api
+      - path: /socket.io
     instance_size_slug: apps-s-1vcpu-0.5gb
     instance_count: 1
     run_command: npm start
@@ -32,9 +33,10 @@ static_sites:
     source_dir: client
     routes:
       - path: /
+    catchall_document: index.html
     build_command: npm run build
     output_dir: build
     envs:
       - key: REACT_APP_API_URL
         scope: BUILD_TIME
-        value: ${crm-server.PUBLIC_URL}/api
+        value: /api
