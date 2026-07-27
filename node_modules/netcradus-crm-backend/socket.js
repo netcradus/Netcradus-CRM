@@ -142,6 +142,10 @@ function initializeSocket(server) {
     },
   });
 
+  ioInstance.engine.on("connection_error", (err) => {
+    console.error("[Socket.IO Engine Error]:", err.code, err.message, err.context);
+  });
+
   ioInstance.use(async (socket, next) => {
     try {
       const token =
