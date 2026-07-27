@@ -109,36 +109,10 @@ async function loadConversationSummary(conversationId, currentUserId) {
 }
 
 function initializeSocket(server) {
-  const parseOrigins = (val) => {
-    if (!val) return [];
-    return val.split(",").map(o => o.trim()).filter(Boolean);
-  };
-
-  const allowedOrigins = [
-    ...parseOrigins(process.env.FRONTEND_URL),
-    ...parseOrigins(process.env.CLIENT_ORIGIN),
-    "https://netcradus.tech",
-    "http://localhost:3000",
-  ];
-
   ioInstance = new Server(server, {
     cors: {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-
-        const isAllowed = allowedOrigins.some(
-          (allowedUrl) => allowedUrl.toLowerCase() === origin.toLowerCase()
-        );
-
-        if (isAllowed) {
-          callback(null, true);
-        } else {
-          console.warn(`[Socket CORS] Origin ${origin} not explicitly allowed. Allowing via fallback.`);
-          callback(null, true);
-        }
-      },
+      origin: process.env.FRONTEND_URL || true,
       methods: ["GET", "POST"],
-      credentials: true,
     },
   });
 
