@@ -24,6 +24,12 @@ services:
       - key: MAX_UPLOAD_MB
         scope: RUN_TIME
         value: "10"
+      - key: ALLOWED_ORIGINS
+        scope: RUN_TIME
+        value: "https://netcradus.tech,https://www.netcradus.tech"
+      - key: FRONTEND_URL
+        scope: RUN_TIME
+        value: "https://netcradus.tech"
 
 static_sites:
   - name: crm-frontend
@@ -34,7 +40,10 @@ static_sites:
     envs:
       - key: REACT_APP_API_URL
         scope: BUILD_TIME
-        value: /api
+        value: https://goldfish-app-62dia.ondigitalocean.app/api
+      - key: REACT_APP_API_BASE_URL
+        scope: BUILD_TIME
+        value: https://goldfish-app-62dia.ondigitalocean.app
 
 ingress:
   rules:
