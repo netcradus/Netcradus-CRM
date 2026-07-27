@@ -29,7 +29,7 @@ export function getAppSocket(token) {
   errorLogged = false;
 
   socketInstance = io(SOCKET_BASE_URL, {
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     upgrade: true,
     rememberUpgrade: true,
     reconnection: true,

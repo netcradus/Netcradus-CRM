@@ -31,7 +31,37 @@ const server = http.createServer(app);
 app.set("trust proxy", 1);
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(cors());
+const parseOrigins = (val) => {
+  if (!val) return [];
+  return val.split(",").map(o => o.trim()).filter(Boolean);
+};
+
+const allowedOrigins = [
+  ...parseOrigins(process.env.FRONTEND_URL),
+  ...parseOrigins(process.env.CLIENT_ORIGIN),
+  "https://netcradus.tech",
+  "http://localhost:3000",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed = allowedOrigins.some(
+        (allowedUrl) => allowedUrl.toLowerCase() === origin.toLowerCase()
+      );
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`[API CORS] Origin ${origin} not explicitly allowed. Allowing via fallback.`);
+        callback(null, true);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  })
+);
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 
 app.get("/", (req, res) => {
@@ -168,6 +198,10 @@ const startServer = async () => {
   await zohoSyncService.startPolling();
 
   server.listen(PORT, "0.0.0.0", async () => {
+    console.log(`[Startup] Backend Entry File: server/index.js`);
+    console.log(`[Startup] Active Port: ${PORT}`);
+    console.log(`[Startup] Socket.IO: Initialized`);
+    console.log(`[Startup] Socket.IO Path: /socket.io`);
     console.log(`Server is running on port ${PORT}`);
 
     const driveStatus = await checkDriveHealth();
