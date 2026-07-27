@@ -33,40 +33,59 @@ app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: false }));
 const parseOrigins = (val) => {
   if (!val) return [];
-  return val.split(",").map(o => o.trim()).filter(Boolean);
+  return val.split(",").map(o => o.trim().replace(/\/+$/, "")).filter(Boolean);
 };
 
-const allowedOrigins = [
-  ...parseOrigins(process.env.FRONTEND_URL),
-  ...parseOrigins(process.env.CLIENT_ORIGIN),
-  ...parseOrigins(process.env.ALLOWED_ORIGINS),
-  "https://netcradus.tech",
-  "https://www.netcradus.tech",
-  "http://localhost:3000",
-  "http://localhost:5000",
-  "http://127.0.0.1:3000",
-];
+const checkOrigin = (origin, callback) => {
+  if (!origin) return callback(null, true);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.some(
-        (allowedUrl) => allowedUrl.toLowerCase() === origin.toLowerCase()
-      );
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.error(`[CORS Blocked] Origin: ${origin} is not in the allowed list. Blocked.`);
-        callback(new Error(`CORS policy: origin ${origin} not allowed`));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    optionsSuccessStatus: 204,
-  })
-);
+  const cleanOrigin = origin.trim().replace(/\/+$/, "").toLowerCase();
+  const allowedOrigins = [
+    ...parseOrigins(process.env.FRONTEND_URL),
+    ...parseOrigins(process.env.CLIENT_ORIGIN),
+    ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    "https://netcradus.tech",
+    "https://www.netcradus.tech",
+    "https://goldfish-app-62dia.ondigitalocean.app",
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:3000",
+  ];
+
+  const isDirectMatch = allowedOrigins.some(
+    (allowedUrl) => allowedUrl.toLowerCase() === cleanOrigin
+  );
+
+  const isDomainMatch =
+    /^https:\/\/(?:[a-z0-9-]+\.)*netcradus\.tech$/i.test(cleanOrigin) ||
+    /^https:\/\/(?:[a-z0-9-]+\.)*ondigitalocean\.app$/i.test(cleanOrigin);
+
+  if (isDirectMatch || isDomainMatch) {
+    return callback(null, true);
+  }
+
+  console.error(`[CORS Blocked] Origin: ${origin} is not in the allowed list.`);
+  return callback(null, false);
+};
+
+const corsOptions = {
+  origin: checkOrigin,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+  ],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));

@@ -65,4 +65,6 @@ ingress:
   cors:
     allow_origins:
       - exact: https://netcradus.tech
+      - exact: https://www.netcradus.tech
+      - regex: ^https:\/\/.*\.ondigitalocean\.app$
       - prefix: http://localhost

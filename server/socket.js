@@ -111,36 +111,44 @@ async function loadConversationSummary(conversationId, currentUserId) {
 function initializeSocket(server) {
   const parseOrigins = (val) => {
     if (!val) return [];
-    return val.split(",").map(o => o.trim()).filter(Boolean);
+    return val.split(",").map(o => o.trim().replace(/\/+$/, "")).filter(Boolean);
   };
 
-  const allowedOrigins = [
-    ...parseOrigins(process.env.FRONTEND_URL),
-    ...parseOrigins(process.env.CLIENT_ORIGIN),
-    ...parseOrigins(process.env.ALLOWED_ORIGINS),
-    "https://netcradus.tech",
-    "https://www.netcradus.tech",
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://127.0.0.1:3000",
-  ];
+  const checkOrigin = (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    const cleanOrigin = origin.trim().replace(/\/+$/, "").toLowerCase();
+    const allowedOrigins = [
+      ...parseOrigins(process.env.FRONTEND_URL),
+      ...parseOrigins(process.env.CLIENT_ORIGIN),
+      ...parseOrigins(process.env.ALLOWED_ORIGINS),
+      "https://netcradus.tech",
+      "https://www.netcradus.tech",
+      "https://goldfish-app-62dia.ondigitalocean.app",
+      "http://localhost:3000",
+      "http://localhost:5000",
+      "http://127.0.0.1:3000",
+    ];
+
+    const isDirectMatch = allowedOrigins.some(
+      (allowedUrl) => allowedUrl.toLowerCase() === cleanOrigin
+    );
+
+    const isDomainMatch =
+      /^https:\/\/(?:[a-z0-9-]+\.)*netcradus\.tech$/i.test(cleanOrigin) ||
+      /^https:\/\/(?:[a-z0-9-]+\.)*ondigitalocean\.app$/i.test(cleanOrigin);
+
+    if (isDirectMatch || isDomainMatch) {
+      return callback(null, true);
+    }
+
+    console.error(`[Socket CORS Blocked] Origin: ${origin} is not in the allowed list.`);
+    return callback(null, false);
+  };
 
   ioInstance = new Server(server, {
     cors: {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-
-        const isAllowed = allowedOrigins.some(
-          (allowedUrl) => allowedUrl.toLowerCase() === origin.toLowerCase()
-        );
-
-        if (isAllowed) {
-          callback(null, true);
-        } else {
-          console.error(`[Socket CORS Blocked] Origin: ${origin} is not in the allowed list. Blocked.`);
-          callback(null, false);
-        }
-      },
+      origin: checkOrigin,
       methods: ["GET", "POST"],
       credentials: true,
     },
