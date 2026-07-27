@@ -35,15 +35,16 @@ static_sites:
   - name: crm-frontend
     source_dir: client
     catchall_document: index.html
+    error_document: index.html
     build_command: npm run build
     output_dir: build
     envs:
       - key: REACT_APP_API_URL
         scope: BUILD_TIME
-        value: https://goldfish-app-62dia.ondigitalocean.app/api
+        value: /api
       - key: REACT_APP_API_BASE_URL
         scope: BUILD_TIME
-        value: https://goldfish-app-62dia.ondigitalocean.app
+        value: /api
 
 ingress:
   rules:

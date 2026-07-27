@@ -9,13 +9,22 @@ const apiUrl = (path = "") => {
   if (!path) return API_URL;
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const apiRoot = API_URL.replace(/\/api$/i, "");
 
   if (normalizedPath === "/api" || normalizedPath.startsWith("/api/")) {
-    return `${apiRoot}${normalizedPath}`;
+    if (!API_URL || API_URL === "/api") {
+      return normalizedPath;
+    }
+    const apiRoot = API_URL.replace(/\/api$/i, "");
+    return apiRoot ? `${apiRoot}${normalizedPath}` : normalizedPath;
   }
 
-  return `${API_URL}${normalizedPath}`;
+  if (!API_URL) {
+    return `/api${normalizedPath}`;
+  }
+
+  return API_URL.endsWith("/api")
+    ? `${API_URL}${normalizedPath}`
+    : `${API_URL}/api${normalizedPath}`;
 };
 
 export { API_URL, apiUrl };

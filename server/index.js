@@ -87,8 +87,19 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
-
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.JSON_BODY_LIMIT || "1mb" }));
+
+// Safe request logging middleware for /api routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    const origin = req.get("Origin") || "No-Origin";
+    res.on("finish", () => {
+      console.log(`[API Log] ${req.method} ${req.path} | Origin: ${origin} | Status: ${res.statusCode}`);
+    });
+  }
+  next();
+});
 
 app.get("/", (req, res) => {
   res.send("NetCradus CRM Backend is running");
@@ -209,7 +220,7 @@ app.get(/.*/, (req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
