@@ -117,8 +117,12 @@ function initializeSocket(server) {
   const allowedOrigins = [
     ...parseOrigins(process.env.FRONTEND_URL),
     ...parseOrigins(process.env.CLIENT_ORIGIN),
+    ...parseOrigins(process.env.ALLOWED_ORIGINS),
     "https://netcradus.tech",
+    "https://www.netcradus.tech",
     "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:3000",
   ];
 
   ioInstance = new Server(server, {
@@ -133,8 +137,8 @@ function initializeSocket(server) {
         if (isAllowed) {
           callback(null, true);
         } else {
-          console.warn(`[Socket CORS] Origin ${origin} not explicitly allowed. Allowing via fallback.`);
-          callback(null, true);
+          console.error(`[Socket CORS Blocked] Origin: ${origin} is not in the allowed list. Blocked.`);
+          callback(null, false);
         }
       },
       methods: ["GET", "POST"],

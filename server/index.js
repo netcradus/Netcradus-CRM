@@ -39,8 +39,12 @@ const parseOrigins = (val) => {
 const allowedOrigins = [
   ...parseOrigins(process.env.FRONTEND_URL),
   ...parseOrigins(process.env.CLIENT_ORIGIN),
+  ...parseOrigins(process.env.ALLOWED_ORIGINS),
   "https://netcradus.tech",
+  "https://www.netcradus.tech",
   "http://localhost:3000",
+  "http://localhost:5000",
+  "http://127.0.0.1:3000",
 ];
 
 app.use(
@@ -53,8 +57,8 @@ app.use(
       if (isAllowed) {
         callback(null, true);
       } else {
-        console.warn(`[API CORS] Origin ${origin} not explicitly allowed. Allowing via fallback.`);
-        callback(null, true);
+        console.error(`[CORS Blocked] Origin: ${origin} is not in the allowed list. Blocked.`);
+        callback(null, false);
       }
     },
     credentials: true,
