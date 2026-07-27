@@ -85,7 +85,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
@@ -209,7 +209,7 @@ app.get(/.*/, (req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 const startServer = async () => {
   await connectDB();
