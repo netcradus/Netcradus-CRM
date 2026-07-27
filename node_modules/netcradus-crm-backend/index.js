@@ -68,20 +68,6 @@ app.use(
   })
 );
 
-// Explicitly handle OPTIONS preflight for all routes
-app.options("*", cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    const isAllowed = allowedOrigins.some(
-      (allowedUrl) => allowedUrl.toLowerCase() === origin.toLowerCase()
-    );
-    callback(isAllowed ? null : new Error(`CORS policy: origin ${origin} not allowed`), isAllowed);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  optionsSuccessStatus: 204,
-}));
 
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
 
