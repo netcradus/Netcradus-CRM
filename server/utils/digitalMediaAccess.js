@@ -1,5 +1,5 @@
-const PRIVILEGED_ROLES = new Set(["admin", "hr", "super_user"]);
-const DIGITAL_MEDIA_ROLES = ["digital_media", "admin", "hr", "super_user"];
+const PRIVILEGED_ROLES = new Set(["admin", "hr", "super_user", "coo"]);
+const DIGITAL_MEDIA_ROLES = ["digital_media", "admin", "hr", "super_user", "coo"];
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 

@@ -9,8 +9,8 @@ const {
 } = require('../controllers/holidayController');
 
 router.get('/', getHolidays);
-router.post('/', rbac(['super_user', 'hr']), createHoliday);
-router.patch('/:id', rbac(['super_user', 'hr']), updateHoliday);
-router.delete('/:id', rbac(['super_user', 'hr']), deleteHoliday);
+router.post('/', rbac(['super_user', 'hr', 'coo']), createHoliday);
+router.patch('/:id', rbac(['super_user', 'hr', 'coo']), updateHoliday);
+router.delete('/:id', rbac(['super_user', 'hr', 'coo']), deleteHoliday);
 
 module.exports = router;

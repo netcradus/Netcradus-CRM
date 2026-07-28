@@ -197,29 +197,29 @@ const App = () => {
               <Route path="/partner/vendors" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerVendors /></RoleRoute>} />
               <Route path="/partner/projects" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerProjects /></RoleRoute>} />
               <Route path="/partner/projects/:id" element={<RoleRoute roles={ACCESS_GROUPS.partner}><PartnerProjectDetail /></RoleRoute>} />
-              <Route path="/admin/partners" element={<RoleRoute roles={ACCESS_GROUPS.admin}><AdminPartners /></RoleRoute>} />
-              <Route path="/admin/partners/:id" element={<RoleRoute roles={ACCESS_GROUPS.admin}><AdminPartnerDetail /></RoleRoute>} />
+              <Route path="/admin/partners" element={<RoleRoute roles={[...ACCESS_GROUPS.admin, "coo"]}><AdminPartners /></RoleRoute>} />
+              <Route path="/admin/partners/:id" element={<RoleRoute roles={[...ACCESS_GROUPS.admin, "coo"]}><AdminPartnerDetail /></RoleRoute>} />
               
               <Route path="/user-management" element={
-                <RoleRoute roles="super_user">
+                <RoleRoute roles={["super_user", "coo"]}>
                   <UserManagement />
                 </RoleRoute>
               } />
 
               <Route path="/admin/devices" element={
-                <RoleRoute roles="super_user">
+                <RoleRoute roles={["super_user", "coo"]}>
                   <AdminDevices />
                 </RoleRoute>
               } />
 
               <Route path="/organization-chart" element={
-                <RoleRoute roles="super_user">
+                <RoleRoute roles={["super_user", "coo"]}>
                   <OrgHierarchyPage />
                 </RoleRoute>
               } />
 
               <Route path="/expenses" element={
-                <RoleRoute roles={["super_user", "admin"]}>
+                <RoleRoute roles={ACCESS_GROUPS.financeAdmin}>
                   <ExpensesPage />
                 </RoleRoute>
               } />
@@ -239,13 +239,13 @@ const App = () => {
               <Route path="/broadcasts" element={<RoleRoute roles={ACCESS_GROUPS.personal}><BroadcastsPage /></RoleRoute>} />
               
               <Route path="/employee-profiles" element={
-                <RoleRoute roles={["super_user", "hr"]}>
+                <RoleRoute roles={["super_user", "hr", "coo"]}>
                   <EmployeeProfilesPage />
                 </RoleRoute>
               } />
 
               <Route path="/interviews" element={
-                <RoleRoute roles={["super_user", "hr"]}>
+                <RoleRoute roles={["super_user", "hr", "coo"]}>
                   <InterviewsPage />
                 </RoleRoute>
               } />
@@ -334,37 +334,37 @@ const App = () => {
 
               {/* Management Hub Routes */}
               <Route path="/management" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <Navigate to="/management/business/overview" replace />
                 </RoleRoute>
               } />
               <Route path="/management/business/clients" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
               <Route path="/management/business/tenders" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
               <Route path="/management/business/overview" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
               <Route path="/management/day-to-day/purchases" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
               <Route path="/management/day-to-day/purchase-items" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
               <Route path="/management/day-to-day/invoices" element={
-                <RoleRoute roles={["super_user", "management"]}>
+                <RoleRoute roles={ACCESS_GROUPS.management}>
                   <ManagementHub />
                 </RoleRoute>
               } />
@@ -385,19 +385,19 @@ const App = () => {
               <Route path="/projects/:id/edit" element={<RoleRoute roles={ACCESS_GROUPS.projects}><ProjectFormPage /></RoleRoute>} />
               
               <Route path="/showcase" element={
-                <RoleRoute roles="super_user" redirectTo="/unauthorized">
+                <RoleRoute roles={["super_user", "coo"]} redirectTo="/unauthorized">
                   <ShowcasePage />
                 </RoleRoute>
               } />
 
               <Route path="/quotes" element={<RoleRoute roles={ACCESS_GROUPS.quotes}><Quotes /></RoleRoute>} />
               <Route path="/social" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Social /></RoleRoute>} />
-              <Route path="/content-calendar" element={<RoleRoute roles={["super_user", "digital_media"]}><ContentCalendarPage /></RoleRoute>} />
-              <Route path="/media-library" element={<RoleRoute roles={["super_user", "digital_media"]}><MediaLibraryPage /></RoleRoute>} />
-              <Route path="/audience" element={<RoleRoute roles={["super_user", "digital_media"]}><AudiencePage /></RoleRoute>} />
-              <Route path="/budget-overview" element={<RoleRoute roles={["super_user", "digital_media"]}><BudgetOverviewPage /></RoleRoute>} />
-              <Route path="/approvals" element={<RoleRoute roles={["super_user", "digital_media", "admin", "hr"]}><ApprovalsPage /></RoleRoute>} />
-              <Route path="/social-inbox" element={<RoleRoute roles={["super_user", "digital_media"]}><UnifiedInboxPage /></RoleRoute>} />
+              <Route path="/content-calendar" element={<RoleRoute roles={["super_user", "digital_media", "coo"]}><ContentCalendarPage /></RoleRoute>} />
+              <Route path="/media-library" element={<RoleRoute roles={["super_user", "digital_media", "coo"]}><MediaLibraryPage /></RoleRoute>} />
+              <Route path="/audience" element={<RoleRoute roles={["super_user", "digital_media", "coo"]}><AudiencePage /></RoleRoute>} />
+              <Route path="/budget-overview" element={<RoleRoute roles={["super_user", "digital_media", "coo"]}><BudgetOverviewPage /></RoleRoute>} />
+              <Route path="/approvals" element={<RoleRoute roles={["super_user", "digital_media", "admin", "hr", "coo"]}><ApprovalsPage /></RoleRoute>} />
+              <Route path="/social-inbox" element={<RoleRoute roles={["super_user", "digital_media", "coo"]}><UnifiedInboxPage /></RoleRoute>} />
               <Route path="/services" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><Services /></RoleRoute>} />
               <Route path="/vendors" element={<RoleRoute roles={ACCESS_GROUPS.vendors}><Vendors /></RoleRoute>} />
               <Route path="/crm-teamspaces" element={<RoleRoute roles={ACCESS_GROUPS.marketing}><CRMTeamspaces /></RoleRoute>} />
@@ -406,7 +406,7 @@ const App = () => {
               <Route path="/solutions" element={<RoleRoute roles={ACCESS_GROUPS.solutions}><Solutions /></RoleRoute>} />
               
               <Route path="/invoices" element={
-                <RoleRoute roles={["super_user", "admin"]}>
+                <RoleRoute roles={ACCESS_GROUPS.financeAdmin}>
                   <Invoices />
                 </RoleRoute>
               } />
@@ -432,7 +432,7 @@ const App = () => {
               <Route path="/attendance-reports" element={<RoleRoute roles={ACCESS_GROUPS.attendanceAdmin}><AttendanceReportsPage /></RoleRoute>} />
 
               <Route path="/admin/storage" element={
-                <RoleRoute roles="super_user">
+                <RoleRoute roles={["super_user", "coo"]}>
                   <StorageAdminPage />
                 </RoleRoute>
               } />
@@ -443,7 +443,7 @@ const App = () => {
                   </RoleRoute>
                 } />
                 <Route path="/settings/zoho" element={
-                  <RoleRoute roles="super_user">
+                  <RoleRoute roles={["super_user", "coo"]}>
                     <ZohoSettingsPanel />
                   </RoleRoute>
                 } />

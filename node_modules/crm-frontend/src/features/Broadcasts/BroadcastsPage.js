@@ -23,7 +23,7 @@ export default function BroadcastsPage() {
   const [selectedBroadcastId, setSelectedBroadcastId] = useState(null);
   
   const role = (localStorage.getItem("userRole") || "").trim().toLowerCase();
-  const canPublish = ["super_user", "hr"].includes(role);
+  const canPublish = ["super_user", "hr", "coo"].includes(role);
 
   const fetchList = useCallback(async () => {
     try {

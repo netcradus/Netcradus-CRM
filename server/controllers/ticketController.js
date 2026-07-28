@@ -72,8 +72,8 @@ const getTickets = async (req, res) => {
     try {
         let query = {};
         
-        // Admins and super_users see all tickets; standard users only see their own
-        const isAdmin = req.user.role === 'super_user' || req.user.role === 'admin';
+        // Admins, COO and super_users see all tickets; standard users only see their own
+        const isAdmin = req.user.role === 'super_user' || req.user.role === 'admin' || req.user.role === 'coo';
         if (!isAdmin) {
             query.raisedBy = req.user.id;
         }

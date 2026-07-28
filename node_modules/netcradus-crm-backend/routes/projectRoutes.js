@@ -17,7 +17,7 @@ router.use((req, res, next) => {
 });
 
 router.get("/users", projectController.getProjectUsers);
-router.get("/showcase", rbac(["super_user"]), projectController.getShowcaseProjects);
+router.get("/showcase", rbac(["super_user", "coo"]), projectController.getShowcaseProjects);
 router.post("/", projectController.createProject);
 router.get("/", projectController.getProjects);
 router.get("/:id", projectController.getProject);

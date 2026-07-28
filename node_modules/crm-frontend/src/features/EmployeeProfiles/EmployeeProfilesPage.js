@@ -268,8 +268,8 @@ function EmployeeProfilesPage() {
   }, [selectedProfile]);
 
   const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
-  const canVerifyDocuments = ["super_user", "hr"].includes(userRole);
-  const isHRorSuperUser = ["super_user", "hr"].includes(userRole);
+  const canVerifyDocuments = ["super_user", "hr", "coo"].includes(userRole);
+  const isHRorSuperUser = ["super_user", "hr", "coo"].includes(userRole);
 
   // Employee Assets States
   const [assetsData, setAssetsData] = useState({

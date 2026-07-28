@@ -17,12 +17,15 @@ import {
 
 import { apiUrl } from "../../config/api";
 
-const formatRoleLabel = (role = "") =>
-  role === "admin"
+const formatRoleLabel = (role = "") => {
+  const norm = String(role || "").trim().toLowerCase();
+  if (norm === "coo") return "Chief Operating Officer (COO)";
+  return role === "admin"
     ? "Administrator"
     : String(role)
         .replace(/_/g, " ")
         .replace(/\b\w/g, (c) => c.toUpperCase());
+};
 
 const getInitials = (name) => {
   if (!name) return "";
@@ -102,6 +105,12 @@ const UserManagement = () => {
     useState(false);
 
   const token = localStorage.getItem("token");
+  const currentUserRole = localStorage.getItem("userRole");
+
+  const isActionAllowed = (targetUserRole) => {
+    if (currentUserRole === "super_user") return true;
+    return !["super_user", "coo", "admin"].includes(targetUserRole);
+  };
 
   // Fetch Users
   const fetchUsers = useCallback(async () => {
@@ -602,46 +611,49 @@ const UserManagement = () => {
                     }}
                   >
                     {/* Edit */}
-                    <button
-                      className="btn btn-ghost"
-                      onClick={() =>
-                        onEditUser(u)
-                      }
-                      title="Edit User"
-                    >
-                      <Pencil size={16} />
-                    </button>
+                    {isActionAllowed(u.role) && (
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() =>
+                          onEditUser(u)
+                        }
+                        title="Edit User"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
 
                     {/* Enable/Disable */}
-                    <button
-                      className="btn btn-ghost"
-                      onClick={() =>
-                        onToggleUserAccess(
-                          u
-                        )
-                      }
-                      title={
-                        u.isDisabled
-                          ? "Enable"
-                          : "Disable"
-                      }
-                    >
-                      {u.isDisabled ? (
-                        <ShieldCheck
-                          size={16}
-                          color="var(--color-success)"
-                        />
-                      ) : (
-                        <ShieldAlert
-                          size={16}
-                          color="var(--color-warning)"
-                        />
-                      )}
-                    </button>
+                    {isActionAllowed(u.role) && (
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() =>
+                          onToggleUserAccess(
+                            u
+                          )
+                        }
+                        title={
+                          u.isDisabled
+                            ? "Enable"
+                            : "Disable"
+                        }
+                      >
+                        {u.isDisabled ? (
+                          <ShieldCheck
+                            size={16}
+                            color="var(--color-success)"
+                          />
+                        ) : (
+                          <ShieldAlert
+                            size={16}
+                            color="var(--color-warning)"
+                          />
+                        )}
+                      </button>
+                    )}
 
                     {/* Delete */}
-                    {u.role !==
-                      "super_user" && (
+                    {isActionAllowed(u.role) && u.role !== "super_user" && (
                       <button
                         className="btn btn-ghost"
                         style={{
@@ -835,6 +847,11 @@ const UserManagement = () => {
                     Digital Media
                   </option>
 
+                  {currentUserRole === "super_user" && (
+                    <option value="coo">
+                      Chief Operating Officer (COO)
+                    </option>
+                  )}
                   {/* Partner is an external role, selectable only from super-user management. */}
                   <option value="partner">
                     Partner
@@ -1084,6 +1101,11 @@ const UserManagement = () => {
                     Digital Media
                   </option>
 
+                  {currentUserRole === "super_user" && (
+                    <option value="coo">
+                      Chief Operating Officer (COO)
+                    </option>
+                  )}
                   {/* Partner is an external role, selectable only from super-user management. */}
                   <option value="partner">
                     Partner

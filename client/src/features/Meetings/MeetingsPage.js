@@ -155,7 +155,7 @@ function MeetingsPage() {
     rescheduled: meetings.filter((lead) => lead.meetingOutcome === "rescheduled").length,
   }), [meetings]);
 
-  if (userRole !== "super_user") {
+  if (userRole !== "super_user" && userRole !== "coo") {
     return <Navigate to="/dashboard" replace />;
   }
 

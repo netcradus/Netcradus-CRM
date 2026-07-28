@@ -5,11 +5,11 @@ const rbac = require("../middleware/rbac");
 
 router.get(
   "/dashboard-summary",
-  rbac(["super_user", "admin", "hr"]),
+  rbac(["super_user", "admin", "hr", "coo"]),
   controller.getExpenseDashboardSummary
 );
 
-router.use(rbac(["super_user", "admin"]));
+router.use(rbac(["super_user", "admin", "coo"]));
 
 router.get("/", controller.getExpenses);
 router.post("/", controller.createExpense);

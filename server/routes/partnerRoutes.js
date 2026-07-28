@@ -5,7 +5,7 @@ const rbac = require("../middleware/rbac");
 const upload = require("../middleware/upload");
 
 // Partner routes are shared by partners and admins so admins can inspect the same scoped data.
-router.use(rbac(["partner", "admin", "super_user"]));
+router.use(rbac(["partner", "admin", "super_user", "coo"]));
 
 router.get("/dashboard", partnerController.getDashboard);
 router.get("/vendors", partnerController.getVendors);
@@ -21,7 +21,7 @@ router.post("/projects/:id/files", upload.single("file"), partnerController.uplo
 router.post("/projects/:id/timeline", partnerController.addTimelineEvent);
 
 // Admin partner pages use these read-only aggregate endpoints.
-router.get("/admin/partners", rbac(["admin", "super_user"]), partnerController.getPartners);
-router.get("/admin/partners/:id", rbac(["admin", "super_user"]), partnerController.getPartnerDetail);
+router.get("/admin/partners", rbac(["admin", "super_user", "coo"]), partnerController.getPartners);
+router.get("/admin/partners/:id", rbac(["admin", "super_user", "coo"]), partnerController.getPartnerDetail);
 
 module.exports = router;

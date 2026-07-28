@@ -6,7 +6,7 @@ const ManagementPurchase = require("../models/ManagementPurchase");
 const ManagementPurchaseItem = require("../models/ManagementPurchaseItem");
 const ManagementInvoice = require("../models/ManagementInvoice");
 
-const ALLOWED_ROLES = ["super_user", "management"];
+const ALLOWED_ROLES = ["super_user", "management", "coo"];
 
 const SECTION_MAP = {
   clients: {

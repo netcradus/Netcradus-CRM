@@ -124,7 +124,7 @@ exports.getAssets = async (req, res) => {
 
     // Role-based access validation
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged && String(req.user?.id || req.user?._id) !== String(userId)) {
       return res.status(403).json({ success: false, message: "You are not authorized to view this user's assets." });
     }
@@ -167,9 +167,9 @@ exports.getAssets = async (req, res) => {
 exports.assignAsset = async (req, res) => {
   try {
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: "Unauthorized. HR or Super User access required." });
+      return res.status(403).json({ success: false, message: "Unauthorized. HR, COO or Super User access required." });
     }
 
     const { userId } = req.body;
@@ -250,9 +250,9 @@ exports.assignAsset = async (req, res) => {
 exports.assignAssetsBulk = async (req, res) => {
   try {
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: "Unauthorized. HR or Super User access required." });
+      return res.status(403).json({ success: false, message: "Unauthorized. HR, COO or Super User access required." });
     }
 
     const { userId, commonDetails, assets } = req.body;
@@ -379,9 +379,9 @@ exports.assignAssetsBulk = async (req, res) => {
 exports.updateAsset = async (req, res) => {
   try {
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: "Unauthorized. HR or Super User access required." });
+      return res.status(403).json({ success: false, message: "Unauthorized. HR, COO or Super User access required." });
     }
 
     const asset = await EmployeeAsset.findOne({ _id: req.params.id, isDeleted: false });
@@ -500,9 +500,9 @@ exports.updateAsset = async (req, res) => {
 exports.returnAsset = async (req, res) => {
   try {
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: "Unauthorized. HR or Super User access required." });
+      return res.status(403).json({ success: false, message: "Unauthorized. HR, COO or Super User access required." });
     }
 
     const asset = await EmployeeAsset.findOne({ _id: req.params.id, isDeleted: false });
@@ -548,9 +548,9 @@ exports.returnAsset = async (req, res) => {
 exports.archiveAsset = async (req, res) => {
   try {
     const userRole = (req.user?.role || "").trim().toLowerCase();
-    const isPrivileged = ["super_user", "hr"].includes(userRole);
+    const isPrivileged = ["super_user", "hr", "coo"].includes(userRole);
     if (!isPrivileged) {
-      return res.status(403).json({ success: false, message: "Unauthorized. HR or Super User access required." });
+      return res.status(403).json({ success: false, message: "Unauthorized. HR, COO or Super User access required." });
     }
 
     const asset = await EmployeeAsset.findOne({ _id: req.params.id, isDeleted: false });

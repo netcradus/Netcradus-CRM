@@ -87,11 +87,15 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
     items.push({ label: "Home", icon: <Home size={20} />, path: "/dashboard", roles: ACCESS_GROUPS.all });
 
-    if (canAccess(role, ACCESS_GROUPS.userAdmin)) {
-      items.push({ label: "User Management", icon: <Users size={20} />, path: "/user-management", roles: ACCESS_GROUPS.userAdmin });
+    if (canAccess(role, ACCESS_GROUPS.userAdmin) || role === "coo") {
+      items.push({ label: "User Management", icon: <Users size={20} />, path: "/user-management", roles: [...ACCESS_GROUPS.userAdmin, "coo"] });
+    }
+    if (canAccess(role, ACCESS_GROUPS.userAdmin) || role === "coo") {
       // Super users get a dedicated partner overview without mixing partners into employee tables.
-      items.push({ label: "Partners", icon: <Briefcase size={20} />, path: "/admin/partners", roles: ACCESS_GROUPS.userAdmin });
-      items.push({ label: "Employee Hierarchy", icon: <Network size={20} />, path: "/organization-chart", roles: ACCESS_GROUPS.userAdmin });
+      items.push({ label: "Partners", icon: <Briefcase size={20} />, path: "/admin/partners", roles: [...ACCESS_GROUPS.userAdmin, "coo"] });
+    }
+    if (canAccess(role, ACCESS_GROUPS.userAdmin) || role === "coo") {
+      items.push({ label: "Employee Hierarchy", icon: <Network size={20} />, path: "/organization-chart", roles: [...ACCESS_GROUPS.userAdmin, "coo"] });
     }
 
     if (canAccess(role, ACCESS_GROUPS.peopleOps)) {
@@ -111,7 +115,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       roles: ACCESS_GROUPS.projects,
       submenu: [
         { label: "Projects", path: "/projects", icon: <Layers size={18} />, roles: ACCESS_GROUPS.projects },
-        { label: "Showcase", path: "/showcase", icon: <Monitor size={18} />, roles: ACCESS_GROUPS.security },
+        { label: "Showcase", path: "/showcase", icon: <Monitor size={18} />, roles: [...ACCESS_GROUPS.security, "coo"] },
       ]
     });
 
@@ -224,20 +228,20 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       ]
     });
 
-    if (canAccess(role, ACCESS_GROUPS.security)) items.push({
+    if (canAccess(role, ACCESS_GROUPS.security) || role === "coo") items.push({
       label: "Security",
       path: "/admin/devices",
       icon: <ShieldCheck size={20} />,
-      roles: ACCESS_GROUPS.security,
+      roles: [...ACCESS_GROUPS.security, "coo"],
       submenu: [
-        { label: "Device Security", path: "/admin/devices", icon: <Smartphone size={18} />, roles: ACCESS_GROUPS.security },
-        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={18} />, roles: ACCESS_GROUPS.security },
-        { label: "Zoho Mail", path: "/settings/zoho", icon: <Mail size={18} />, roles: ACCESS_GROUPS.security },
+        { label: "Device Security", path: "/admin/devices", icon: <Smartphone size={18} />, roles: [...ACCESS_GROUPS.security, "coo"] },
+        { label: "Storage Admin", path: "/admin/storage", icon: <Database size={18} />, roles: [...ACCESS_GROUPS.security, "coo"] },
+        { label: "Zoho Mail", path: "/settings/zoho", icon: <Mail size={18} />, roles: [...ACCESS_GROUPS.security, "coo"] },
       ]
     });
 
-    if (canAccess(role, ACCESS_GROUPS.security)) {
-      items.push({ label: "Password Manager", icon: <Key size={20} />, path: "/password-manager", roles: ACCESS_GROUPS.security });
+    if (canAccess(role, ["super_user"])) {
+      items.push({ label: "Password Manager", icon: <Key size={20} />, path: "/password-manager", roles: ["super_user"] });
     }
 
     return items;

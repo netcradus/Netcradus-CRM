@@ -252,10 +252,7 @@ function Login() {
 
       <div className="lp-shell">
         <div className="lp-mobile-brand">
-          <div className="lp-logo-row">
-            <img src="/sidebar-logo.jpeg" alt="Netcradus" className="lp-logo-img" />
-            <img src="/netcradus.png" alt="Netcradus" className="lp-logo-text" />
-          </div>
+          <img src="/LOGO.png" alt="Netcradus" className="lp-hero-logo" />
           <div className="lp-brand-actions">
             <ThemeToggle className="lp-theme-toggle" compact />
             <div className="lp-secure-mark">
@@ -268,10 +265,7 @@ function Login() {
         <section className="lp-brand-panel">
           <div>
             <div className="lp-brand-top">
-              <div className="lp-logo-row">
-                <img src="/sidebar-logo.jpeg" alt="Netcradus" className="lp-logo-img" />
-                <img src="/netcradus.png" alt="Netcradus" className="lp-logo-text" />
-              </div>
+              <img src="/LOGO.png" alt="Netcradus" className="lp-hero-logo" />
               <div className="lp-brand-actions">
                 <ThemeToggle className="lp-theme-toggle" compact />
                 <div className="lp-secure-mark">

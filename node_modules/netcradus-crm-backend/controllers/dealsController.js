@@ -563,7 +563,7 @@ const isClosedDeal = (deal) => {
 const ensureDealAccess = (req, res) => {
   const role = normalizeRole(req.user?.role);
 
-  if (role === "super_user" || role === "sales") {
+  if (role === "super_user" || role === "sales" || role === "coo") {
     return true;
   }
 

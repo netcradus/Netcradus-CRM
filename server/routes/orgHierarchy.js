@@ -13,9 +13,10 @@ const router = express.Router();
 
 router.get("/assignable-users", getAssignableUsers);
 
-router.use(rbac(["super_user"]));
+router.get("/", rbac(["super_user", "coo"]), getHierarchy);
 
-router.get("/", getHierarchy);
+router.use(rbac(["super_user", "coo"]));
+
 router.post("/", createHierarchyNode);
 router.put("/bulk-update", bulkUpdateHierarchy);
 router.put("/:id", updateHierarchyNode);

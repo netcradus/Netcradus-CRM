@@ -16,6 +16,21 @@ const superUserOnly = (req, res, next) => {
   next();
 };
 
+const superUserOrCoo = (req, res, next) => {
+  if (req.user?.role !== 'super_user' && req.user?.role !== 'coo') {
+    return res.status(403).json({ success: false, message: 'Super user or COO access required.', code: 'FORBIDDEN' });
+  }
+  next();
+};
+
+const superUserOrCooOrHr = (req, res, next) => {
+  const allowed = ['super_user', 'coo', 'hr'];
+  if (!allowed.includes(req.user?.role)) {
+    return res.status(403).json({ success: false, message: 'Super user, COO or HR access required.', code: 'FORBIDDEN' });
+  }
+  next();
+};
+
 // ─── Employee routes (any authenticated user — own data only) ─────────────────
 
 // Storage info
@@ -26,6 +41,10 @@ router.get('/files', ctrl.getMyFiles);
 
 // File upload (rate limited)
 router.post('/upload', uploadRateLimiter, upload.single('file'), ctrl.uploadFile);
+
+// Employee document routes
+router.get('/employee/:userId', superUserOrCooOrHr, ctrl.getEmployeeDocuments);
+router.post('/upload/:userId', superUserOrCooOrHr, uploadRateLimiter, upload.single('document'), ctrl.uploadEmployeeDocument);
 
 // View file inline (proxy — never exposes raw Drive URL)
 router.get('/view/:documentId', viewDownloadRateLimiter, ctrl.viewFile);
@@ -52,10 +71,10 @@ router.delete('/folders/:folderName', ctrl.deleteFolder);
 // ─── Super user only routes ───────────────────────────────────────────────────
 
 // All user storage overview
-router.get('/admin/storage', superUserOnly, ctrl.getAllUsersStorage);
+router.get('/admin/storage', superUserOrCoo, ctrl.getAllUsersStorage);
 
 // View any user's files
-router.get('/admin/user/:userId/files', superUserOnly, ctrl.getUserFiles);
+router.get('/admin/user/:userId/files', superUserOrCoo, ctrl.getUserFiles);
 
 // Update quota
 router.patch('/admin/user/:userId/quota', superUserOnly, ctrl.updateUserQuota);

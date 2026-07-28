@@ -225,7 +225,7 @@ const ensureProjectAccess = (project, req, res) => {
   const collaborators = Array.isArray(project.collaborators) ? project.collaborators : [];
   const isCollaborator = collaborators.some((c) => String(c?._id || c || "") === String(userId));
 
-  if (isSuperUser(req.user) || isOwner || isAssigned || isCollaborator) {
+  if (isSuperUser(req.user) || req.user.role === "coo" || isOwner || isAssigned || isCollaborator) {
     return true;
   }
 
@@ -320,7 +320,7 @@ exports.getProjects = catchAsync(async (req, res) => {
   const { status, industry, search, sortBy = "", page = 1, limit = 20 } = req.query;
   let query = { isDeleted: false };
 
-  if (req.user.role === "super_user") {
+  if (req.user.role === "super_user" || req.user.role === "coo") {
     query = { isDeleted: false };
   } else {
     query = {

@@ -171,6 +171,10 @@ const createHierarchyNode = async (req, res) => {
       return res.status(400).json({ message: "priorityLevel must be an integer greater than or equal to 0" });
     }
 
+    if (parsedPriorityLevel === 0 && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can create root level priority 0 nodes" });
+    }
+
     const resolvedPriorityLevel = user.role === "super_user" ? 0 : parsedPriorityLevel;
     let normalizedParentId = null;
     if (parentId && resolvedPriorityLevel !== 0) {
@@ -216,10 +220,18 @@ const updateHierarchyNode = async (req, res) => {
       return res.status(404).json({ message: "Hierarchy node not found" });
     }
 
+    const targetUser = await User.findById(node.userId).select("role");
+    if (targetUser && targetUser.role === "super_user" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can modify the Super User hierarchy node" });
+    }
+
     if (priorityLevel !== undefined) {
       const parsedPriorityLevel = parsePriorityLevel(priorityLevel);
       if (parsedPriorityLevel === null) {
         return res.status(400).json({ message: "priorityLevel must be an integer greater than or equal to 1" });
+      }
+      if (parsedPriorityLevel === 0 && req.user.role !== "super_user") {
+        return res.status(403).json({ message: "Only Super Users can assign priority level 0" });
       }
       node.priorityLevel = parsedPriorityLevel;
     }
@@ -289,6 +301,11 @@ const deleteHierarchyNode = async (req, res) => {
       return res.status(404).json({ message: "Hierarchy node not found" });
     }
 
+    const targetUser = await User.findById(node.userId).select("role");
+    if (targetUser && targetUser.role === "super_user" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can delete the Super User node" });
+    }
+
     await OrgHierarchy.updateMany({ parentId: node._id }, { $set: { parentId: null } });
     const removedUserId = node.userId?._id || node.userId;
     await User.updateMany({ reportsTo: removedUserId }, { $set: { reportsTo: null } });
@@ -331,6 +348,16 @@ const bulkUpdateHierarchy = async (req, res) => {
 
       if (parsedPriorityLevel === 0 && update.parentId) {
         return res.status(400).json({ message: "Top-level Super Admin node cannot be assigned to a parent" });
+      }
+
+      if (req.user.role !== "super_user") {
+        const targetNode = await OrgHierarchy.findById(update.id).populate("userId", "role");
+        if (targetNode?.userId?.role === "super_user") {
+          return res.status(403).json({ message: "Only Super Users can modify the Super User hierarchy node" });
+        }
+        if (parsedPriorityLevel === 0) {
+          return res.status(403).json({ message: "Only Super Users can assign priority level 0" });
+        }
       }
     }
 

@@ -158,7 +158,7 @@ const createUserByAdmin = async (req, res) => {
     const { email, password, role, department: manualDept, designation: manualDesignation, name, skipOnboarding } = req.body;
     const normalizedRole = String(role || "").trim().toLowerCase();
     // Partner is selectable by super users but remains outside employee/admin role groups.
-    const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"];
+    const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner", "coo"];
 
     if (!email || !password || !role) {
       return res.status(400).json({
@@ -170,6 +170,16 @@ const createUserByAdmin = async (req, res) => {
       return res.status(400).json({
         message: "Invalid role selected"
       });
+    }
+
+    if (normalizedRole === "coo" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can create a COO user" });
+    }
+    if (normalizedRole === "super_user" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can create a Super User" });
+    }
+    if (normalizedRole === "admin" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can create an Admin user" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -601,6 +611,9 @@ const deleteUserByAdmin = async (req, res) => {
     if (user.role === "super_user") {
       return res.status(403).json({ message: "Super User accounts cannot be deleted" });
     }
+    if (["coo", "admin"].includes(user.role) && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can delete COO or Admin users" });
+    }
 
     await Contact.deleteOne({ linkedUser: user._id });
     await user.deleteOne();
@@ -624,6 +637,10 @@ const adminChangeUserPassword = async (req, res) => {
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    if (["super_user", "coo", "admin"].includes(user.role) && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can change the password of COO, Admin, or Super Users" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -657,17 +674,26 @@ const updateUserByAdmin = async (req, res) => {
     if (user.role === "super_user" && req.user.role !== "super_user") {
       return res.status(403).json({ message: "Cannot update the primary Super User" });
     }
+    if (user.role === "coo" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can modify a COO user" });
+    }
+    if (user.role === "admin" && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can modify an Admin user" });
+    }
 
     const previousEmail = user.email;
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase().trim();
     if (role) {
       const normalizedRole = String(role).trim().toLowerCase();
-      const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner"];
+      const allowedRoles = ["admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner", "coo"];
       if (!allowedRoles.includes(normalizedRole) && normalizedRole !== "super_user") {
         return res.status(400).json({
           message: "Invalid role selected"
         });
+      }
+      if (["super_user", "coo", "admin"].includes(normalizedRole) && req.user.role !== "super_user") {
+        return res.status(403).json({ message: "Only Super Users can assign super_user, coo, or admin roles" });
       }
       user.role = normalizedRole;
     }
@@ -728,6 +754,9 @@ const toggleUserAccessByAdmin = async (req, res) => {
     if (user.role === "super_user") {
       return res.status(403).json({ message: "Super User accounts cannot be disabled" });
     }
+    if (["coo", "admin"].includes(user.role) && req.user.role !== "super_user") {
+      return res.status(403).json({ message: "Only Super Users can disable COO or Admin users" });
+    }
 
     user.isDisabled = Boolean(isDisabled);
     user.disabledAt = user.isDisabled ? new Date() : null;
@@ -753,12 +782,15 @@ const toggleUserAccessByAdmin = async (req, res) => {
   }
 };
 
-const formatRoleLabel = (role = "") =>
-  String(role || "")
+const formatRoleLabel = (role = "") => {
+  const norm = String(role || "").trim().toLowerCase();
+  if (norm === "coo") return "Chief Operating Officer (COO)";
+  return String(role || "")
     .split("_")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+};
 
 const requestOTP = async (req, res) => {
   try {
@@ -939,7 +971,9 @@ const verifyAdminDevice = async (req, res) => {
 
 const getAdminDevices = async (req, res) => {
   try {
-    const devices = await AdminDevice.find({ userId: req.user.id }).sort({ lastUsedAt: -1 });
+    const canViewOrganizationDevices = ["super_user", "coo"].includes(req.user.role);
+    const query = canViewOrganizationDevices ? {} : { userId: req.user.id };
+    const devices = await AdminDevice.find(query).sort({ lastUsedAt: -1 });
     res.json(devices);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -949,8 +983,16 @@ const getAdminDevices = async (req, res) => {
 const revokeAdminDevice = async (req, res) => {
   try {
     const { deviceId } = req.params;
-    await AdminDevice.deleteOne({ userId: req.user.id, deviceId });
-    await logAuthEvent(req.user.id, "DEVICE_REVOKED", req.ip, req.get('User-Agent'), `Revoked ${deviceId}`);
+    const canViewOrganizationDevices = ["super_user", "coo"].includes(req.user.role);
+    const query = canViewOrganizationDevices ? { deviceId } : { userId: req.user.id, deviceId };
+
+    const device = await AdminDevice.findOne(query);
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    await AdminDevice.deleteOne({ _id: device._id });
+    await logAuthEvent(device.userId, "DEVICE_REVOKED", req.ip, req.get('User-Agent'), `Revoked ${deviceId} by ${req.user.role} ${req.user.id}`);
     res.json({ message: "Device revoked successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error" });

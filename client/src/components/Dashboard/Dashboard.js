@@ -9,6 +9,7 @@ import TechDashboard from "./TechDashboard.js";
 import DigitalMediaDashboard from "./DigitalMediaDashboard.js";
 import PartnerDashboard from "../../features/Partner/PartnerDashboard.js";
 import ManagerDashboard from "../../features/ManagerPortal/ManagerDashboard.js";
+import COODashboard from "./COODashboard.js";
 import { normalizeRole } from "../../config/access";
 
 function Dashboard() {
@@ -17,6 +18,7 @@ function Dashboard() {
   const renderDashboard = () => {
     switch (userRole) {
       case "super_user": return <SuperUserDashboard />;
+      case "coo": return <COODashboard />;
       case "admin": return <AdminDashboard />;
       case "management": return <ManagementDashboard />;
       case "manager": return <ManagerDashboard />;

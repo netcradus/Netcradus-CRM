@@ -34,6 +34,18 @@ const superUserOnly = (req, res, next) => {
     next();
 };
 
+const adminOrSuperOrCoo = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (req.user.role !== "super_user" && req.user.role !== "coo") {
+        return res.status(403).json({ message: "Only Super Users or COO can perform this action" });
+    }
+
+    next();
+};
+
 // Login Route + Limiter
 router.post("/login", loginLimiter, login);
 
@@ -51,16 +63,16 @@ router.post("/password/forgot-reset", loginLimiter, resetPasswordWithOTP);
 router.post("/verify-password-reauth", authMiddleware, verifyPasswordForReAuth);
 
 // Admin device management
-router.get("/admin/devices", authMiddleware, superUserOnly, getAdminDevices);
-router.delete("/admin/devices/:deviceId", authMiddleware, superUserOnly, revokeAdminDevice);
+router.get("/admin/devices", authMiddleware, adminOrSuperOrCoo, getAdminDevices);
+router.delete("/admin/devices/:deviceId", authMiddleware, adminOrSuperOrCoo, revokeAdminDevice);
 
 // Admin-only user management
-router.get("/users", authMiddleware, superUserOnly, getUsers);
-router.post("/users", authMiddleware, superUserOnly, createUserByAdmin);
-router.delete("/users/:id", authMiddleware, superUserOnly, deleteUserByAdmin);
-router.put("/users/:id/password", authMiddleware, superUserOnly, adminChangeUserPassword);
-router.patch("/users/:id", authMiddleware, superUserOnly, updateUserByAdmin);
-router.patch("/users/:id/access", authMiddleware, superUserOnly, toggleUserAccessByAdmin);
+router.get("/users", authMiddleware, adminOrSuperOrCoo, getUsers);
+router.post("/users", authMiddleware, adminOrSuperOrCoo, createUserByAdmin);
+router.delete("/users/:id", authMiddleware, adminOrSuperOrCoo, deleteUserByAdmin);
+router.put("/users/:id/password", authMiddleware, adminOrSuperOrCoo, adminChangeUserPassword);
+router.patch("/users/:id", authMiddleware, adminOrSuperOrCoo, updateUserByAdmin);
+router.patch("/users/:id/access", authMiddleware, adminOrSuperOrCoo, toggleUserAccessByAdmin);
 
 
 module.exports = router;

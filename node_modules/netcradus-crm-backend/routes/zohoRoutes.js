@@ -53,14 +53,14 @@ router.get("/zoho/callback", handleCallback);
 
 router.use(authMiddleware);
 
-router.get("/zoho/status", rbac(["super_user"]), getConnectionStatus);
+router.get("/zoho/status", rbac(["super_user", "coo"]), getConnectionStatus);
 router.get("/zoho/connect", rbac(["super_user"]), initiateOAuth);
 router.post("/zoho/disconnect", rbac(["super_user"]), disconnectZoho);
 router.get("/health/zoho", rbac(["super_user"]), getZohoHealth);
 
 router.post("/zoho/accounts/link", rbac(["super_user"]), linkUserZohoAccount);
 router.delete("/zoho/accounts/:userId/unlink", rbac(["super_user"]), unlinkUserZohoAccount);
-router.get("/zoho/accounts", rbac(["super_user"]), getLinkedAccounts);
+router.get("/zoho/accounts", rbac(["super_user", "coo"]), getLinkedAccounts);
 
 router.use("/mail", zohoAccountMiddleware, mailStandardLimiter);
 

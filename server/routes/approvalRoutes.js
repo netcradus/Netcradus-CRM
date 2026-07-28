@@ -4,7 +4,7 @@ const approvalController = require("../controllers/approvalController");
 
 const router = express.Router();
 
-router.use(rbac(["admin", "hr", "super_user"]));
+router.use(rbac(["admin", "hr", "super_user", "coo"]));
 
 router.get("/queue", approvalController.getApprovalQueue);
 

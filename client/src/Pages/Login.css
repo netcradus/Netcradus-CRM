@@ -98,10 +98,10 @@ body,
 
 .lp-bg-dots {
   background-image:
-    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.52) 1.2px, transparent 1.6px),
-    radial-gradient(circle at 72% 22%, rgba(255,255,255,0.38) 1px, transparent 1.4px),
-    radial-gradient(circle at 80% 72%, rgba(255,255,255,0.3) 1.2px, transparent 1.6px),
-    radial-gradient(circle at 36% 84%, rgba(255,255,255,0.22) 1px, transparent 1.4px);
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.52) 1.2px, transparent 1.6px),
+    radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.38) 1px, transparent 1.4px),
+    radial-gradient(circle at 80% 72%, rgba(255, 255, 255, 0.3) 1.2px, transparent 1.6px),
+    radial-gradient(circle at 36% 84%, rgba(255, 255, 255, 0.22) 1px, transparent 1.4px);
 }
 
 .lp-bg-glow {
@@ -209,7 +209,7 @@ body,
 .lp-card-shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(125deg, rgba(255,255,255,0.12), transparent 28%, transparent 100%);
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.12), transparent 28%, transparent 100%);
   pointer-events: none;
 }
 
@@ -256,6 +256,23 @@ body,
   width: auto;
 }
 
+.lp-hero-logo {
+  width: 320px; /* Default desktop width (300-340px) */
+  height: auto;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  align-self: flex-start;
+}
+
+@media (max-width: 1440px) {
+  .lp-hero-logo {
+    width: 285px; /* Laptop width (270-300px) */
+  }
+}
+
 .lp-badge,
 .lp-secure-mark,
 .lp-secure-pill,
@@ -290,7 +307,7 @@ body,
 }
 
 .lp-brand-copy {
-  margin-top: 14px;
+  margin-top: 32px; /* Spacing between logo and GOOD EVENING text */
 }
 
 .lp-kicker {
@@ -347,8 +364,8 @@ body,
   transform: translateX(-50%);
   border-radius: 26px;
   background:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 30px 30px;
   mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
 }
@@ -388,7 +405,7 @@ body,
   position: absolute;
   left: 50%;
   top: 50%;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
@@ -411,7 +428,7 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
   z-index: 3;
@@ -421,8 +438,8 @@ body,
   position: absolute;
   padding: 10px 18px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 14px;
   font-weight: 600;
   color: white;
@@ -453,13 +470,25 @@ body,
 
 
 @keyframes lpOrbitAccent {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 @keyframes lpOrbitFloat {
-  0%, 100% { margin-top: 0; }
-  50% { margin-top: -6px; }
+
+  0%,
+  100% {
+    margin-top: 0;
+  }
+
+  50% {
+    margin-top: -6px;
+  }
 }
 
 .lp-feature-icon {
@@ -621,14 +650,16 @@ body,
 .lp-spinner {
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255,255,255,0.36);
+  border: 2px solid rgba(255, 255, 255, 0.36);
   border-top-color: white;
   border-radius: 50%;
   animation: lpSpin 0.8s linear infinite;
 }
 
 @keyframes lpSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .lp-error {
@@ -698,6 +729,10 @@ body,
     grid-template-columns: 1fr;
     width: min(900px, calc(100vw - 36px));
     margin: 18px auto;
+  }
+
+  .lp-hero-logo {
+    width: 235px; /* Tablet width (220-250px) */
   }
 
   .lp-mobile-brand {
@@ -784,6 +819,10 @@ body,
 }
 
 @media (max-width: 480px) {
+  .lp-hero-logo {
+    width: 185px; /* Mobile width (170-200px) */
+  }
+
   .lp-display-title {
     font-size: 1.9rem;
   }

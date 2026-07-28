@@ -860,13 +860,14 @@ const normalizeImportHeader = (value) => String(value || "").trim().toLowerCase(
 const normalizeImportFieldName = (value) => (IMPORTABLE_LEAD_FIELDS.has(value) ? value : "");
 
 const ensureLeadAccess = (req, res) => {
-  if (isSuperUser(req.user) || isSalesUser(req.user)) {
+  const role = normalizeRole(req.user?.role);
+  if (isSuperUser(req.user) || isSalesUser(req.user) || role === "coo") {
     return true;
   }
 
   res.status(403).json({
     success: false,
-    message: "Only super users and sales users can access leads.",
+    message: "Only super users, sales users, and COO can access leads.",
   });
   return false;
 };

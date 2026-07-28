@@ -34,7 +34,7 @@ const uploadPrivate = multer({
     }
 });
 
-const PRIVILEGED_CONTACT_ROLES = new Set(["admin", "hr", "super_user"]);
+const PRIVILEGED_CONTACT_ROLES = new Set(["admin", "hr", "super_user", "coo"]);
 
 const normalizeRole = (value = "") => String(value || "").trim().toLowerCase();
 const normalizeEmail = (value = "") => String(value || "").trim().toLowerCase();
@@ -76,17 +76,25 @@ const canAccessAnySalarySlip = (user) => PRIVILEGED_CONTACT_ROLES.has(normalizeR
 const isOwnContact = (user, contact) =>
     normalizeEmail(user?.email) && normalizeEmail(user?.email) === normalizeEmail(contact?.email);
 
-const canAccessSalarySlips = (user, contact) =>
-    canAccessAnySalarySlip(user) || isOwnContact(user, contact);
+const canAccessSalarySlips = async (user, contact) => {
+    const targetRole = await getLinkedUserRole(contact);
+    if (targetRole === "super_user" && normalizeRole(user?.role) !== "super_user") {
+        return false;
+    }
+    return canAccessAnySalarySlip(user) || isOwnContact(user, contact);
+};
 
-const HR_HIDDEN_ROLES = new Set(["admin", "super_user"]);
+const HR_HIDDEN_ROLES = new Set(["admin", "super_user", "coo"]);
 
-const formatRoleLabel = (role = "") =>
-    String(role || "")
+const formatRoleLabel = (role = "") => {
+    const norm = String(role || "").trim().toLowerCase();
+    if (norm === "coo") return "Chief Operating Officer (COO)";
+    return String(role || "")
         .split("_")
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
+};
 
 const toPlainContact = (contact) =>
     typeof contact?.toObject === "function" ? contact.toObject() : { ...contact };
@@ -969,11 +977,15 @@ const maskEsic = (val) => {
 };
 
 // Helper to filter fields based on role and re-auth status
-const filterContactFields = (contact, role, isReAuthed = false) => {
+const filterContactFields = (contact, role, isReAuthed = false, targetRole = "") => {
     const doc = toPlainContact(contact);
+    const viewerRole = normalizeRole(role);
+    const targetUserRole = normalizeRole(targetRole);
+
+    const isTargetSuperUser = targetUserRole === "super_user";
 
     // Management: Highly restricted
-    if (role === 'management') {
+    if (viewerRole === 'management') {
         return {
             _id: doc._id,
             employeeId: doc.employeeId || null,
@@ -988,16 +1000,22 @@ const filterContactFields = (contact, role, isReAuthed = false) => {
         };
     }
 
-    // Admin and HR: Can see most things, but PII and slips require re-auth
-    if (role === 'admin' || role === 'hr') {
+    // Admin, HR, and COO
+    if (['admin', 'hr', 'coo'].includes(viewerRole)) {
         const result = { ...doc };
         result.aadhaarNumber = maskAadhaar(doc.aadhaarNumber);
         result.panNumber = maskPan(doc.panNumber);
         result.uanNumber = maskUan(doc.uanNumber);
         result.esicNumber = maskEsic(doc.esicNumber);
-        if (!isReAuthed) {
+        
+        const maskSalary = !isReAuthed || (isTargetSuperUser && viewerRole !== 'super_user');
+        
+        if (maskSalary) {
             result.salary = "********";
             result.offeredSalary = "********";
+        }
+        
+        if (!isReAuthed) {
             result.contactNumber = "********";
             result.address = "********";
             result.salarySlips = doc.salarySlips ? doc.salarySlips.length : 0; // Just return count
@@ -1011,8 +1029,8 @@ const filterContactFields = (contact, role, isReAuthed = false) => {
         return result;
     }
 
-    // Super User: Sees all, but still masks PII/Slips if not re-authed (per user requirement)
-    if (role === 'super_user') {
+    // Super User
+    if (viewerRole === 'super_user') {
         const result = { ...doc };
         result.aadhaarNumber = maskAadhaar(doc.aadhaarNumber);
         result.panNumber = maskPan(doc.panNumber);
@@ -1075,7 +1093,7 @@ exports.getContacts = async (req, res) => {
             }
         });
 
-        const filtered = mergedContacts.map((c) => filterContactFields(c, req.user.role, false));
+        const filtered = mergedContacts.map((c) => filterContactFields(c, req.user.role, false, userRoleByEmail.get(normalizeEmail(c.email)) || ""));
         res.json(filtered);
     } catch (err) {
         res.status(500).send("Server Error");
@@ -1093,7 +1111,7 @@ exports.getContactById = async (req, res) => {
             return res.status(403).json({ message: "You are not allowed to view this contact." });
         }
 
-        const filtered = filterContactFields(contact, req.user.role, false);
+        const filtered = filterContactFields(contact, req.user.role, false, linkedRole);
         res.json(filtered);
     } catch (err) {
         res.status(500).send("Server Error");
@@ -1112,7 +1130,7 @@ exports.getContactSensitive = async (req, res) => {
         }
 
         // This route should be protected by checkReAuthToken middleware in routes
-        const filtered = filterContactFields(contact, req.user.role, true);
+        const filtered = filterContactFields(contact, req.user.role, true, linkedRole);
         const linkedUser = await resolveLinkedUser(contact);
         const liveLeave = await getTodayApprovedLeave(linkedUser?._id);
         const auditTargetId = contact.sourceUserId || contact._id;
@@ -1157,7 +1175,7 @@ exports.getSalarySlipList = async (req, res) => {
         const contact = await resolveContactRecord(req.params.id);
         if (!contact) return res.status(404).json({ message: "Contact not found" });
 
-        if (!canAccessSalarySlips(req.user, contact)) {
+        if (!(await canAccessSalarySlips(req.user, contact))) {
             return res.status(403).json({ message: "You are not allowed to view these salary slips." });
         }
 
@@ -1191,7 +1209,7 @@ exports.downloadSalarySlip = async (req, res) => {
         const contact = await resolveContactRecord(salarySlip.contactId);
         if (!contact) return res.status(404).json({ message: "Contact not found" });
 
-        if (!canAccessSalarySlips(req.user, contact)) {
+        if (!(await canAccessSalarySlips(req.user, contact))) {
             return res.status(403).json({ message: "You are not allowed to download this salary slip." });
         }
 

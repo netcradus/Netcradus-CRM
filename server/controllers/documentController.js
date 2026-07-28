@@ -23,7 +23,7 @@ const sanitizeDoc = (doc) => {
 };
 
 const getEffectiveUserId = (req) => {
-  if (req.user && ['super_user', 'admin', 'hr'].includes(req.user.role)) {
+  if (req.user && ['super_user', 'admin', 'hr', 'coo'].includes(req.user.role)) {
     return req.query?.userId || req.body?.userId || req.user.id;
   }
   return req.user?.id;
@@ -505,8 +505,8 @@ exports.verifyDocument = catchAsync(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid status value.' });
   }
 
-  // Guard: HR or Admin or Super User only
-  if (!['super_user', 'admin', 'hr'].includes(req.user?.role)) {
+  // Guard: HR or Admin or Super User or COO only
+  if (!['super_user', 'admin', 'hr', 'coo'].includes(req.user?.role)) {
     return res.status(403).json({ success: false, message: 'Unauthorized action.' });
   }
 
@@ -519,4 +519,66 @@ exports.verifyDocument = catchAsync(async (req, res) => {
   await doc.save();
 
   res.json({ success: true, message: `Document status updated to ${status}.`, data: sanitizeDoc(doc) });
+});
+
+/**
+ * GET /api/documents/employee/:userId
+ * Retrieves all non-deleted documents for the specified employee userId.
+ */
+exports.getEmployeeDocuments = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const docs = await Document.find({ ownerId: userId, isDeleted: false })
+    .sort({ uploadedAt: -1 })
+    .lean();
+
+  const safeDocs = docs.map(d => {
+    const { driveFileId, driveViewLink, ...safe } = d;
+    return safe;
+  });
+  res.json(safeDocs);
+});
+
+/**
+ * POST /api/documents/upload/:userId
+ * Uploads a document for the specified employee userId into their personal storage space.
+ */
+exports.uploadEmployeeDocument = catchAsync(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded.', code: 'NO_FILE' });
+  }
+
+  const { userId } = req.params;
+  const { documentType, notes } = req.body;
+
+  const storage = await storageService.getUserStorage(userId);
+  const generalFolder = storage.subFolders.find(f => f.name === 'general') || storage.subFolders[0];
+  if (!generalFolder) {
+    return res.status(400).json({ success: false, message: 'No suitable destination folder found in user storage.', code: 'NO_FOLDER' });
+  }
+  const folderId = generalFolder.driveFolderId;
+
+  const doc = await storageService.uploadToFolder(
+    userId,
+    folderId,
+    req.file,
+    'user',
+    userId,
+    documentType || null,
+    notes || null
+  );
+
+  // Log upload audit record
+  AuditLog.create({
+    action: 'DOCUMENT_UPLOAD',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  }).catch(console.error);
+
+  res.status(201).json({
+    success: true,
+    message: 'File uploaded successfully.',
+    data: sanitizeDoc(doc),
+  });
 });

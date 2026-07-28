@@ -49,12 +49,13 @@ function canLoadAssignableUsers(user) {
 }
 
 function canViewAllTasks(user) {
-  return user?.role === "super_user";
+  return user?.role === "super_user" || user?.role === "coo";
 }
 
 function canManageTask(user, task) {
   if (user?.role === "super_user") return true;
   if (user?.role === "admin") return true;
+  if (user?.role === "coo") return true;
   if (task?.taskType === "self") {
     const creatorId = task?.createdBy?._id || task?.createdBy;
     return String(creatorId) === String(user._id);
@@ -82,6 +83,13 @@ async function canReviewSelfTask(user, task) {
 
   if (await isUserSuperiorTo(user._id, task.createdBy)) {
     return true;
+  }
+
+  if (role === "coo") {
+    const creatorUser = await User.findById(task.createdBy).select("department role").lean();
+    if (creatorUser && creatorUser.role !== "super_user" && ["Sales", "Support", "IT", "Digital Media", "DigitalMedia", "it", "sales", "support", "digitalmedia", "digital_media"].includes(creatorUser.department)) {
+      return true;
+    }
   }
 
   if (!isReviewer(user)) {
@@ -554,6 +562,11 @@ async function getPendingApprovals(req, res) {
           visibleCreatorIds.add(String(task.createdBy));
         }
       });
+    } else if (role === "coo") {
+      const operationalUsers = await User.find({
+        department: { $in: ["Sales", "Support", "IT", "Digital Media", "DigitalMedia", "it", "sales", "support", "digitalmedia", "digital_media"] }
+      }).select("_id").lean();
+      operationalUsers.forEach(u => visibleCreatorIds.add(String(u._id)));
     } else if (isReviewer(req.user)) {
       const reviewerFallbackTasks = await Task.find({
         taskType: "self",
@@ -685,7 +698,7 @@ async function getAssignableUsers(req, res) {
       isDisabled: false,
     };
 
-    if (req.user.role === "super_user" || assignableIds === "ALL") {
+    if (req.user.role === "super_user" || req.user.role === "coo" || assignableIds === "ALL") {
       userQuery.role = { $ne: "super_user" };
     } else if (Array.isArray(assignableIds)) {
       userQuery._id = { $in: assignableIds };
@@ -948,8 +961,8 @@ async function completeTask(req, res) {
 
 async function reviewTask(req, res) {
   try {
-    if (!isReviewer(req.user)) {
-      return res.status(403).json({ success: false, message: "Only Super Users or HR can review tasks" });
+    if (!isReviewer(req.user) && req.user.role !== "coo") {
+      return res.status(403).json({ success: false, message: "Only Super Users, HR, or COO can review tasks" });
     }
 
     const task = await findTaskOr404(req.params.id, res);

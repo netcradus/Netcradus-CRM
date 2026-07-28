@@ -3,7 +3,7 @@ const router = express.Router();
 const interviewController = require("../controllers/interviewController");
 const rbac = require("../middleware/rbac");
 
-router.use(rbac(["super_user", "hr"]));
+router.use(rbac(["super_user", "hr", "coo"]));
 
 router.get("/", interviewController.listInterviews);
 router.post("/", interviewController.createInterview);

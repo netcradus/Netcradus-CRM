@@ -4,10 +4,10 @@ const Deal = require("../models/Deal");
 const User = require("../models/User");
 
 const ensureSuperUser = (req, res) => {
-  if (req.user?.role !== "super_user") {
+  if (req.user?.role !== "super_user" && req.user?.role !== "coo") {
     res.status(403).json({
       success: false,
-      message: "Only super users can access this resource",
+      message: "Only super users or COO can access this resource",
     });
     return false;
   }

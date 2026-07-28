@@ -149,13 +149,14 @@ export default function Tasks() {
     return previewScheduledDate(assigneeNextDate, form.estimatedHours, form.dueDate);
   }, [assigneeNextDate, editingTask, form.assignedTo, form.dueDate, form.estimatedHours]);
 
-  const canCreateSelfTask = role !== "super_user";
-  const canViewPendingApprovals = pendingApprovals.length > 0 || assignableUsers.length > 0 || role === "super_user";
+  const canCreateSelfTask = role !== "super_user" && role !== "coo";
+  const canViewPendingApprovals = pendingApprovals.length > 0 || assignableUsers.length > 0 || role === "super_user" || role === "coo";
 
   const canDeleteTask = useCallback(
     (task) =>
       role === "super_user" ||
       role === "admin" ||
+      role === "coo" ||
       String(task.assignedBy?._id || task.assignedBy) === String(currentUserId),
     [currentUserId, role]
   );

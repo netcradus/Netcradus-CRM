@@ -16,8 +16,8 @@ router.post("/posts", socialController.createPost);
 router.patch("/posts/:id", socialController.updatePost);
 router.delete("/posts/:id", socialController.deletePost);
 router.post("/posts/:id/submit-for-review", socialController.submitPostForReview);
-router.post("/posts/:id/approve", rbac(["admin", "hr", "super_user"]), socialController.approvePost);
-router.post("/posts/:id/reject", rbac(["admin", "hr", "super_user"]), socialController.rejectPost);
+router.post("/posts/:id/approve", rbac(["admin", "hr", "super_user", "coo"]), socialController.approvePost);
+router.post("/posts/:id/reject", rbac(["admin", "hr", "super_user", "coo"]), socialController.rejectPost);
 
 router.get("/inbox", socialController.getInboxItems);
 router.patch("/inbox/:id/read", socialController.markInboxItemRead);

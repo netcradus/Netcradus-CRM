@@ -10,7 +10,7 @@ const {
 } = require("../controllers/broadcastController");
 
 // Create (Publish) Broadcast - Super User and HR only
-router.post("/", authMiddleware, rbac(["super_user", "hr"]), createBroadcast);
+router.post("/", authMiddleware, rbac(["super_user", "hr", "coo"]), createBroadcast);
 
 // Get Broadcasts (Filtered for current user)
 router.get("/", authMiddleware, getBroadcasts);

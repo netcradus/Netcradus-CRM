@@ -3,7 +3,7 @@ const router = express.Router();
 const invoiceController = require("../controllers/invoiceController");
 const rbac = require("../middleware/rbac");
 
-router.use(rbac(["super_user", "admin"]));
+router.use(rbac(["super_user", "admin", "coo"]));
 
 // Routes
 router.get("/", invoiceController.getInvoices);           // Get all invoices

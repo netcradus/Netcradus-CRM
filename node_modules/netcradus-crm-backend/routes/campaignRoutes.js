@@ -12,8 +12,8 @@ router.post('/', campaignsController.addCampaign);
 router.put('/:id', campaignsController.updateCampaign);
 router.patch('/:id/budget', campaignsController.updateCampaignBudget);
 router.post('/:id/submit-for-review', campaignsController.submitCampaignForReview);
-router.post('/:id/approve', rbac(["admin", "hr", "super_user"]), campaignsController.approveCampaign);
-router.post('/:id/reject', rbac(["admin", "hr", "super_user"]), campaignsController.rejectCampaign);
+router.post('/:id/approve', rbac(["admin", "hr", "super_user", "coo"]), campaignsController.approveCampaign);
+router.post('/:id/reject', rbac(["admin", "hr", "super_user", "coo"]), campaignsController.rejectCampaign);
 router.delete('/:id', campaignsController.deleteCampaign);
 
 module.exports = router;

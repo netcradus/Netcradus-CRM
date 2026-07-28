@@ -175,7 +175,7 @@ async function canAssignTask(currentUserId, targetUserId, currentUserRole) {
   // Not in hierarchy — use role-based fallback
   if (assignableIds === null) {
     const allowedRoles = ['superadmin', 'super_admin', 'admin',
-                          'administrator', 'hr'];
+                          'administrator', 'hr', 'coo'];
     const roleAllowed = allowedRoles.includes(
       currentUserRole?.toLowerCase()
     );

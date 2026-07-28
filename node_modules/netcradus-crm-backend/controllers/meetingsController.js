@@ -7,13 +7,14 @@ const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 const isSuperUser = (user) => normalizeRole(user?.role) === "super_user";
 
 const ensureSuperUser = (req, res) => {
-  if (isSuperUser(req.user)) {
+  const role = normalizeRole(req.user?.role);
+  if (isSuperUser(req.user) || role === "coo") {
     return true;
   }
 
   res.status(403).json({
     success: false,
-    message: "Only super users can access meetings.",
+    message: "Only super users and COO can access meetings.",
   });
   return false;
 };

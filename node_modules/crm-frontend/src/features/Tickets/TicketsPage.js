@@ -81,7 +81,7 @@ const TicketsPage = () => {
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("userId");
     const token = localStorage.getItem("token");
-    const canManageTickets = userRole === "super_user";
+    const canManageTickets = userRole === "super_user" || userRole === "coo";
 
     const fetchTickets = useCallback(async () => {
         try {
@@ -394,9 +394,9 @@ const TicketsPage = () => {
                                     <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No comments posted yet.</div>
                                 ) : (
                                     replyingTicket.comments.map((comment, index) => (
-                                        <div key={index} style={{ padding: '8px 12px', background: comment.senderRole === 'super_user' ? 'var(--color-bg-alt, #f7fafc)' : 'var(--color-bg-muted)', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
+                                        <div key={index} style={{ padding: '8px 12px', background: ['super_user', 'coo'].includes(comment.senderRole) ? 'var(--color-bg-alt, #f7fafc)' : 'var(--color-bg-muted)', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                                                <strong>{comment.senderRole === 'super_user' ? 'You (Super User)' : 'Customer'}</strong>
+                                                <strong>{comment.senderRole === 'super_user' ? 'You (Super User)' : comment.senderRole === 'coo' ? 'You (COO)' : 'Customer'}</strong>
                                                 <span>{new Date(comment.createdAt).toLocaleString()}</span>
                                             </div>
                                             <div style={{ fontSize: '12px' }}>{comment.message}</div>

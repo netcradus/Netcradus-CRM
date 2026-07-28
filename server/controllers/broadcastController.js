@@ -118,11 +118,11 @@ const createBroadcast = async (req, res) => {
 // 2. Get Broadcasts
 const getBroadcasts = async (req, res) => {
   try {
-    const isSuperOrHr = ["super_user", "hr"].includes(req.user.role);
+    const isSuperOrHr = ["super_user", "hr", "coo"].includes(req.user.role);
     let query;
     let managerIds = [];
 
-    if (req.user.role === "super_user") {
+    if (req.user.role === "super_user" || req.user.role === "coo") {
       const managers = await User.find({ role: "manager" }).select("_id").lean();
       managerIds = managers.map(m => m._id);
       query = {
@@ -203,14 +203,14 @@ const getBroadcastById = async (req, res) => {
 
     const isAuthor = String(broadcast.authorId?._id || broadcast.authorId) === String(req.user._id);
     const isRecipient = broadcast.recipientUserIds.some(uid => String(uid) === String(req.user._id));
-    const isSuperUser = req.user.role === "super_user";
+    const isSuperUser = req.user.role === "super_user" || req.user.role === "coo";
 
     // Access authorization check
     if (!isAuthor && !isRecipient && !isSuperUser) {
       return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to view this broadcast" });
     }
 
-    const isSuperOrHr = ["super_user", "hr"].includes(req.user.role);
+    const isSuperOrHr = ["super_user", "hr", "coo"].includes(req.user.role);
     const showStats = (isAuthor && isSuperOrHr) || (isSuperUser && broadcast.authorId?.role === "manager");
 
     const data = {
