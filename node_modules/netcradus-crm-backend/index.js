@@ -44,6 +44,7 @@ const checkOrigin = (origin, callback) => {
     ...parseOrigins(process.env.FRONTEND_URL),
     ...parseOrigins(process.env.CLIENT_ORIGIN),
     ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    "https://netcradus-support-portal-1.onrender.com",
     "https://netcradus-support-portal.onrender.com",
     "https://netcradus.tech",
     "https://www.netcradus.tech",
