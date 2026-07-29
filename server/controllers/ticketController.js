@@ -45,6 +45,8 @@ const createTicket = async (req, res) => {
         const ticket = new Ticket({
             ticketId,
             raisedBy: req.user.id,
+            createdBy: req.user.id,
+            source: req.headers['x-source'] || 'crm',
             role: req.user.role,
             title,
             description,
@@ -52,8 +54,8 @@ const createTicket = async (req, res) => {
             priority,
             companyName,
             contactPerson,
-            email,
-            phone,
+            email: email || req.user.email,
+            phone: phone || '',
             product,
             attachments
         });
@@ -80,6 +82,28 @@ const getTickets = async (req, res) => {
 
         const tickets = await Ticket.find(query).populate('raisedBy', 'name email').sort({ createdAt: -1 });
         res.json({ success: true, data: tickets });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// GET TICKET BY ID
+const getTicketById = async (req, res) => {
+    try {
+        const ticket = await Ticket.findById(req.params.id).populate('raisedBy', 'name email');
+        if (!ticket) {
+            return res.status(404).json({ success: false, message: "Ticket not found" });
+        }
+
+        // Authorization check: owner, or admin/coo/super_user, or support role
+        const isOwner = ticket.raisedBy && ticket.raisedBy._id.toString() === req.user.id;
+        const hasAccess = req.user.role === 'super_user' || req.user.role === 'admin' || req.user.role === 'coo' || req.user.role === 'support' || isOwner;
+
+        if (!hasAccess) {
+            return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to view this ticket" });
+        }
+
+        res.json({ success: true, ticket });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -163,6 +187,7 @@ module.exports = {
     upload,
     createTicket,
     getTickets,
+    getTicketById,
     addComment,
     addInfo,
     updateTicketStatus

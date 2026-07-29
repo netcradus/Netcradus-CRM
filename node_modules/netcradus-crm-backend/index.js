@@ -44,9 +44,11 @@ const checkOrigin = (origin, callback) => {
     ...parseOrigins(process.env.FRONTEND_URL),
     ...parseOrigins(process.env.CLIENT_ORIGIN),
     ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    "https://netcradus-support-portal.onrender.com",
     "https://netcradus.tech",
     "https://www.netcradus.tech",
     "https://goldfish-app-62dia.ondigitalocean.app",
+    "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:5000",
     "http://127.0.0.1:3000",
@@ -80,6 +82,8 @@ const corsOptions = {
     "Origin",
     "Access-Control-Request-Method",
     "Access-Control-Request-Headers",
+    "X-Source",
+    "x-source"
   ],
   optionsSuccessStatus: 204,
 };
@@ -113,11 +117,14 @@ app.get("/healthz", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+
+
 const requireDbReady = (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
+    res.setHeader("Retry-After", "5");
     return res.status(503).json({
       success: false,
-      message: "Database is reconnecting. Please retry shortly.",
+      message: "Database is temporarily unavailable. Please retry shortly.",
     });
   }
   next();

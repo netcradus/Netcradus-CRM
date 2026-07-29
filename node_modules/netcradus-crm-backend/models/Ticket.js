@@ -10,6 +10,8 @@ const commentSchema = new mongoose.Schema({
 const ticketSchema = new mongoose.Schema({
     ticketId: { type: String, unique: true, required: true }, // TKT-XXXX
     raisedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    source: { type: String, default: "crm" },
     role: { type: String, required: true }, // Role of the raiser at time of creation
     title: { type: String, required: true },
     description: { type: String, required: true },

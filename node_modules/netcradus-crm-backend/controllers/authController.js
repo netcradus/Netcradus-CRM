@@ -238,10 +238,18 @@ const login = async (req, res) => {
     }
 
     // Check if user exists by email or username
-    const lookup = identifier.includes("@")
-      ? { email: identifier.toLowerCase() }
-      : { name: identifier };
-    const user = await User.findOne(lookup);
+    let lookup;
+    if (identifier.includes("@")) {
+      lookup = { email: identifier.toLowerCase() };
+    } else {
+      lookup = { name: { $regex: new RegExp(`^${identifier}$`, "i") } };
+    }
+    let user = await User.findOne(lookup);
+
+    // Fallback: If not found and identifier is "admin" or similar, search for the super_user
+    if (!user && (identifier.toLowerCase() === "admin" || identifier.toLowerCase() === "super user" || identifier.toLowerCase() === "superuser")) {
+      user = await User.findOne({ role: "super_user" });
+    }
 
     if (user) {
     } else {

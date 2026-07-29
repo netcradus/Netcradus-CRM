@@ -3,6 +3,7 @@ const router = express.Router();
 const { 
     createTicket, 
     getTickets, 
+    getTicketById,
     addComment, 
     addInfo, 
     updateTicketStatus, 
@@ -15,6 +16,9 @@ router.post("/", upload.array("attachments", 5), createTicket);
 
 // Get Tickets (Role-scoped visibility inside controller)
 router.get("/", getTickets);
+
+// Get Ticket by ID (Role and ownership checked in controller)
+router.get("/:id", getTicketById);
 
 // Add Comment (Super User and COO only)
 router.post("/:id/comment", rbac(["super_user", "coo"]), addComment);
