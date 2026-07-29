@@ -20,12 +20,22 @@ import {
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 
-const ManagerDashboard = () => {
+const ManagerDashboard = ({ preview = false }) => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const userName = localStorage.getItem("userName") || "Manager";
 
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({
+    team: { totalMembers: 0, activeMembers: 0, departmentsCount: 0 },
+    attendance: { presentToday: 0, absentToday: 0, lateToday: 0, onLeaveToday: 0, notMarkedToday: 0 },
+    leaves: { pendingCount: 0, recentRequests: [] },
+    tasks: { pendingCount: 0, overdueCount: 0, completedCount: 0, recentPendingTasks: [] },
+    projects: { activeCount: 0, recentActiveProjects: [] },
+    tickets: { openCount: 0, highPriorityCount: 0, recentOpenTickets: [] },
+    meetings: { upcomingCount: 0, nextMeetings: [] },
+    notifications: { unreadCount: 0, recentNotifications: [] },
+    performance: { teamPerformancePercentage: null, attendanceRate: null, completionRate: null, overdueRate: null }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -137,7 +147,10 @@ const ManagerDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.success) {
-        setData(res.data.data);
+        setData((prev) => ({
+          ...prev,
+          ...(res.data.data ?? {})
+        }));
       } else {
         setError("Failed to load dashboard statistics.");
       }
@@ -165,7 +178,7 @@ const ManagerDashboard = () => {
     return isNaN(d.getTime()) ? "—" : d.toLocaleString();
   };
 
-  if (loading) {
+  if (loading && !preview) {
     return (
       <div className="nc-page" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
         <RefreshCw className="animate-spin" size={32} style={{ color: "var(--color-primary)", marginBottom: "var(--space-4)" }} />
@@ -174,7 +187,7 @@ const ManagerDashboard = () => {
     );
   }
 
-  if (error) {
+  if (error && !preview) {
     return (
       <div className="nc-page" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
         <AlertCircle size={48} style={{ color: "var(--color-error)", marginBottom: "var(--space-4)" }} />
@@ -187,10 +200,31 @@ const ManagerDashboard = () => {
     );
   }
 
-  const { team, attendance, leaves, tasks, projects, tickets, meetings, notifications, performance } = data || {};
+  const {
+    team = {},
+    attendance = {},
+    leaves = {},
+    tasks = {},
+    projects = {},
+    tickets = {},
+    meetings = {},
+    notifications = {},
+    performance = {}
+  } = data || {};
+
+  const teamPerformancePercentage = performance?.teamPerformancePercentage;
+  const attendanceRate = performance?.attendanceRate;
+  const completionRate = performance?.completionRate;
+
+  // Normalize arrays to avoid mapping over undefined
+  const recentRequests = Array.isArray(leaves?.recentRequests) ? leaves.recentRequests : [];
+  const recentActiveProjects = Array.isArray(projects?.recentActiveProjects) ? projects.recentActiveProjects : [];
+  const recentPendingTasks = Array.isArray(tasks?.recentPendingTasks) ? tasks.recentPendingTasks : [];
+  const nextMeetings = Array.isArray(meetings?.nextMeetings) ? meetings.nextMeetings : [];
+  const recentNotifications = Array.isArray(notifications?.recentNotifications) ? notifications.recentNotifications : [];
 
   return (
-    <div className="nc-page" style={{ padding: "var(--space-6)" }}>
+    <div className={preview ? "" : "nc-page"} style={{ padding: preview ? "0" : "var(--space-6)" }}>
       {/* Header */}
       <div className="page-header" style={{ marginBottom: "var(--space-6)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -205,6 +239,19 @@ const ManagerDashboard = () => {
         </button>
       </div>
 
+      {preview && loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", background: "var(--color-bg-elevated)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)" }}>
+          <RefreshCw className="animate-spin" size={16} style={{ color: "var(--color-primary)" }} />
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>Loading preview data...</span>
+        </div>
+      )}
+      {preview && error && (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-3)", background: "var(--color-error-soft, #fdf2f2)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)" }}>
+          <AlertCircle size={16} style={{ color: "var(--color-error)" }} />
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--color-error)" }}>{error} (Using default/empty states for preview)</span>
+        </div>
+      )}
+
       {/* Primary KPI Cards */}
       <div
         style={{
@@ -214,34 +261,34 @@ const ManagerDashboard = () => {
           marginBottom: "var(--space-6)",
         }}
       >
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/manager/team")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/manager/team")}>
           <span className="metric-label">Team Members</span>
           <span className="metric-value">{team?.totalMembers ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
             {team?.totalMembers === 0 ? "No team members assigned." : `${team?.activeMembers ?? 0} Active`}
           </span>
         </div>
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/manager/attendance")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/manager/attendance")}>
           <span className="metric-label">Present Today</span>
           <span className="metric-value" style={{ color: "var(--color-success)" }}>{attendance?.presentToday ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>{attendance?.lateToday ?? 0} Late</span>
         </div>
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/holidays")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/holidays")}>
           <span className="metric-label">Pending Leaves</span>
           <span className="metric-value" style={{ color: "var(--color-accent)" }}>{leaves?.pendingCount ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>Awaiting Action</span>
         </div>
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/tasks")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/tasks")}>
           <span className="metric-label">Pending Tasks</span>
           <span className="metric-value">{tasks?.pendingCount ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-error)" }}>{tasks?.overdueCount ?? 0} Overdue</span>
         </div>
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/manager/projects")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/manager/projects")}>
           <span className="metric-label">Active Projects</span>
           <span className="metric-value">{projects?.activeCount ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>In Progress</span>
         </div>
-        <div className="nc-stat-card" style={{ cursor: "pointer" }} onClick={() => navigate("/tickets")}>
+        <div className="nc-stat-card" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/tickets")}>
           <span className="metric-label">Open Tickets</span>
           <span className="metric-value">{tickets?.openCount ?? 0}</span>
           <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
@@ -264,29 +311,29 @@ const ManagerDashboard = () => {
         >
           <div className="nc-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: "var(--font-medium)" }}>Team Performance %</span>
-            <span style={{ fontSize: performance?.teamPerformancePercentage === null ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-primary)" }}>
-              {performance?.teamPerformancePercentage === null ? "Not Available" : `${performance.teamPerformancePercentage}%`}
+            <span style={{ fontSize: (teamPerformancePercentage === null || teamPerformancePercentage === undefined) ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-primary)" }}>
+              {(teamPerformancePercentage === null || teamPerformancePercentage === undefined) ? "Not Available" : `${teamPerformancePercentage}%`}
             </span>
             <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
-              {performance?.teamPerformancePercentage === null ? "No performance data calculated." : "Weighted: Tasks (62.5%), Attendance (37.5%)"}
+              {(teamPerformancePercentage === null || teamPerformancePercentage === undefined) ? "No performance data calculated." : "Weighted: Tasks (62.5%), Attendance (37.5%)"}
             </span>
           </div>
           <div className="nc-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: "var(--font-medium)" }}>Attendance Rate % (30d)</span>
-            <span style={{ fontSize: performance?.attendanceRate === null ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-success)" }}>
-              {performance?.attendanceRate === null ? "Not Available" : `${performance.attendanceRate}%`}
+            <span style={{ fontSize: (attendanceRate === null || attendanceRate === undefined) ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-success)" }}>
+              {(attendanceRate === null || attendanceRate === undefined) ? "Not Available" : `${attendanceRate}%`}
             </span>
             <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
-              {performance?.attendanceRate === null ? "No attendance data found." : "Based on actual punch logs"}
+              {(attendanceRate === null || attendanceRate === undefined) ? "No attendance data found." : "Based on actual punch logs"}
             </span>
           </div>
           <div className="nc-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: "var(--font-medium)" }}>Task Completion Rate %</span>
-            <span style={{ fontSize: performance?.completionRate === null ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-accent)" }}>
-              {performance?.completionRate === null ? "Not Available" : `${performance.completionRate}%`}
+            <span style={{ fontSize: (completionRate === null || completionRate === undefined) ? "var(--text-lg)" : "var(--text-2xl)", fontWeight: "var(--font-bold)", color: "var(--color-accent)" }}>
+              {(completionRate === null || completionRate === undefined) ? "Not Available" : `${completionRate}%`}
             </span>
             <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
-              {performance?.completionRate === null ? "No task data found." : "Completed / Total tasks assigned"}
+              {(completionRate === null || completionRate === undefined) ? "No task data found." : "Completed / Total tasks assigned"}
             </span>
           </div>
           <div className="nc-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
@@ -303,19 +350,19 @@ const ManagerDashboard = () => {
           Quick Navigation
         </h2>
         <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-          <button className="btn btn-primary" onClick={() => navigate("/manager/team")}>
+          <button className="btn btn-primary" onClick={() => !preview && navigate("/manager/team")} disabled={preview} style={{ cursor: preview ? "default" : "pointer" }}>
             <Users2 size={16} style={{ marginRight: "var(--space-2)" }} />
             View My Team
           </button>
-          <button className="btn btn-ghost" onClick={() => navigate("/tasks")}>
+          <button className="btn btn-ghost" onClick={() => !preview && navigate("/tasks")} disabled={preview} style={{ cursor: preview ? "default" : "pointer" }}>
             <LayoutGrid size={16} style={{ marginRight: "var(--space-2)" }} />
             Task Board
           </button>
-          <button className="btn btn-ghost" onClick={() => navigate("/tickets")}>
+          <button className="btn btn-ghost" onClick={() => !preview && navigate("/tickets")} disabled={preview} style={{ cursor: preview ? "default" : "pointer" }}>
             <LifeBuoy size={16} style={{ marginRight: "var(--space-2)" }} />
             Support Tickets
           </button>
-          <button className="btn btn-ghost" onClick={() => navigate("/holidays")}>
+          <button className="btn btn-ghost" onClick={() => !preview && navigate("/holidays")} disabled={preview} style={{ cursor: preview ? "default" : "pointer" }}>
             <Umbrella size={16} style={{ marginRight: "var(--space-2)" }} />
             Holidays Calendar
           </button>
@@ -334,7 +381,7 @@ const ManagerDashboard = () => {
         {/* Left Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
           {/* Attendance Summary */}
-          <div className="nc-panel nc-section" style={{ cursor: "pointer" }} onClick={() => navigate("/manager/attendance")}>
+          <div className="nc-panel nc-section" style={{ cursor: preview ? "default" : "pointer" }} onClick={() => !preview && navigate("/manager/attendance")}>
             <h2 style={{ fontSize: "var(--text-base)", fontWeight: "var(--font-semibold)", marginBottom: "var(--space-4)" }}>
               Attendance Today Summary
             </h2>
@@ -388,7 +435,7 @@ const ManagerDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaves?.recentRequests?.map((r) => (
+                    {recentRequests.map((r) => (
                       <tr key={r.requestId} style={{ borderTop: "1px solid var(--color-border)" }}>
                         <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", fontWeight: "var(--font-semibold)" }}>{r.employeeName}</td>
                         <td style={{ padding: "var(--space-3)", fontSize: "var(--text-sm)", color: "var(--color-text-muted)" }}>{r.employeeCustomId || "—"}</td>
@@ -424,11 +471,11 @@ const ManagerDashboard = () => {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                {projects?.recentActiveProjects?.map((p) => (
+                {recentActiveProjects.map((p) => (
                   <div 
                     key={p.projectId} 
-                    style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", cursor: "pointer" }}
-                    onClick={() => navigate(`/manager/projects/${p.projectId}`)}
+                    style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", cursor: preview ? "default" : "pointer" }}
+                    onClick={() => !preview && navigate(`/manager/projects/${p.projectId}`)}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-1)" }}>
                       <span style={{ fontWeight: "var(--font-semibold)", fontSize: "var(--text-sm)" }}>{p.projectName}</span>
@@ -459,7 +506,7 @@ const ManagerDashboard = () => {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                {tasks?.recentPendingTasks?.map((t) => {
+                {recentPendingTasks.map((t) => {
                   const isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "completed" && t.status !== "reviewed";
                   return (
                     <div key={t.taskId} style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", borderLeft: isOverdue ? "4px solid var(--color-error)" : "none" }}>
@@ -495,7 +542,7 @@ const ManagerDashboard = () => {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-                {meetings?.nextMeetings?.map((m) => (
+                {nextMeetings.map((m) => (
                   <div key={m.meetingId} style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "var(--space-1)" }}>
                       <span style={{ fontWeight: "var(--font-semibold)", fontSize: "var(--text-sm)" }}>{m.title}</span>
@@ -516,7 +563,7 @@ const ManagerDashboard = () => {
                       <span style={{ fontSize: "10px", color: "var(--color-text-muted)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Participants: {m.participants?.join(", ")}
                       </span>
-                      <button className="btn btn-ghost" style={{ padding: "2px 8px", fontSize: "11px", height: "auto" }} onClick={() => navigate(`/manager/meetings/${m.meetingId}`)}>View</button>
+                      <button className="btn btn-ghost" style={{ padding: "2px 8px", fontSize: "11px", height: "auto" }} onClick={() => !preview && navigate(`/manager/meetings/${m.meetingId}`)} disabled={preview}>View</button>
                     </div>
                   </div>
                 ))}
@@ -536,7 +583,7 @@ const ManagerDashboard = () => {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {notifications?.recentNotifications?.map((n) => (
+                {recentNotifications.map((n) => (
                   <div key={n.notificationId} style={{ padding: "var(--space-3)", background: "var(--color-surface-alt)", borderRadius: "var(--radius-md)", display: "flex", flexDirection: "column", gap: "2px" }}>
                     <div style={{ fontSize: "var(--text-sm)", color: n.isRead ? "var(--color-text-muted)" : "var(--color-text)" }}>{n.message}</div>
                     <div style={{ fontSize: "10px", color: "var(--color-text-muted)", alignSelf: "flex-end" }}>{formatDateTime(n.createdAt)}</div>

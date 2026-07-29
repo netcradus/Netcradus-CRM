@@ -25,7 +25,7 @@ const {
 
 // All manager portal routes require authentication and the manager role.
 router.use(authMiddleware);
-router.use(rbac(["manager"]));
+router.use(rbac(["manager", "super_user"]));
 
 // GET /api/manager/dashboard — get dashboard operational summary metrics
 router.get("/dashboard", getDashboardSummary);

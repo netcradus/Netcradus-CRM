@@ -26,6 +26,8 @@ import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ManagementDashboard from "./ManagementDashboard";
 import WorkspaceWidget from "./WorkspaceWidget";
+import ManagerDashboard from "../../features/ManagerPortal/ManagerDashboard";
+import COODashboard from "./COODashboard";
  
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
@@ -261,7 +263,8 @@ const SuperUserDashboard = () => {
       case "it": return <TechDashboard preview={!selectedUser} />;
       case "digital_media": return <DigitalMediaDashboard preview={!selectedUser} />;
       case "management": return <ManagementDashboard preview={!selectedUser} />;
-      case "manager": return <div style={{ padding: "var(--space-6)", color: "var(--color-text-muted)", textAlign: "center" }}>Manager Dashboard preview</div>;
+      case "manager": return <ManagerDashboard preview={!selectedUser} />;
+      case "coo": return <COODashboard preview={!selectedUser} readOnly={true} embedded={true} />;
       default: return null;
     }
   };
@@ -367,7 +370,7 @@ const SuperUserDashboard = () => {
             <option value="digital_media">Digital Media</option>
             <option value="management">Management</option>
             <option value="manager">Manager</option>
-            <option value="all">All Roles</option>
+            <option value="coo">COO</option>
           </select>
         </div>
       </div>

@@ -58,7 +58,7 @@ const calculateWorkingHours = (employee) => {
   return `${hours.toFixed(2)} hrs`;
 };
 
-const COODashboard = () => {
+const COODashboard = ({ preview = false, readOnly = false, embedded = false }) => {
   const previewRef = useRef(null);
   const graphRef = useRef(null);
   const [users, setUsers] = useState([]);
@@ -92,7 +92,7 @@ const COODashboard = () => {
         const employees = Array.isArray(res.data?.data?.employees) ? res.data.data.employees : [];
         setDrawerData(employees);
       } else if (type === "pendingApprovals") {
-        const res = await axios.get(apiUrl("/api/tasks/pending-approvals"), { headers });
+        const res = await axios.get(apiUrl("/api/tasks/self/pending-approvals"), { headers });
         setDrawerData(Array.isArray(res.data?.tasks) ? res.data.tasks : []);
       }
     } catch (err) {
@@ -224,7 +224,7 @@ const COODashboard = () => {
               filtered.map(p => (
                 <div 
                   key={p._id}
-                  onClick={() => window.location.href = "/employee-profiles"}
+                  onClick={() => !preview && (window.location.href = "/employee-profiles")}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -233,7 +233,7 @@ const COODashboard = () => {
                     background: "var(--color-bg-elevated)",
                     border: "1px solid var(--color-border)",
                     borderRadius: "var(--radius-lg)",
-                    cursor: "pointer",
+                    cursor: preview ? "default" : "pointer",
                     transition: "all 0.2s"
                   }}
                   className="coo-drawer-item"
@@ -433,26 +433,31 @@ const COODashboard = () => {
 
                   <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
                     <button 
-                      onClick={() => window.location.href = "/tasks"} 
+                      onClick={() => !preview && (window.location.href = "/tasks")} 
                       className="nc-btn nc-btn-outline nc-btn-xs"
-                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                      disabled={preview}
+                      style={{ fontSize: "11px", padding: "4px 8px", cursor: preview ? "default" : "pointer" }}
                     >
                       View Detail
                     </button>
-                    <button 
-                      onClick={() => handleApproveTask(task)} 
-                      className="nc-btn nc-btn-xs"
-                      style={{ background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontSize: "11px", padding: "4px 8px", cursor: "pointer" }}
-                    >
-                      Approve
-                    </button>
-                    <button 
-                      onClick={() => handleRejectTask(task)} 
-                      className="nc-btn nc-btn-xs"
-                      style={{ background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontSize: "11px", padding: "4px 8px", cursor: "pointer" }}
-                    >
-                      Reject
-                    </button>
+                    {!preview && !readOnly && (
+                      <>
+                        <button 
+                          onClick={() => handleApproveTask(task)} 
+                          className="nc-btn nc-btn-xs"
+                          style={{ background: "var(--color-success)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontSize: "11px", padding: "4px 8px", cursor: "pointer" }}
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleRejectTask(task)} 
+                          className="nc-btn nc-btn-xs"
+                          style={{ background: "var(--color-error)", color: "#fff", border: "none", borderRadius: "var(--radius-md)", fontSize: "11px", padding: "4px 8px", cursor: "pointer" }}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
@@ -486,7 +491,7 @@ const COODashboard = () => {
   const fetchPendingTasks = async () => {
     setLoadingPendingTasks(true);
     try {
-      const res = await axios.get(apiUrl("/api/tasks/pending-approvals"), {
+      const res = await axios.get(apiUrl("/api/tasks/self/pending-approvals"), {
         headers: { Authorization: `Bearer ${token}` },
         timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
       });
@@ -523,14 +528,33 @@ const COODashboard = () => {
 
   const liveAttendanceChartData = useMemo(() => {
     if (!attendanceSnapshot) return [];
+    
+    const totalEmployees = Math.max(0, Number(users.length) || 0);
+    const present = Math.max(0, Number(attendanceSnapshot.presentCount) || 0);
+    const late = Math.max(0, Number(attendanceSnapshot.lateCount) || 0);
+    const onLeave = Math.max(0, Number(attendanceSnapshot.onLeaveCount) || 0);
+
+    const presentOnTime = Math.max(0, present - late);
+    const absent = Math.max(
+      0,
+      totalEmployees - presentOnTime - late - onLeave
+    );
+
     return [
-      { label: "Present", count: attendanceSnapshot.presentCount || 0 },
-      { label: "Active", count: attendanceSnapshot.clockedInCount || 0 },
-      { label: "Late", count: attendanceSnapshot.lateCount || 0 },
-      { label: "On Leave", count: attendanceSnapshot.onLeaveCount || 0 },
-      { label: "Absent", count: attendanceSnapshot.absentCount || 0 },
+      { label: "Present On Time", count: presentOnTime },
+      { label: "Late", count: late },
+      { label: "On Leave", count: onLeave },
+      { label: "Absent", count: absent },
     ];
-  }, [attendanceSnapshot]);
+  }, [attendanceSnapshot, users]);
+
+  const visibleChartData = useMemo(() => {
+    return liveAttendanceChartData.filter(d => d.count > 0);
+  }, [liveAttendanceChartData]);
+
+  const hasAttendanceData = useMemo(() => {
+    return liveAttendanceChartData.some(d => d.count > 0);
+  }, [liveAttendanceChartData]);
 
   const roleDistributionData = useMemo(() => {
     const employees = attendanceSnapshot?.employees || [];
@@ -588,7 +612,7 @@ const COODashboard = () => {
   };
 
   return (
-    <div className="dashboard-container" style={{ padding: "var(--space-6)" }}>
+    <div className={preview ? "" : "dashboard-container"} style={{ padding: preview ? "0" : "var(--space-6)" }}>
       {/* Page Header */}
       <div className="page-header" style={{ marginBottom: "var(--space-6)" }}>
         <div className="page-header-left">
@@ -767,7 +791,7 @@ const COODashboard = () => {
                       Submitted by: {task.createdBy?.name || "Employee"} ({task.createdBy?.department || "General"})
                     </p>
                   </div>
-                  <button onClick={() => window.location.href = "/tasks"} className="nc-btn nc-btn-xs" style={{ background: "var(--color-accent)", color: "#fff", border: "none", borderRadius: "var(--border-radius-sm)", padding: "var(--space-2) var(--space-3)", cursor: "pointer", fontSize: "var(--text-xs)" }}>
+                  <button onClick={() => !preview && (window.location.href = "/tasks")} className="nc-btn nc-btn-xs" disabled={preview} style={{ background: "var(--color-accent)", color: "#fff", border: "none", borderRadius: "var(--border-radius-sm)", padding: "var(--space-2) var(--space-3)", cursor: preview ? "default" : "pointer", fontSize: "var(--text-xs)" }}>
                     View & Approve
                   </button>
                 </div>
@@ -780,28 +804,39 @@ const COODashboard = () => {
         <div className="nc-card">
           <h2 className="section-title" style={{ marginBottom: "var(--space-4)" }}>Today's Workforce Pulse</h2>
           {attendanceSnapshot ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", alignItems: "center" }}>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={liveAttendanceChartData} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={60} fill="#8884d8">
-                    {liveAttendanceChartData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-                {liveAttendanceChartData.map((d, idx) => (
-                  <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-xs)" }}>
-                    <span style={{ width: "10px", height: "10px", display: "inline-block", background: PIE_COLORS[idx % PIE_COLORS.length], borderRadius: "50%" }}></span>
-                    <span>
-                      {d.label}: <strong>{d.count}</strong>
-                    </span>
-                  </div>
-                ))}
+            hasAttendanceData ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", alignItems: "center" }}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={visibleChartData} dataKey="count" nameKey="label" cx="50%" cy="50%" outerRadius={60} fill="#8884d8">
+                      {visibleChartData.map((entry, idx) => {
+                        const colorIdx = liveAttendanceChartData.findIndex(d => d.label === entry.label);
+                        return <Cell key={`cell-${idx}`} fill={PIE_COLORS[colorIdx % PIE_COLORS.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => {
+                      const totalEmployees = Math.max(0, Number(users.length) || 0);
+                      const percentage = totalEmployees > 0 ? ((value / totalEmployees) * 100).toFixed(1) : 0;
+                      return [`${value} employee(s) (${percentage}%)`, name];
+                    }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                  {liveAttendanceChartData.map((d, idx) => (
+                    <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-xs)" }}>
+                      <span style={{ width: "10px", height: "10px", display: "inline-block", background: PIE_COLORS[idx % PIE_COLORS.length], borderRadius: "50%" }}></span>
+                      <span>
+                        {d.label}: <strong>{d.count}</strong>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "var(--space-8)", color: "var(--color-text-muted)", fontSize: "var(--text-sm)" }}>
+                No workforce attendance data available today
+              </div>
+            )
           ) : (
             <p className="loading-state">Loading attendance data...</p>
           )}
@@ -823,45 +858,47 @@ const COODashboard = () => {
       </div>
 
       {/* Department Preview Selector */}
-      <div className="nc-card" style={{ marginBottom: "var(--space-6)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-          <div>
-            <h2 className="section-title">Department Dashboard Previews</h2>
-            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", margin: 0 }}>
-              Select a department below to view its specific portal, KPIs, and operational dashboards.
-            </p>
-          </div>
-          <div>
-            <select value={selectedRole} onChange={handleRoleChange} className="nc-select" style={{ minWidth: "220px", padding: "var(--space-2) var(--space-4)", borderRadius: "var(--border-radius-md)", border: "1px solid var(--color-border)", background: "var(--color-bg-card)", color: "var(--color-text)" }}>
-              <option value="">-- Select Dashboard --</option>
-              <option value="management">Management Hub</option>
-              <option value="sales">Sales & Deals Portal</option>
-              <option value="hr">HR & People Operations</option>
-              <option value="support">Customer Support Portal</option>
-              <option value="it">IT & Tech Ops</option>
-              <option value="digital_media">Digital Media & Marketing</option>
-            </select>
-          </div>
-        </div>
-
-        {selectedRole ? (
-          <div ref={previewRef} style={{ borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-6)", marginTop: "var(--space-6)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
-              <span className="badge badge-accent" style={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "10px" }}>
-                Preview Mode: {selectedRole}
-              </span>
-              <button onClick={() => setSelectedRole("")} className="nc-btn nc-btn-outline nc-btn-xs">
-                Close Preview
-              </button>
+      {!preview && (
+        <div className="nc-card" style={{ marginBottom: "var(--space-6)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+            <div>
+              <h2 className="section-title">Department Dashboard Previews</h2>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", margin: 0 }}>
+                Select a department below to view its specific portal, KPIs, and operational dashboards.
+              </p>
             </div>
-            {renderDashboardPreview()}
+            <div>
+              <select value={selectedRole} onChange={handleRoleChange} className="nc-select" style={{ minWidth: "220px", padding: "var(--space-2) var(--space-4)", borderRadius: "var(--border-radius-md)", border: "1px solid var(--color-border)", background: "var(--color-bg-card)", color: "var(--color-text)" }}>
+                <option value="">-- Select Dashboard --</option>
+                <option value="management">Management Hub</option>
+                <option value="sales">Sales & Deals Portal</option>
+                <option value="hr">HR & People Operations</option>
+                <option value="support">Customer Support Portal</option>
+                <option value="it">IT & Tech Ops</option>
+                <option value="digital_media">Digital Media & Marketing</option>
+              </select>
+            </div>
           </div>
-        ) : (
-          <div className="empty-state" style={{ padding: "var(--space-8)", textAlign: "center", border: "2px dashed var(--color-border)", borderRadius: "var(--border-radius-lg)", color: "var(--color-text-muted)" }}>
-            <p>Select a department dashboard from the dropdown above to view its live preview.</p>
-          </div>
-        )}
-      </div>
+  
+          {selectedRole ? (
+            <div ref={previewRef} style={{ borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-6)", marginTop: "var(--space-6)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
+                <span className="badge badge-accent" style={{ textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "10px" }}>
+                  Preview Mode: {selectedRole}
+                </span>
+                <button onClick={() => setSelectedRole("")} className="nc-btn nc-btn-outline nc-btn-xs">
+                  Close Preview
+                </button>
+              </div>
+              {renderDashboardPreview()}
+            </div>
+          ) : (
+            <div className="empty-state" style={{ padding: "var(--space-8)", textAlign: "center", border: "2px dashed var(--color-border)", borderRadius: "var(--border-radius-lg)", color: "var(--color-text-muted)" }}>
+              <p>Select a department dashboard from the dropdown above to view its live preview.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
