@@ -17,7 +17,7 @@ const { getIpGeoLocation } = require('../services/securityService');
 const { getSettings, invalidateCache } = require('../config/attendanceSettings');
 const User = require('../models/User');
 const LeaveApplication = require('../models/LeaveApplication');
-const { getTodayShiftDate, isWeekend, isHoliday } = require('../utils/dateUtils');
+const { getTodayShiftDate, isWeekend, isHoliday, buildOfficeDateTime, parseShiftDate } = require('../utils/dateUtils');
 const { getHolidaysForYear } = require('../services/holidayService');
 const { differenceInMinutes } = require('date-fns');
 
@@ -335,7 +335,8 @@ exports.updateAttendanceSettings = async (req, res) => {
 exports.getTodaySnapshot = async (req, res) => {
   try {
     const settings = await getSettings();
-    const shiftDate = getTodayShiftDate(settings.timezone);
+    const { date: dateParam } = req.query;
+    const shiftDate = dateParam ? parseShiftDate(dateParam) : getTodayShiftDate(settings.timezone);
     const holidays = await getHolidaysForYear(shiftDate.getFullYear());
     const isWknd = isWeekend(shiftDate, settings.weekends, settings.timezone);
     const isHldy = isHoliday(shiftDate, holidays);
@@ -399,6 +400,17 @@ exports.getTodaySnapshot = async (req, res) => {
         status = 'holiday';
       }
 
+      let lateByMinutes = 0;
+      let isLate = false;
+      if (rec && rec.punchIn) {
+        const firstPunchInTime = new Date(rec.punchIn);
+        const threshold = buildOfficeDateTime(shiftDate, "10:00", settings.timezone);
+        if (firstPunchInTime > threshold) {
+          isLate = true;
+          lateByMinutes = Math.max(0, differenceInMinutes(firstPunchInTime, threshold));
+        }
+      }
+
       return {
         userId: u._id,
         name: u.name,
@@ -417,8 +429,8 @@ exports.getTodaySnapshot = async (req, res) => {
         isOnBreak: rec?.isOnBreak || false,
         currentBreakStart: rec?.currentBreakStart || null,
         breaks: rec?._id ? (breaksByAttendance[String(rec._id)] || []) : [],
-        isLate: rec?.isLate || false,
-        lateByMinutes: rec?.lateByMinutes || 0,
+        isLate,
+        lateByMinutes,
         leaveType: leave?.leaveType || null,
         leaveDates: leave ? { from: leave.from, to: leave.to } : null,
       };

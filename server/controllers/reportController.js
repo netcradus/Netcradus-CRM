@@ -19,8 +19,8 @@ exports.monthlyReport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid userId.' });
     }
 
-    // --- RBAC: non-admin/hr can only see own report ---
-    if (!['admin', 'hr', 'super_user'].includes(req.user.role) && String(req.user._id) !== String(userId)) {
+    // --- RBAC: non-admin/hr/coo can only see own report ---
+    if (!['admin', 'hr', 'super_user', 'coo'].includes(req.user.role) && String(req.user._id) !== String(userId)) {
       return res.status(403).json({ success: false, message: 'Forbidden.' });
     }
 
@@ -38,12 +38,19 @@ exports.monthlyReport = async (req, res) => {
   }
 };
 
-// GET /api/attendance/report/export?month=MM&year=YYYY&format=csv  (admin/hr)
+// GET /api/attendance/report/export?month=MM&year=YYYY&userId=  (admin/hr/coo)
 exports.exportReport = async (req, res) => {
   try {
-    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
-    const year = parseInt(req.query.year) || new Date().getFullYear();
-    const csv = await exportMonthlyCsv(month, year);
+    const month = parseInt(req.query.month, 10) || new Date().getMonth() + 1;
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+    const userId = req.query.userId || String(req.user._id);
+
+    // Enforce RBAC
+    if (!['admin', 'hr', 'super_user', 'coo'].includes(req.user.role) && String(req.user._id) !== String(userId)) {
+      return res.status(403).json({ success: false, message: 'Forbidden.' });
+    }
+
+    const csv = await exportMonthlyCsv(userId, month, year);
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="attendance_${year}_${month}.csv"`);
     res.status(200).send(csv);

@@ -73,8 +73,8 @@ router.patch('/settings', rbac(['super_user']), updateAttendanceSettings);
 
 // Reports
 router.get('/report/monthly', monthlyReport);
-router.get('/report/export', rbac(['super_user', 'hr', 'coo']), exportReport);
-router.get('/report/summary', rbac(['super_user', 'coo']), yearlySummary);
+router.get('/report/export', rbac(['super_user', 'admin', 'hr', 'coo']), exportReport);
+router.get('/report/summary', rbac(['super_user', 'admin', 'coo']), yearlySummary);
 
 // Admin / HR Management Dashboard APIs
 router.get('/admin/today-snapshot', rbac(['super_user', 'admin', 'hr', 'coo']), getTodaySnapshot);
