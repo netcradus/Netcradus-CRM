@@ -89,6 +89,7 @@ const PartnerDashboard         = lazy(() => import("./features/Partner/PartnerDa
 const PartnerVendors           = lazy(() => import("./features/Partner/PartnerVendors"));
 const PartnerProjects          = lazy(() => import("./features/Partner/PartnerProjects"));
 const DeviceManagementPage     = lazy(() => import("./features/DeviceManagement/DeviceManagementPage"));
+const DomainManagementPage     = lazy(() => import("./features/DomainManagement/DomainManagementPage"));
 const PartnerProjectDetail     = lazy(() => import("./features/Partner/PartnerProjectDetail"));
 const AdminPartners            = lazy(() => import("./features/Partner/AdminPartners"));
 const AdminPartnerDetail       = lazy(() => import("./features/Partner/AdminPartnerDetail"));
@@ -248,6 +249,12 @@ const App = () => {
               <Route path="/device-management" element={
                 <RoleRoute roles={["super_user"]}>
                   <DeviceManagementPage />
+                </RoleRoute>
+              } />
+
+              <Route path="/domain-management" element={
+                <RoleRoute roles={["super_user"]}>
+                  <DomainManagementPage />
                 </RoleRoute>
               } />
 

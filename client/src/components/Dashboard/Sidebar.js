@@ -180,7 +180,10 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
         { label: "Vendors", path: "/vendors", icon: <Truck size={18} />, roles: ACCESS_GROUPS.vendors },
         { label: "Products", path: "/products", icon: <Box size={18} />, roles: ACCESS_GROUPS.products },
         { label: "Forecasts", path: "/forecasts", icon: <BarChart size={18} />, roles: ACCESS_GROUPS.forecasts },
-        ...(role === "super_user" ? [{ label: "Device Management", path: "/device-management", icon: <Monitor size={18} />, roles: ["super_user"] }] : [])
+        ...(role === "super_user" ? [
+          { label: "Device Management", path: "/device-management", icon: <Monitor size={18} />, roles: ["super_user"] },
+          { label: "Domain Management", path: "/domain-management", icon: <Globe size={18} />, roles: ["super_user"] }
+        ] : [])
       ]
     });
 
