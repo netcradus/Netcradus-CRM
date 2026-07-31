@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { User, Briefcase, Mail, Phone, MapPin, Plus, Save, Download, FileText, Search, ShieldAlert, Edit, Trash2, Eye, Clock, X, Menu, ChevronRight } from "lucide-react";
 import { apiUrl } from "../../config/api";
@@ -119,9 +120,17 @@ const calculateTenure = (joiningDate, leavingDate) => {
 
 function EmployeeProfilesPage() {
   const token = localStorage.getItem("token");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryUserId = searchParams.get("userId");
   const [profiles, setProfiles] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [activeTab, setActiveTab] = useState("Overview");
+
+  useEffect(() => {
+    if (queryUserId) {
+      setSelectedUserId(queryUserId);
+    }
+  }, [queryUserId]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -161,12 +170,17 @@ function EmployeeProfilesPage() {
       setLoading(true);
       const { data } = await axios.get(apiUrl("/api/contacts/profiles"), { headers });
       setProfiles(data);
-      if (data.length && !selectedUserId) {
-        setSelectedUserId(data[0].linkedUser?._id);
+      if (data.length) {
+        const hasQueryUser = queryUserId && data.some(p => p.linkedUser?._id === queryUserId);
+        if (hasQueryUser) {
+          setSelectedUserId(queryUserId);
+        } else if (!selectedUserId) {
+          setSelectedUserId(data[0].linkedUser?._id);
+        }
       }
     } catch (err) { setError("Failed to load profiles"); }
     finally { setLoading(false); }
-  }, [headers, selectedUserId]);
+  }, [headers, selectedUserId, queryUserId]);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 

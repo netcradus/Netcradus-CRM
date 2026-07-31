@@ -88,6 +88,7 @@ const ZohoSettingsPanel        = lazy(() => import("./features/Mail/ZohoSettings
 const PartnerDashboard         = lazy(() => import("./features/Partner/PartnerDashboard"));
 const PartnerVendors           = lazy(() => import("./features/Partner/PartnerVendors"));
 const PartnerProjects          = lazy(() => import("./features/Partner/PartnerProjects"));
+const DeviceManagementPage     = lazy(() => import("./features/DeviceManagement/DeviceManagementPage"));
 const PartnerProjectDetail     = lazy(() => import("./features/Partner/PartnerProjectDetail"));
 const AdminPartners            = lazy(() => import("./features/Partner/AdminPartners"));
 const AdminPartnerDetail       = lazy(() => import("./features/Partner/AdminPartnerDetail"));
@@ -241,6 +242,12 @@ const App = () => {
               <Route path="/employee-profiles" element={
                 <RoleRoute roles={["super_user", "hr", "coo"]}>
                   <EmployeeProfilesPage />
+                </RoleRoute>
+              } />
+
+              <Route path="/device-management" element={
+                <RoleRoute roles={["super_user"]}>
+                  <DeviceManagementPage />
                 </RoleRoute>
               } />
 

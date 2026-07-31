@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -64,38 +66,105 @@ const SuperUserDashboard = () => {
   const [savingReminder, setSavingReminder] = useState(false);
   const userName = localStorage.getItem("userName") || "Super User";
   const token = localStorage.getItem("token");
- 
+
+  const navigate = useNavigate();
+  const [modalType, setModalType] = useState(null); // 'totalUsers' or 'presentToday' or null
+  const [profiles, setProfiles] = useState([]);
+  
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+
+  const [errorUsers, setErrorUsers] = useState(null);
+  const [errorAttendance, setErrorAttendance] = useState(null);
+  const [errorProfiles, setErrorProfiles] = useState(null);
+
+  const getInitials = (name) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    setErrorUsers(null);
+    try {
+      const res = await axios.get(apiUrl("/api/auth/users"), {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+      });
+      setUsers(res.data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setErrorUsers(err.response?.data?.message || err.message || "Failed to load users");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const fetchAttendance = async () => {
+    setLoadingAttendance(true);
+    setErrorAttendance(null);
+    try {
+      const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+      });
+      setAttendanceSnapshot(res.data.data);
+    } catch (err) {
+      console.error("Error fetching attendance snapshot:", err);
+      setErrorAttendance(err.response?.data?.message || err.message || "Failed to load attendance");
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  const fetchProfiles = async () => {
+    setLoadingProfiles(true);
+    setErrorProfiles(null);
+    try {
+      const res = await axios.get(apiUrl("/api/contacts/profiles"), {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
+      });
+      setProfiles(res.data);
+    } catch (err) {
+      console.error("Error fetching profiles:", err);
+      setErrorProfiles(err.response?.data?.message || err.message || "Failed to load profile details");
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get(apiUrl("/api/auth/users"), {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
-        });
-        setUsers(res.data);
-      } catch (err) {
-        console.error("Error fetching users:", err);
+    if (token) {
+      fetchUsers();
+      fetchAttendance();
+      fetchProfiles();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setModalType(null);
       }
     };
-    fetchUsers();
-  }, [token]);
- 
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
-        });
-        setAttendanceSnapshot(res.data.data);
-      } catch (err) {
-        console.error("Error fetching attendance snapshot:", err);
-      }
+    if (modalType) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
     };
-    fetchAttendance();
-    const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
-    return () => clearInterval(interval);
-  }, [token]);
+  }, [modalType]);
 
   const fetchMeetingReminders = async () => {
     try {
@@ -382,11 +451,43 @@ const SuperUserDashboard = () => {
       )}
  
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
-        <div className="nc-stat-card">
+        <div
+          className="nc-stat-card clickable-card"
+          role="button"
+          tabIndex={0}
+          onClick={() => setModalType('totalUsers')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setModalType('totalUsers');
+            }
+          }}
+          style={{
+            cursor: 'pointer',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            outline: 'none',
+          }}
+        >
           <span className="metric-label">Total Users</span>
           <span className="metric-value">{users.length}</span>
         </div>
-        <div className="nc-stat-card">
+        <div
+          className="nc-stat-card clickable-card"
+          role="button"
+          tabIndex={0}
+          onClick={() => setModalType('presentToday')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setModalType('presentToday');
+            }
+          }}
+          style={{
+            cursor: 'pointer',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            outline: 'none',
+          }}
+        >
           <span className="metric-label">Present Today</span>
           <span className="metric-value">{attendanceSnapshot?.presentCount || 0}</span>
         </div>
@@ -536,6 +637,358 @@ const SuperUserDashboard = () => {
         <h3 style={{ marginBottom: 'var(--space-4)', fontSize: 'var(--text-base)' }}>Team Attendance Live</h3>
         <AttendanceWidget />
       </div>
+
+      <style>{`
+        .clickable-card:hover {
+          border-color: var(--color-accent) !important;
+          box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.15) !important;
+        }
+        .clickable-card:focus-visible {
+          border-color: var(--color-accent) !important;
+          box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3) !important;
+        }
+      `}</style>
+
+      {modalType && (
+        <div
+          className="nc-modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalType(null);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-6)',
+            background: 'var(--color-overlay, rgba(0, 0, 0, 0.6))',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div
+            className="nc-modal-content"
+            style={{
+              width: 'min(100%, 800px)',
+              maxHeight: 'min(88vh, 720px)',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '28px',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-surface-strong, #1f1f1f)',
+              boxShadow: 'var(--shadow-2xl)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              className="nc-modal-header"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: 'var(--space-5) var(--space-6)',
+                borderBottom: '1px solid var(--color-border)',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
+                {modalType === 'totalUsers'
+                  ? `All Registered Users (${users.length})`
+                  : `Present Today (${
+                      (attendanceSnapshot?.employees || []).filter(e =>
+                        ['present', 'overtime', 'half_day'].includes(e.status)
+                      ).length
+                    })`}
+              </h3>
+              <button
+                onClick={() => setModalType(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                  padding: 'var(--space-2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div
+              className="nc-modal-body"
+              style={{
+                padding: 'var(--space-6)',
+                overflowY: 'auto',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-4)',
+              }}
+            >
+              {/* Loading state */}
+              {((modalType === 'totalUsers' && loadingUsers) ||
+                (modalType === 'presentToday' && loadingAttendance) ||
+                loadingProfiles) && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-8)' }}>
+                  <div
+                    className="animate-spin"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      border: '3px solid rgba(255, 255, 255, 0.08)',
+                      borderTopColor: 'var(--color-accent)',
+                      borderRadius: '50%',
+                      marginBottom: 'var(--space-4)',
+                    }}
+                  />
+                  <p style={{ color: 'var(--color-text-muted)' }}>Loading records...</p>
+                </div>
+              )}
+
+              {/* Error state */}
+              {((modalType === 'totalUsers' && errorUsers) ||
+                (modalType === 'presentToday' && errorAttendance) ||
+                errorProfiles) &&
+                !((modalType === 'totalUsers' && loadingUsers) ||
+                  (modalType === 'presentToday' && loadingAttendance) ||
+                  loadingProfiles) && (
+                  <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                    <p style={{ color: 'var(--color-danger, #ef4444)', marginBottom: 'var(--space-4)' }}>
+                      {modalType === 'totalUsers' ? errorUsers : errorAttendance || errorProfiles}
+                    </p>
+                    <button
+                      className="btn btn-primary"
+                      onClick={
+                        modalType === 'totalUsers'
+                          ? () => {
+                              fetchUsers();
+                              fetchProfiles();
+                            }
+                          : () => {
+                              fetchAttendance();
+                              fetchProfiles();
+                            }
+                      }
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+              {/* Empty state */}
+              {!((modalType === 'totalUsers' && loadingUsers) ||
+                (modalType === 'presentToday' && loadingAttendance) ||
+                loadingProfiles) &&
+                !((modalType === 'totalUsers' && errorUsers) ||
+                  (modalType === 'presentToday' && errorAttendance) ||
+                  errorProfiles) &&
+                (modalType === 'totalUsers'
+                  ? users.length === 0
+                  : (attendanceSnapshot?.employees || []).filter(e =>
+                      ['present', 'overtime', 'half_day'].includes(e.status)
+                    ).length === 0) && (
+                  <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
+                    No records found.
+                  </div>
+                )}
+
+              {/* Records list */}
+              {!((modalType === 'totalUsers' && loadingUsers) ||
+                (modalType === 'presentToday' && loadingAttendance) ||
+                loadingProfiles) &&
+                !((modalType === 'totalUsers' && errorUsers) ||
+                  (modalType === 'presentToday' && errorAttendance) ||
+                  errorProfiles) && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    {(modalType === 'totalUsers'
+                      ? users
+                      : (attendanceSnapshot?.employees || []).filter(e =>
+                          ['present', 'overtime', 'half_day'].includes(e.status)
+                        )
+                    ).map((record) => {
+                      const targetUserId = modalType === 'totalUsers' ? record._id : record.userId;
+                      const userProfile = profiles.find((p) => p.linkedUser?._id === targetUserId);
+                      
+                      // Fields mapping
+                      const fullName = record.name;
+                      const email = record.email;
+                      const role = record.role;
+                      const department = record.department;
+                      const employeeId = modalType === 'totalUsers' ? record.userId : (userProfile?.employeeId || 'N/A');
+                      const designation = modalType === 'totalUsers' ? (record.designation || 'N/A') : (userProfile?.designation || 'N/A');
+                      const profilePhoto = userProfile?.profilePhoto || '';
+                      
+                      // Card specific fields
+                      const activeStatus = modalType === 'totalUsers' ? (!record.isDisabled ? 'Active' : 'Inactive') : null;
+                      const checkInTime = modalType === 'presentToday' ? (record.punchIn ? new Date(record.punchIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A') : null;
+                      const attendanceStatus = modalType === 'presentToday' ? record.status : null;
+
+                      return (
+                        <div
+                          key={targetUserId}
+                          onClick={() => {
+                            setModalType(null);
+                            navigate(`/employee-profiles?userId=${targetUserId}`);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: 'var(--space-4)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '16px',
+                            background: 'var(--color-bg-surface, #262626)',
+                            cursor: 'pointer',
+                            transition: 'border-color 0.2s, background-color 0.2s',
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--color-accent)';
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--color-border)';
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-surface)';
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', minWidth: 0 }}>
+                            {/* Avatar */}
+                            <div style={{ position: 'relative', width: '48px', height: '48px', flexShrink: 0 }}>
+                              {profilePhoto ? (
+                                <img
+                                  src={`${apiUrl(profilePhoto)}?token=${localStorage.getItem('token') || ''}`}
+                                  alt={fullName}
+                                  style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                style={{
+                                  display: profilePhoto ? 'none' : 'flex',
+                                  width: '48px',
+                                  height: '48px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 'var(--color-bg-alt, #3f3f3f)',
+                                  color: 'var(--color-text-primary, #ffffff)',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  fontSize: '16px',
+                                }}
+                              >
+                                {getInitials(fullName)}
+                              </div>
+                            </div>
+
+                            {/* User Info */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                              <span style={{ fontWeight: 'var(--font-semibold)', color: 'var(--color-text-primary)', fontSize: 'var(--text-sm)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {fullName}
+                              </span>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                                ID: {employeeId} · {designation}
+                              </span>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {email}
+                              </span>
+                              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginTop: '2px' }}>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '10px',
+                                  background: 'var(--color-bg-alt, #3f3f3f)',
+                                  color: 'var(--color-text-muted)'
+                                }}>
+                                  {formatRoleLabel(role)}
+                                </span>
+                                <span style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '10px',
+                                  background: 'var(--color-bg-alt, #3f3f3f)',
+                                  color: 'var(--color-text-muted)'
+                                }}>
+                                  {department}
+                                </span>
+                                {/* Active / Inactive Badge for Total Users */}
+                                {activeStatus && (
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    fontSize: '10px',
+                                    background: activeStatus === 'Active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: activeStatus === 'Active' ? '#22c55e' : '#ef4444',
+                                    fontWeight: 'var(--font-semibold)'
+                                  }}>
+                                    {activeStatus}
+                                  </span>
+                                )}
+                                {/* Punch in time for Present Today */}
+                                {checkInTime && (
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    fontSize: '10px',
+                                    background: 'rgba(59, 130, 246, 0.15)',
+                                    color: '#3b82f6',
+                                    fontWeight: 'var(--font-semibold)'
+                                  }}>
+                                    In: {checkInTime}
+                                  </span>
+                                )}
+                                {/* Attendance Status Badge for Present Today */}
+                                {attendanceStatus && (
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '999px',
+                                    fontSize: '10px',
+                                    background: attendanceStatus === 'present' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                                    color: attendanceStatus === 'present' ? '#22c55e' : '#eab308',
+                                    fontWeight: 'var(--font-semibold)'
+                                  }}>
+                                    {attendanceStatus.charAt(0).toUpperCase() + attendanceStatus.slice(1)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            className="btn btn-ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setModalType(null);
+                              navigate(`/employee-profiles?userId=${targetUserId}`);
+                            }}
+                            style={{
+                              padding: 'var(--space-2) var(--space-4)',
+                              fontSize: 'var(--text-xs)',
+                              height: '32px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            View Profile
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
