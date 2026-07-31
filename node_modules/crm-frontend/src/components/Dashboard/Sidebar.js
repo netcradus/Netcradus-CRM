@@ -172,14 +172,12 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
       roles: ACCESS_GROUPS.management,
       submenu: [
         { label: "Overview", path: "/management/business/overview", icon: <BarChart3 size={18} />, roles: ACCESS_GROUPS.management },
-        { label: "Meetings", path: "/meetings", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.meetings },
         { label: "Visits", path: "/visits", icon: <MapPin size={18} />, roles: ACCESS_GROUPS.visits },
         { label: "Calls", path: "/calls", icon: <Phone size={18} />, roles: ACCESS_GROUPS.calls },
         { label: "Solutions", path: "/solutions", icon: <Lightbulb size={18} />, roles: ACCESS_GROUPS.solutions },
         { label: "Cases", path: "/cases", icon: <FolderOpen size={18} />, roles: ACCESS_GROUPS.cases },
         { label: "Vendors", path: "/vendors", icon: <Truck size={18} />, roles: ACCESS_GROUPS.vendors },
         { label: "Products", path: "/products", icon: <Box size={18} />, roles: ACCESS_GROUPS.products },
-        { label: "Forecasts", path: "/forecasts", icon: <BarChart size={18} />, roles: ACCESS_GROUPS.forecasts },
         ...(role === "super_user" ? [
           { label: "Device Management", path: "/device-management", icon: <Monitor size={18} />, roles: ["super_user"] },
           { label: "Domain Management", path: "/domain-management", icon: <Globe size={18} />, roles: ["super_user"] }
