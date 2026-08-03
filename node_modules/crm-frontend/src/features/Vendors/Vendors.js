@@ -79,10 +79,12 @@ function Vendors() {
         </div>
       </div>
 
-      <div className="nc-card" style={{ marginBottom: "var(--space-6)", padding: "var(--space-4)" }}>
-        <div style={{ position: "relative", maxWidth: "320px" }}>
-          <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-          <input className="form-input" style={{ paddingLeft: "36px" }} placeholder="Search vendors..." value={search} onChange={(event) => setSearch(event.target.value)} />
+      <div className="crm-filter-card">
+        <div className="crm-filter-row crm-filter-row--no-reset" style={{ gridTemplateColumns: "1fr" }}>
+          <div className="crm-filter-search">
+            <Search className="crm-filter-search-icon" size={14} />
+            <input placeholder="Search vendors..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          </div>
         </div>
       </div>
 

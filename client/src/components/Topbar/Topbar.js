@@ -43,30 +43,33 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
 
   return (
     <header className="topbar">
-      <div className="topbar-left">
+      <div className="topbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {isMobile && (
           <button
             type="button"
-            className={`topbar-menu-btn ${isSidebarExpanded ? "is-active" : ""}`}
+            className="topbar-menu-btn"
             onClick={onToggleSidebar}
-            aria-label="Toggle sidebar"
+            aria-label="Open menu"
           >
             <PanelLeft size={18} />
           </button>
         )}
-        <div className="topbar-logo-mark">
-          {initials}
-        </div>
-        <div className="topbar-title">
-          <div className="topbar-product-logo-wrap">
-            <img src="/netcradus.png" alt="Netcradus" className="topbar-product-logo" />
-          </div>
-          <span className="topbar-subtitle">Revenue CRM Workspace</span>
+        <div className="navbar-brand">
+          <img
+            src="/dashboardlogo.png"
+            alt="Netcradus"
+            className="brand-logo light-only"
+          />
+          <img
+            src="/dashboardlogo2.png"
+            alt="Netcradus"
+            className="brand-logo dark-only"
+          />
         </div>
       </div>
 
-      <div className="topbar-right">
-        <div className="topbar-search">
+      <div className="topbar-center" style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "480px", margin: "0 var(--space-4)" }}>
+        <div className="topbar-search" style={{ width: "100%", maxWidth: "480px" }}>
           <Search size={14} />
           <input
             placeholder="Search leads, accounts, deals..."
@@ -78,23 +81,25 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
             }}
           />
         </div>
+      </div>
 
-        <button 
+      <div className="topbar-right" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <button
           type="button"
-          className="topbar-browser-btn" 
+          className="topbar-browser-btn"
           title="Open Google Search"
           aria-label="Open Google Search"
           onClick={() => setIsGoogleSearchOpen(true)}
-          style={{ 
+          style={{
             background: "none",
             border: "none",
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            width: "36px", 
-            height: "36px", 
-            borderRadius: "50%", 
-            color: "var(--color-text-secondary)", 
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            color: "var(--color-text-secondary)",
             transition: "background-color 0.2s",
             cursor: "pointer",
             padding: 0
@@ -106,22 +111,22 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
         </button>
 
         <ThemeToggle className="topbar-theme-toggle" compact />
-        
+
         {/* Mail entry button */}
-        <Link 
-          to="/dashboard/mail" 
-          className="topbar-mail-btn" 
+        <Link
+          to="/dashboard/mail"
+          className="topbar-mail-btn"
           title="Open Internal Mail"
           aria-label="Open Internal Mail"
-          style={{ 
-            position: "relative", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            width: "36px", 
-            height: "36px", 
-            borderRadius: "50%", 
-            color: "var(--color-text-secondary)", 
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            color: "var(--color-text-secondary)",
             transition: "background-color 0.2s",
             cursor: "pointer"
           }}
@@ -130,21 +135,21 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
         >
           <img src="/mailicon.png" alt="Mail" style={{ width: "20px", height: "20px", objectFit: "contain" }} />
           {unreadCount > 0 && (
-            <span style={{ 
-              position: "absolute", 
-              top: "-2px", 
-              right: "-2px", 
-              backgroundColor: "var(--color-accent)", 
-              color: "#fff", 
-              fontSize: "10px", 
-              fontWeight: "bold", 
-              borderRadius: "50%", 
-              minWidth: "16px", 
-              height: "16px", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center", 
-              padding: "0 4px" 
+            <span style={{
+              position: "absolute",
+              top: "-2px",
+              right: "-2px",
+              backgroundColor: "var(--color-accent)",
+              color: "#fff",
+              fontSize: "10px",
+              fontWeight: "bold",
+              borderRadius: "50%",
+              minWidth: "16px",
+              height: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0 4px"
             }}>
               {unreadCount}
             </span>
@@ -158,9 +163,9 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
         </div>
       </div>
 
-      <GoogleSearchModal 
-        isOpen={isGoogleSearchOpen} 
-        onClose={() => setIsGoogleSearchOpen(false)} 
+      <GoogleSearchModal
+        isOpen={isGoogleSearchOpen}
+        onClose={() => setIsGoogleSearchOpen(false)}
       />
     </header>
   );

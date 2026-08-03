@@ -8,6 +8,9 @@ import {
   ListTodo,
   Activity,
   AlertTriangle,
+  BriefcaseBusiness,
+  BadgeCheck,
+  Timer,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -157,20 +160,32 @@ function TechDashboard({ preview = false }) {
         <div className="nc-stat-card">
           <span className="metric-label">Live Projects</span>
           <span className="metric-value">{projects.length}</span>
+          <div className="circle-badge circle-badge--accent">
+            <FolderKanban />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Workflow Columns</span>
           <span className="metric-value">{columns.length}</span>
+          <div className="circle-badge circle-badge--success">
+            <BriefcaseBusiness />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Avg. Progress</span>
           <span className="metric-value">{avgProgressValue}%</span>
+          <div className="circle-badge circle-badge--info">
+            <BadgeCheck />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Overdue Cards</span>
           <span className="metric-value" style={{ color: 'var(--color-error)' }}>
             {projects.filter(p => p.deadline && new Date(p.deadline) < new Date() && (Number(p.progress)||0) < 100).length}
           </span>
+          <div className="circle-badge circle-badge--warning">
+            <Timer />
+          </div>
         </div>
       </div>
 

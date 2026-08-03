@@ -14,11 +14,12 @@ import axios from "axios";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
+import { Users, UserCheck, Activity } from "lucide-react";
 
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
-const PIE_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
+const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
 
 const formatRoleLabel = (role = "general") =>
   role === "admin"
@@ -28,51 +29,54 @@ const formatRoleLabel = (role = "general") =>
         .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const AdminDashboard = () => {
-  const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const token = localStorage.getItem("token");
+  const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
 
   useEffect(() => {
-    const fetchAttendance = async () => {
+    const fetchDashboardData = async () => {
       try {
+        const headers = { Authorization: `Bearer ${token}` };
         const res = await axios.get(apiUrl("/api/attendance/admin/today-snapshot"), {
-          headers: { Authorization: `Bearer ${token}` },
+          headers,
           timeout: DASHBOARD_REQUEST_TIMEOUT_MS,
         });
         setAttendanceSnapshot(res.data.data);
       } catch (err) {
-        console.error("Error fetching attendance snapshot:", err);
+        setAttendanceSnapshot(null);
       }
     };
 
-    fetchAttendance();
-    const interval = setInterval(fetchAttendance, DASHBOARD_REFRESH_MS);
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, DASHBOARD_REFRESH_MS);
     return () => clearInterval(interval);
   }, [token]);
 
-  const trackedEmployees = attendanceSnapshot?.employees?.length || 0;
-
-  const roleDistributionData = useMemo(() => {
-    const employees = attendanceSnapshot?.employees || [];
-    const groupedRoles = employees.reduce((acc, employee) => {
-      const roleLabel = formatRoleLabel(employee.role);
-      acc[roleLabel] = (acc[roleLabel] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
+  const trackedEmployees = useMemo(() => {
+    if (!attendanceSnapshot) return 0;
+    return attendanceSnapshot.employees?.length || 0;
   }, [attendanceSnapshot]);
 
   const departmentChartData = useMemo(() => {
     const employees = attendanceSnapshot?.employees || [];
-    const groupedDepartments = employees.reduce((acc, employee) => {
-      const department = employee.department || "General";
-      acc[department] = (acc[department] || 0) + 1;
+    const counts = employees.reduce((acc, emp) => {
+      const dept = emp.department || "General";
+      acc[dept] = (acc[dept] || 0) + 1;
       return acc;
     }, {});
+    return Object.entries(counts).map(([name, total]) => ({ name, total }));
+  }, [attendanceSnapshot]);
 
-    return Object.entries(groupedDepartments)
-      .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total);
+  const roleDistributionData = useMemo(() => {
+    const employees = attendanceSnapshot?.employees || [];
+    const counts = employees.reduce((acc, emp) => {
+      const role = emp.role || "user";
+      acc[role] = (acc[role] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([name, value]) => ({
+      name: name.toUpperCase(),
+      value,
+    }));
   }, [attendanceSnapshot]);
 
   const attendanceStatusData = useMemo(
@@ -99,18 +103,30 @@ const AdminDashboard = () => {
         <div className="nc-stat-card">
           <span className="metric-label">Tracked Employees</span>
           <span className="metric-value">{trackedEmployees}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Users />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Present Today</span>
           <span className="metric-value">{attendanceSnapshot?.presentCount || 0}</span>
+          <div className="circle-badge circle-badge--success">
+            <UserCheck />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Active Now</span>
           <span className="metric-value">{attendanceSnapshot?.clockedInCount || 0}</span>
+          <div className="circle-badge circle-badge--info">
+            <UserCheck />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Attendance Health</span>
           <span className="metric-value" style={{ color: 'var(--color-success)' }}>Stable</span>
+          <div className="circle-badge circle-badge--warning">
+            <Activity />
+          </div>
         </div>
       </div>
 

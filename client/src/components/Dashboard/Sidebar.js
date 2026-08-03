@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Home, Users, Briefcase, Ticket, Layout, Layers, Monitor, CircleDollarSign,
   FileText, Receipt, FileEdit, ShoppingCart, Package, Book, Database, Target,
   Contact, Building, Coins, TrendingUp, Megaphone, Globe, LayoutGrid, BarChart3,
   Calendar, ListChecks, MapPin, Phone, Lightbulb, FolderOpen, Truck, Box,
   BarChart, UserCheck, Clock, Umbrella, Plane, Users2, User, MessageSquare,
-  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail, Settings, UserCog
+  HardDrive, ShieldCheck, Smartphone, Key, LogOut, ChevronDown, ChevronRight, Network, Mail, Settings, UserCog, PanelLeft
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ACCESS_GROUPS, canAccess } from "../../config/access";
@@ -13,9 +13,10 @@ import useOnboarding from "../../features/Onboarding/useOnboarding";
 import { getAppSocket } from "../../services/socket";
 import { MAIL_UNREAD_EVENT } from "../../hooks/useMail";
 
-const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, onHoverExpanded, onHoverCollapsed, onCloseMobile }) => {
+const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const sidebarRef = useRef(null);
   useOnboarding();
   const userRole = (localStorage.getItem("userRole") || "").trim().toLowerCase();
   const token = localStorage.getItem("token");
@@ -23,7 +24,37 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
   const [mailUnreadCount, setMailUnreadCount] = useState(0);
 
   const role = userRole || "user";
-  const isDesktopCollapsed = !isExpanded && !isMobileOpen;
+
+  // Close sidebar on click outside or escape key press
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && sidebarRef.current.contains(event.target)) {
+        return;
+      }
+      if (event.target.closest(".topbar-avatar") || event.target.closest(".profile-dropdown") || event.target.closest(".dropdown-menu")) {
+        return;
+      }
+      if (event.target.closest(".modal") || event.target.closest(".modal-content") || event.target.closest(".google-search-modal")) {
+        return;
+      }
+      onSetExpanded(false);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onSetExpanded(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExpanded, onSetExpanded]);
 
   const onLogout = () => {
     localStorage.clear();
@@ -52,22 +83,20 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
     e.preventDefault();
     e.stopPropagation();
-    const targetPath = getItemTargetPath(item);
 
-    if (isDesktopCollapsed) {
-      onToggleExpanded?.();
-      setOpenSubmenu(item.label);
-      return;
-    }
+    // Clicking a parent icon always expands the sidebar
+    onSetExpanded(true);
+
+    const targetPath = getItemTargetPath(item);
+    setOpenSubmenu((prev) => (prev === item.label ? null : item.label));
 
     if (targetPath && location.pathname !== targetPath) {
       navigate(targetPath);
     }
-
-    setOpenSubmenu((prev) => (prev === item.label ? null : item.label));
   };
 
   const handleLeafNavigation = () => {
+    onSetExpanded(false);
     if (window.innerWidth <= 768) {
       onCloseMobile?.();
     }
@@ -283,20 +312,14 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
 
   return (
     <nav 
-      className={`sidebar ${isExpanded ? "is-expanded" : "is-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
-      onMouseEnter={onHoverExpanded}
-      onMouseLeave={() => {
-        if (window.innerWidth > 768) {
-          setOpenSubmenu(null);
-          onHoverCollapsed?.();
-        }
-      }}
+      ref={sidebarRef}
+      className={`sidebar ${isExpanded ? "sidebar-expanded" : "sidebar-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
     >
-      <div className="sidebar-brand">
+      <div className="sidebar-brand" style={{ display: "flex", alignItems: "center", justifyContent: isExpanded ? "flex-start" : "center", padding: isExpanded ? "0 22px" : "16px 0", gap: "14px", width: "100%", borderBottom: "1px solid var(--color-border)" }}>
         <div className="sidebar-logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         </div>
-        <span className="sidebar-brand-text">Netcradus</span>
+        {isExpanded && <span className="sidebar-brand-text">Netcradus</span>}
       </div>
 
       <div className="sidebar-menu">
@@ -312,14 +335,17 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
                 <button 
                   className={`sidebar-item ${isParentActive ? "is-parent-active" : ""}`}
                   onClick={(e) => handleSubmenuToggle(e, item)}
+                  title={!isExpanded ? item.label : ""}
                 >
                   <div className="sidebar-item-icon">{item.icon}</div>
-                  <span className="sidebar-item-text">{item.label}</span>
-                  <div className="sidebar-item-caret">
-                    {isSubmenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </div>
+                  {isExpanded && <span className="sidebar-item-text">{item.label}</span>}
+                  {isExpanded && (
+                    <div className="sidebar-item-caret">
+                      {isSubmenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </div>
+                  )}
                 </button>
-                {isSubmenuOpen && (isExpanded || isMobileOpen) && (
+                {isSubmenuOpen && isExpanded && (
                   <div className="sidebar-submenu">
                     {visibleSubmenu.map((sub) => (
                       <NavLink 
@@ -349,6 +375,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
               key={item.path} 
               to={item.path} 
               className={({ isActive }) => `sidebar-item ${isActive ? "is-active" : ""}`}
+              title={!isExpanded ? item.label : ""}
               onClick={(event) => {
                 if (guardNavigation(event)) {
                   return;
@@ -357,16 +384,16 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
               }}
             >
               <div className="sidebar-item-icon">{item.icon}</div>
-              <span className="sidebar-item-text">{item.label}</span>
+              {isExpanded && <span className="sidebar-item-text">{item.label}</span>}
             </NavLink>
           );
         })}
       </div>
 
       <div className="sidebar-footer">
-        <button className="sidebar-item sidebar-logout" onClick={onLogout}>
+        <button className="sidebar-item sidebar-logout" onClick={onLogout} title={!isExpanded ? "Logout" : ""}>
           <div className="sidebar-item-icon"><LogOut size={20} /></div>
-          <span className="sidebar-item-text">Logout</span>
+          {isExpanded && <span className="sidebar-item-text">Logout</span>}
         </button>
       </div>
     </nav>

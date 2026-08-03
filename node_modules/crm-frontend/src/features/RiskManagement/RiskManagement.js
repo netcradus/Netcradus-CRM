@@ -12,6 +12,10 @@ import {
   RotateCcw,
   User,
   Info,
+  AlertTriangle,
+  Flame,
+  Siren,
+  ShieldCheck,
 } from "lucide-react";
 
 const CATEGORIES = ["Financial", "Operational", "Strategic", "Compliance", "Technical"];
@@ -297,6 +301,9 @@ export default function RiskManagement() {
         >
           <span className="metric-label">Total Risks</span>
           <span className="metric-value">{stats.total}</span>
+          <div className="circle-badge circle-badge--accent">
+            <ShieldAlert />
+          </div>
         </div>
         <div
           className="nc-stat-card"
@@ -312,6 +319,9 @@ export default function RiskManagement() {
           <span className="metric-value" style={{ color: "var(--color-warning)" }}>
             {stats.open}
           </span>
+          <div className="circle-badge circle-badge--success">
+            <AlertTriangle />
+          </div>
         </div>
         <div
           className="nc-stat-card"
@@ -327,6 +337,9 @@ export default function RiskManagement() {
           <span className="metric-value" style={{ color: "var(--color-accent)" }}>
             {stats.high}
           </span>
+          <div className="circle-badge circle-badge--info">
+            <Flame />
+          </div>
         </div>
         <div
           className="nc-stat-card"
@@ -342,6 +355,9 @@ export default function RiskManagement() {
           <span className="metric-value" style={{ color: "var(--color-error)" }}>
             {stats.critical}
           </span>
+          <div className="circle-badge circle-badge--warning">
+            <Siren />
+          </div>
         </div>
         <div
           className="nc-stat-card"
@@ -357,6 +373,9 @@ export default function RiskManagement() {
           <span className="metric-value" style={{ color: "var(--color-success)" }}>
             {stats.closed}
           </span>
+          <div className="circle-badge circle-badge--accent">
+            <ShieldCheck />
+          </div>
         </div>
       </div>
 
@@ -373,65 +392,50 @@ export default function RiskManagement() {
       )}
 
       {/* Filter Toolbar */}
-      <div
-        className="nc-card"
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--space-4)",
-          padding: "var(--space-4)",
-          marginBottom: "var(--space-6)",
-          alignItems: "center",
-        }}
-      >
-        <div className="form-field" style={{ flex: 1, minWidth: 200, marginBottom: 0 }}>
-          <div className="topbar-search" style={{ margin: 0, width: "100%", height: "42px" }}>
-            <Search size={18} />
+      <div className="crm-filter-card">
+        <div className="crm-risk-filter-row">
+          <div className="crm-filter-search">
+            <Search className="crm-filter-search-icon" size={18} />
             <input
               type="text"
               placeholder="Search risks..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              style={{ paddingLeft: "var(--space-10)", height: "100%" }}
             />
           </div>
-        </div>
 
-        <div className="form-field" style={{ width: 180, marginBottom: 0 }}>
-          <select
-            className="form-select"
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            style={{ height: "42px" }}
-          >
-            <option value="">All Categories</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="crm-filter-control">
+            <select
+              value={filters.category}
+              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+            >
+              <option value="">All Categories</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="form-field" style={{ width: 180, marginBottom: 0 }}>
-          <select
-            className="form-select"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            style={{ height: "42px" }}
-          >
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map((st) => (
-              <option key={st} value={st}>
-                {st}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="crm-filter-control">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            >
+              <option value="">All Statuses</option>
+              {STATUS_OPTIONS.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <button className="btn btn-ghost" onClick={handleResetFilters} title="Reset filters" style={{ height: "42px", display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-          <RotateCcw size={15} /> Reset
-        </button>
+          <button className="crm-filter-reset" onClick={handleResetFilters} title="Reset filters">
+            <RotateCcw size={15} style={{ marginRight: "6px" }} /> Reset
+          </button>
+        </div>
       </div>
 
       {/* Data Table */}

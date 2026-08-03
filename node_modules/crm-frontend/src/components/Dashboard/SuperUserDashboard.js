@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { X, Users, UserCheck, CalendarClock, Activity } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -470,6 +470,9 @@ const SuperUserDashboard = () => {
         >
           <span className="metric-label">Total Users</span>
           <span className="metric-value">{users.length}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Users />
+          </div>
         </div>
         <div
           className="nc-stat-card clickable-card"
@@ -490,14 +493,23 @@ const SuperUserDashboard = () => {
         >
           <span className="metric-label">Present Today</span>
           <span className="metric-value">{attendanceSnapshot?.presentCount || 0}</span>
+          <div className="circle-badge circle-badge--success">
+            <UserCheck />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">On Leave</span>
           <span className="metric-value">{attendanceSnapshot?.onLeaveCount || 0}</span>
+          <div className="circle-badge circle-badge--info">
+            <CalendarClock />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">System Health</span>
           <span className="metric-value" style={{ color: 'var(--color-success)' }}>100%</span>
+          <div className="circle-badge circle-badge--warning">
+            <Activity />
+          </div>
         </div>
       </div>
  

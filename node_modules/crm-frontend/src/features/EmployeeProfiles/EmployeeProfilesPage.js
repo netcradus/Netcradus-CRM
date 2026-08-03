@@ -1309,11 +1309,9 @@ function EmployeeProfilesPage() {
             </div>
           )}
 
-          <div className="form-field" style={{ marginBottom: "var(--space-4)" }}>
-            <div style={{ position: "relative" }}>
-              <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-              <input className="form-input" style={{ paddingLeft: "36px", fontSize: "var(--text-xs)" }} placeholder="Search name, email..." value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
+          <div className="crm-filter-search" style={{ marginBottom: "var(--space-4)" }}>
+            <Search className="crm-filter-search-icon" size={14} />
+            <input placeholder="Search name, email..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>

@@ -11,9 +11,7 @@ const MainLayout = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 768) {
-        setIsSidebarExpanded(false);
-      } else {
+      if (window.innerWidth > 768) {
         setIsMobileSidebarOpen(false);
       }
     };
@@ -23,28 +21,15 @@ const MainLayout = () => {
   }, []);
 
   const handleToggleSidebar = () => {
-    if (window.innerWidth <= 768) {
-      setIsMobileSidebarOpen((current) => !current);
-    }
+    setIsMobileSidebarOpen((current) => !current);
   };
 
   return (
     <div className="dashboard-layout">
       <Sidebar
         isExpanded={isSidebarExpanded}
-        isMobileOpen={isMobileSidebarOpen}
-        onToggleExpanded={() => setIsSidebarExpanded((current) => !current)}
         onSetExpanded={setIsSidebarExpanded}
-        onHoverExpanded={() => {
-          if (window.innerWidth > 768) {
-            setIsSidebarExpanded(true);
-          }
-        }}
-        onHoverCollapsed={() => {
-          if (window.innerWidth > 768) {
-            setIsSidebarExpanded(false);
-          }
-        }}
+        isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
       {isMobileSidebarOpen && <button className="sidebar-backdrop" onClick={() => setIsMobileSidebarOpen(false)} aria-label="Close navigation" />}

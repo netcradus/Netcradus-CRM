@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
  
-const PRESET_COLORS = ["#1e293b", "#115e59", "#312e81", "#334155"];
+const PRESET_COLORS = ["#ff6547", "#16b364", "#4f7cff", "#f79009"];
 const DEFAULT_COLOR = PRESET_COLORS[0];
  
 const WorkspaceWidget = () => {
@@ -155,6 +155,12 @@ const WorkspaceWidget = () => {
     }
   };
  
+  const formatNoteDate = (d) => {
+    if (!d) return "Active Note";
+    const date = new Date(d);
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " - Widget";
+  };
+
   const NoteCard = ({ note }) => {
     const [isEditing, setIsEditing] = useState(note.isEditing || false);
     const [content, setContent] = useState(note.content);
@@ -179,21 +185,47 @@ const WorkspaceWidget = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
-          minWidth: "220px",
-          width: "220px",
-          height: "160px",
-          backgroundColor: note.color,
+          minWidth: "230px",
+          width: "230px",
+          height: "170px",
+          backgroundColor: "var(--color-bg-surface)",
+          borderLeft: `4px solid ${note.color || "var(--color-accent)"}`,
+          borderTop: "1px solid var(--color-border)",
+          borderRight: "1px solid var(--color-border)",
+          borderBottom: "1px solid var(--color-border)",
           borderRadius: "var(--radius-md)",
-          padding: "var(--space-3)",
+          padding: "var(--space-4)",
           position: "relative",
           display: "flex",
           flexDirection: "column",
           flexShrink: 0,
-          boxShadow: "var(--shadow-sm)",
-          border: "1px solid rgba(255,255,255,0.05)"
+          boxShadow: isHovered ? "var(--shadow-lg)" : "var(--shadow-sm)",
+          transform: isHovered ? "translateY(-4px)" : "none",
+          transition: "transform var(--transition-base), box-shadow var(--transition-base)"
         }}
       >
-        <div style={{ flex: 1, overflowY: "auto", marginBottom: isHovered ? "24px" : "0" }} className="hide-scrollbar">
+        {/* Widget Header with Lucide-like icon representation */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "var(--space-2)" }}>
+          <div style={{
+            width: "24px",
+            height: "24px",
+            borderRadius: "50%",
+            backgroundColor: `${note.color}15`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: note.color
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8.5" />
+              <path d="M21 3h-6v6" />
+              <path d="m21 3-9 9" />
+            </svg>
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: "var(--font-bold)", color: "var(--color-text-primary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick Memo</span>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", marginBottom: isHovered ? "24px" : "12px" }} className="hide-scrollbar">
           {isEditing ? (
             <textarea
               ref={inputRef}
@@ -209,7 +241,8 @@ const WorkspaceWidget = () => {
                 resize: "none",
                 outline: "none",
                 fontSize: "var(--text-sm)",
-                fontFamily: "var(--font-sans)"
+                fontFamily: "var(--font-sans)",
+                lineHeight: "1.4"
               }}
               placeholder="Type note..."
             />
@@ -221,52 +254,53 @@ const WorkspaceWidget = () => {
                 height: "100%",
                 cursor: "text",
                 fontSize: "var(--text-sm)",
+                color: "var(--color-text-secondary)",
                 whiteSpace: "pre-wrap",
-                wordBreak: "break-word"
+                wordBreak: "break-word",
+                lineHeight: "1.4"
               }}
             >
-              {note.content || <span style={{ color: "var(--color-text-faint)" }}>Click to edit...</span>}
+              {note.content || <span style={{ color: "var(--color-text-faint)" }}>Click to edit note...</span>}
             </div>
           )}
         </div>
-       
-        {isHovered && (
-          <div style={{
-            position: "absolute",
-            bottom: "var(--space-2)",
-            left: "var(--space-3)",
-            right: "var(--space-3)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {PRESET_COLORS.map(c => (
-                <div
-                  key={c}
-                  onClick={() => handleUpdateNote(note._id, { color: c })}
-                  style={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "50%",
-                    backgroundColor: c,
-                    cursor: "pointer",
-                    border: note.color === c ? "2px solid rgba(255,255,255,0.8)" : "1px solid rgba(255,255,255,0.2)"
-                  }}
-                />
-              ))}
+
+        {/* Date and actions line */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
+          <span style={{ fontSize: "10px", color: "var(--color-text-muted)" }}>
+            {formatNoteDate(note.updatedAt || note.createdAt)}
+          </span>
+          
+          {isHovered && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "4px" }}>
+                {PRESET_COLORS.map(c => (
+                  <div
+                    key={c}
+                    onClick={() => handleUpdateNote(note._id, { color: c })}
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "50%",
+                      backgroundColor: c,
+                      cursor: "pointer",
+                      border: note.color === c ? "2px solid var(--color-text-primary)" : "1px solid var(--color-border)"
+                    }}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => handleDeleteNote(note._id)}
+                style={{ color: "var(--color-text-muted)", cursor: "pointer", padding: "2px", background: "none", border: "none" }}
+                title="Delete note"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => handleDeleteNote(note._id)}
-              style={{ color: "var(--color-text-muted)", cursor: "pointer", padding: "4px" }}
-              title="Delete note"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
-              </svg>
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };

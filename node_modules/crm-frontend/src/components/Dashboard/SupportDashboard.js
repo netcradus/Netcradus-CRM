@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Download, Ticket, TimerReset, CircleAlert } from "lucide-react";
+import { Search, Plus, Download, Ticket, TimerReset, CircleAlert, FolderOpen, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
@@ -115,18 +115,30 @@ function SupportDashboard({ preview }) {
         <div className="nc-stat-card">
           <span className="metric-label">Total Tickets</span>
           <span className="metric-value">{loading ? "--" : tickets.length}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Ticket />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Open Tickets</span>
           <span className="metric-value" style={{ color: 'var(--color-warning)' }}>{loading ? "--" : tickets.filter(t => t.status === 'open').length}</span>
+          <div className="circle-badge circle-badge--success">
+            <FolderOpen />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Resolved Today</span>
           <span className="metric-value" style={{ color: 'var(--color-success)' }}>{loading ? "--" : resolvedTodayCount}</span>
+          <div className="circle-badge circle-badge--info">
+            <CheckCircle2 />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">In Progress</span>
           <span className="metric-value" style={{ color: 'var(--color-accent)' }}>{loading ? "--" : tickets.filter(t => t.status === 'in-progress').length}</span>
+          <div className="circle-badge circle-badge--warning">
+            <TimerReset />
+          </div>
         </div>
       </div>
 

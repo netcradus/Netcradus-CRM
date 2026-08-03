@@ -61,28 +61,36 @@ export default function ManagerProjectsPage() {
         </div>
       </div>
 
-      <div className="nc-card" style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-8)', display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-            <input className="form-input" style={{ paddingLeft: '36px' }} placeholder="Search name, tagline..." value={filters.search} onChange={e => setFilter("search", e.target.value)} />
+      <div className="crm-filter-card">
+         <div className="crm-project-filter-row">
+            <div className="crm-filter-search">
+               <Search className="crm-filter-search-icon" size={14} />
+               <input placeholder="Search name, tagline..." value={filters.search} onChange={e => setFilter("search", e.target.value)} />
+            </div>
+            <div className="crm-filter-control">
+               <select value={filters.status} onChange={e => setFilter("status", e.target.value)}>
+                  <option value="">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="new">New</option>
+                  <option value="on_hold">On Hold</option>
+               </select>
+            </div>
+            <div className="crm-filter-control">
+               <select value={filters.industry} onChange={e => setFilter("industry", e.target.value)}>
+                  <option value="">All Industries</option>
+                  {industries.map(i => <option key={i} value={i}>{i}</option>)}
+               </select>
+            </div>
+            <div className="crm-filter-control">
+               <select value={filters.sortBy} onChange={e => setFilter("sortBy", e.target.value)}>
+                  <option value="">Featured First</option>
+                  <option value="createdAt">Newest</option>
+                  <option value="name">Name</option>
+               </select>
+            </div>
          </div>
-         <select className="form-select" style={{ width: '150px' }} value={filters.status} onChange={e => setFilter("status", e.target.value)}>
-            <option value="">All Status</option>
-            <option value="completed">Completed</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="in_progress">In Progress</option>
-            <option value="new">New</option>
-            <option value="on_hold">On Hold</option>
-         </select>
-         <select className="form-select" style={{ width: '150px' }} value={filters.industry} onChange={e => setFilter("industry", e.target.value)}>
-            <option value="">All Industries</option>
-            {industries.map(i => <option key={i} value={i}>{i}</option>)}
-         </select>
-         <select className="form-select" style={{ width: '150px' }} value={filters.sortBy} onChange={e => setFilter("sortBy", e.target.value)}>
-            <option value="">Featured First</option>
-            <option value="createdAt">Newest</option>
-            <option value="name">Name</option>
-         </select>
       </div>
 
       {error && (

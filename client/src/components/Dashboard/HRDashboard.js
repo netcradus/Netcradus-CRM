@@ -18,6 +18,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import { Users, UserCheck, Clock, CalendarClock, Receipt } from "lucide-react";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 
 const DASHBOARD_REFRESH_MS = 300000;
@@ -158,22 +159,37 @@ const HRDashboard = ({ preview }) => {
         <div className="nc-stat-card" onClick={() => navigate("/admin/attendance")} style={{ cursor: 'pointer' }}>
           <span className="metric-label">Total Employees</span>
           <span className="metric-value">{attendanceSnapshot?.employees?.length || 0}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Users />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Active Workforce</span>
           <span className="metric-value">{attendanceSnapshot?.clockedInCount || 0}</span>
+          <div className="circle-badge circle-badge--success">
+            <UserCheck />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Late Arrivals</span>
           <span className="metric-value" style={{ color: 'var(--color-warning)' }}>{attendanceSnapshot?.lateCount || 0}</span>
+          <div className="circle-badge circle-badge--info">
+            <Clock />
+          </div>
         </div>
         <div className="nc-stat-card" onClick={() => navigate("/leave")} style={{ cursor: 'pointer' }}>
           <span className="metric-label">Leave Requests</span>
           <span className="metric-value">{leaveApplications.length}</span>
+          <div className="circle-badge circle-badge--warning">
+            <CalendarClock />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Total Spend</span>
           <span className="metric-value">{formatCurrency(expenseSummary.totalSpend)}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Receipt />
+          </div>
         </div>
       </div>
 

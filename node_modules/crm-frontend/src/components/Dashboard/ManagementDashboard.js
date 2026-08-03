@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import { useNavigate } from "react-router-dom";
+import { UserPlus, ClipboardList, Ticket, PlayCircle, CheckCircle2 } from "lucide-react";
 
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
@@ -161,22 +162,37 @@ const ManagementDashboard = () => {
         <div className="nc-stat-card" onClick={() => navigate("/leads")} style={{ cursor: 'pointer' }}>
           <span className="metric-label">My Leads</span>
           <span className="metric-value">{stats.leads}</span>
+          <div className="circle-badge circle-badge--accent">
+            <UserPlus />
+          </div>
         </div>
         <div className="nc-stat-card" onClick={() => navigate("/tasks")} style={{ cursor: 'pointer' }}>
           <span className="metric-label">My Tasks</span>
           <span className="metric-value">{stats.tasks}</span>
+          <div className="circle-badge circle-badge--success">
+            <ClipboardList />
+          </div>
         </div>
         <div className="nc-stat-card" onClick={() => navigate("/tickets")} style={{ cursor: 'pointer' }}>
           <span className="metric-label">Support Tickets</span>
           <span className="metric-value">{stats.tickets}</span>
+          <div className="circle-badge circle-badge--info">
+            <Ticket />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Active Tasks</span>
           <span className="metric-value" style={{ color: 'var(--color-accent)' }}>{stats.activeTasks}</span>
+          <div className="circle-badge circle-badge--warning">
+            <PlayCircle />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Completed Tasks</span>
           <span className="metric-value" style={{ color: 'var(--color-success)' }}>{stats.completedTasks}</span>
+          <div className="circle-badge circle-badge--accent">
+            <CheckCircle2 />
+          </div>
         </div>
       </div>
 

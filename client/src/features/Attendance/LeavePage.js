@@ -101,9 +101,9 @@ export default function LeavePage() {
          ))}
       </div>
 
-      <div className="nc-card" style={{ marginBottom: 'var(--space-6)', padding: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)' }}>
-         <button className={`btn ${tab === 'my' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('my')}>My History</button>
-         {canReviewLeaves && <button className={`btn ${tab === 'queue' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('queue')}>Approval Queue</button>}
+      <div className="nc-tab-list">
+         <button className={`nc-tab-button ${tab === 'my' ? 'is-active' : ''}`} onClick={() => setTab('my')}>My History</button>
+         {canReviewLeaves && <button className={`nc-tab-button ${tab === 'queue' ? 'is-active' : ''}`} onClick={() => setTab('queue')}>Approval Queue</button>}
       </div>
 
       {tab === 'my' && (

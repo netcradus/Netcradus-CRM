@@ -23,7 +23,7 @@ import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import ManagementDashboard from "./ManagementDashboard";
 import WorkspaceWidget from "./WorkspaceWidget";
-import { X } from "lucide-react";
+import { X, Users, UserCheck, CalendarClock, Clock3 } from "lucide-react";
 
 const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
@@ -623,13 +623,15 @@ const COODashboard = ({ preview = false, readOnly = false, embedded = false }) =
 
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--space-6)", marginBottom: "var(--space-8)" }}>
-        
-        <div 
+               <div 
           onClick={() => handleCardClick("subordinates")} 
           className="nc-stat-card coo-kpi-card"
         >
           <span className="metric-label">Total Subordinates</span>
           <span className="metric-value">{users.length}</span>
+          <div className="circle-badge circle-badge--accent">
+            <Users />
+          </div>
         </div>
 
         <div 
@@ -640,6 +642,9 @@ const COODashboard = ({ preview = false, readOnly = false, embedded = false }) =
           <span className="metric-value" style={{ color: "var(--color-success)" }}>
             {attendanceSnapshot ? attendanceSnapshot.clockedInCount : "--"}
           </span>
+          <div className="circle-badge circle-badge--success">
+            <UserCheck />
+          </div>
         </div>
 
         <div 
@@ -650,6 +655,9 @@ const COODashboard = ({ preview = false, readOnly = false, embedded = false }) =
           <span className="metric-value" style={{ color: "var(--color-warning)" }}>
             {attendanceSnapshot ? attendanceSnapshot.onLeaveCount : "--"}
           </span>
+          <div className="circle-badge circle-badge--info">
+            <CalendarClock />
+          </div>
         </div>
 
         <div 
@@ -660,6 +668,9 @@ const COODashboard = ({ preview = false, readOnly = false, embedded = false }) =
           <span className="metric-value" style={{ color: "var(--color-accent)" }}>
             {pendingTasks.length}
           </span>
+          <div className="circle-badge circle-badge--warning">
+            <Clock3 />
+          </div>
         </div>
 
       </div>

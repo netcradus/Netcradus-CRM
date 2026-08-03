@@ -12,6 +12,9 @@ import {
   Search,
   Trash2,
   RotateCcw,
+  ClipboardList,
+  PlayCircle,
+  Clock3,
 } from "lucide-react";
 import { apiUrl } from "../../config/api";
 import { getNotificationSocket } from "../../services/socket";
@@ -455,30 +458,42 @@ export default function Tasks() {
         <div className="nc-stat-card">
           <span className="metric-label">Visible Tasks</span>
           <span className="metric-value">{pagination.totalTasks || tasks.length}</span>
+          <div className="circle-badge circle-badge--accent">
+            <ClipboardList />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Active Tasks</span>
           <span className="metric-value" style={{ color: "var(--color-warning)" }}>{activeTasks}</span>
+          <div className="circle-badge circle-badge--success">
+            <PlayCircle />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Completed</span>
           <span className="metric-value" style={{ color: "var(--color-success)" }}>{completedAssignedTasks + approvedSelfTasks}</span>
+          <div className="circle-badge circle-badge--info">
+            <CheckCircle2 />
+          </div>
         </div>
         <div className="nc-stat-card">
           <span className="metric-label">Pending Approvals</span>
           <span className="metric-value" style={{ color: "var(--color-primary)" }}>{pendingApprovals.length}</span>
+          <div className="circle-badge circle-badge--warning">
+            <Clock3 />
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-6)", flexWrap: "wrap" }}>
-        <button className={`btn ${activeTab === "assigned" ? "btn-primary" : "btn-ghost"}`} onClick={() => setActiveTab("assigned")}>
+      <div className="nc-tab-list">
+        <button className={`nc-tab-button ${activeTab === "assigned" ? "is-active" : ""}`} onClick={() => setActiveTab("assigned")}>
           Assigned Tasks
         </button>
-        <button className={`btn ${activeTab === "self" ? "btn-primary" : "btn-ghost"}`} onClick={() => setActiveTab("self")}>
+        <button className={`nc-tab-button ${activeTab === "self" ? "is-active" : ""}`} onClick={() => setActiveTab("self")}>
           My Self Tasks
         </button>
         {canViewPendingApprovals ? (
-          <button className={`btn ${activeTab === "pending-approvals" ? "btn-primary" : "btn-ghost"}`} onClick={() => setActiveTab("pending-approvals")}>
+          <button className={`nc-tab-button ${activeTab === "pending-approvals" ? "is-active" : ""}`} onClick={() => setActiveTab("pending-approvals")}>
             Pending Approvals
             {pendingApprovals.length ? <span className="badge badge-warning" style={{ marginLeft: 6 }}>{pendingApprovals.length}</span> : null}
           </button>
@@ -509,37 +524,33 @@ export default function Tasks() {
             </div>
           ) : null}
 
-          <div className="nc-card" style={{ marginBottom: "var(--space-6)", padding: "var(--space-4)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) repeat(3, minmax(150px, 180px)) auto", gap: "var(--space-4)", alignItems: "end" }}>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="form-label">Search Tasks</label>
-                <div style={{ position: "relative" }}>
-                  <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-                  <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Task title..." value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
-                </div>
+          <div className="crm-filter-card">
+            <div className="crm-task-filter-row">
+              <div className="crm-filter-search">
+                <Search className="crm-filter-search-icon" size={14} />
+                <input placeholder="Search tasks..." value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} />
               </div>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="form-label">Status</label>
-                <select className="form-select" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+              <div className="crm-filter-control">
+                <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
                   <option value="">All Status</option>
                   {STATUS_OPTIONS.map((option) => <option key={option} value={option}>{prettify(option)}</option>)}
                 </select>
               </div>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="form-label">Priority</label>
-                <select className="form-select" value={filters.priority} onChange={(event) => setFilters({ ...filters, priority: event.target.value })}>
+              <div className="crm-filter-control">
+                <select value={filters.priority} onChange={(event) => setFilters({ ...filters, priority: event.target.value })}>
                   <option value="">All Priority</option>
                   {PRIORITY_OPTIONS.map((option) => <option key={option} value={option}>{prettify(option)}</option>)}
                 </select>
               </div>
-              <div className="form-field" style={{ marginBottom: 0 }}>
-                <label className="form-label">Assigned User</label>
-                <select className="form-select" value={filters.assignedTo} onChange={(event) => setFilters({ ...filters, assignedTo: event.target.value })}>
+              <div className="crm-filter-control">
+                <select value={filters.assignedTo} onChange={(event) => setFilters({ ...filters, assignedTo: event.target.value })}>
                   <option value="">All Users</option>
                   {assignableUsers.map((user) => <option key={user._id} value={user._id}>{user.name || user.email}</option>)}
                 </select>
               </div>
-              <button className="btn btn-ghost" onClick={() => setFilters({ search: "", status: "", priority: "", assignedTo: "" })}><RotateCcw size={14} /> Reset</button>
+              <button className="crm-filter-reset" onClick={() => setFilters({ search: "", status: "", priority: "", assignedTo: "" })}>
+                <RotateCcw size={14} style={{ marginRight: "6px" }} /> Reset
+              </button>
             </div>
           </div>
 
