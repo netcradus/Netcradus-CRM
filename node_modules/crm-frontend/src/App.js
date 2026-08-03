@@ -66,6 +66,7 @@ const Campaigns                = lazy(() => import("./features/Campaigns/Campaig
 const PriceBooks               = lazy(() => import("./features/PriceBooks/PriceBooks"));
 const Solutions                = lazy(() => import("./features/Solutions/Solutions"));
 const CT                       = lazy(() => import("./features/CT/CT"));
+const RiskManagement           = lazy(() => import("./features/RiskManagement/RiskManagement"));
 
 const AttendancePage           = lazy(() => import("./features/Attendance/AttendancePage"));
 const LeavePage                = lazy(() => import("./features/Attendance/LeavePage"));
@@ -418,6 +419,7 @@ const App = () => {
               <Route path="/purchase-orders" element={<RoleRoute roles={ACCESS_GROUPS.purchaseOrders}><PurchaseOrders /></RoleRoute>} />
               <Route path="/visits" element={<RoleRoute roles={ACCESS_GROUPS.visits}><Visits /></RoleRoute>} />
               <Route path="/solutions" element={<RoleRoute roles={ACCESS_GROUPS.solutions}><Solutions /></RoleRoute>} />
+              <Route path="/risk-management" element={<RoleRoute roles={ACCESS_GROUPS.riskManagement}><RiskManagement /></RoleRoute>} />
               
               <Route path="/invoices" element={
                 <RoleRoute roles={ACCESS_GROUPS.financeAdmin}>

@@ -178,6 +178,7 @@ const Sidebar = ({ isExpanded, isMobileOpen, onToggleExpanded, onSetExpanded, on
         { label: "Cases", path: "/cases", icon: <FolderOpen size={18} />, roles: ACCESS_GROUPS.cases },
         { label: "Vendors", path: "/vendors", icon: <Truck size={18} />, roles: ACCESS_GROUPS.vendors },
         { label: "Products", path: "/products", icon: <Box size={18} />, roles: ACCESS_GROUPS.products },
+        { label: "Risk Management", path: "/risk-management", icon: <ShieldCheck size={18} />, roles: ACCESS_GROUPS.riskManagement },
         ...(role === "super_user" ? [
           { label: "Device Management", path: "/device-management", icon: <Monitor size={18} />, roles: ["super_user"] },
           { label: "Domain Management", path: "/domain-management", icon: <Globe size={18} />, roles: ["super_user"] }

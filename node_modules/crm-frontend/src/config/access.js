@@ -50,6 +50,7 @@ export const ACCESS_GROUPS = {
   personal: ALL_ROLES.filter((role) => role !== "partner"),
   partner: ["partner", "admin", "super_user"],
   admin: ["admin", "super_user"],
+  riskManagement: ["super_user", "admin", "coo", "hr", "manager", "management", "sales", "support", "it", "digital_media"],
 };
 
 export function normalizeRole(role) {
