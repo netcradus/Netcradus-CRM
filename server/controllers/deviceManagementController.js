@@ -159,3 +159,137 @@ exports.deleteDevice = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+// POST /api/device-management/bulk
+exports.bulkImportDevices = async (req, res) => {
+  try {
+    const { devices } = req.body;
+    if (!Array.isArray(devices)) {
+      return res.status(400).json({ success: false, message: "Devices array is required" });
+    }
+
+    const result = {
+      imported: 0,
+      skipped: 0,
+      invalid: 0,
+      duplicate: 0,
+      rowErrors: []
+    };
+
+    // Load existing records to check duplicates
+    const existingDevices = await DeviceManagement.find({}, "number serial_number").lean();
+    const dbNumbers = new Set(existingDevices.map(d => String(d.number).trim().toLowerCase()));
+    const dbSerials = new Set(existingDevices.map(d => String(d.serial_number).trim().toLowerCase()));
+
+    const localNumbers = new Set();
+    const localSerials = new Set();
+
+    const isCorruptedString = (str) => {
+      if (typeof str !== "string") return false;
+      const hasControlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(str);
+      const hasZipFragments = /xl\/(sharedStrings|worksheets|drawings|charts)\.xml|docProps\/(core|app)\.xml|\[Content_Types\]\.xml/.test(str);
+      return hasControlChars || hasZipFragments;
+    };
+
+    for (let i = 0; i < devices.length; i++) {
+      const row = devices[i];
+      const rowIndex = i + 1;
+
+      // Skip completely empty rows
+      if (!row || (!row.number && !row.product && !row.product_type && !row.serial_number)) {
+        result.skipped++;
+        continue;
+      }
+
+      const number = String(row.number || "").trim();
+      const product = String(row.product || "").trim();
+      const product_type = String(row.product_type || "").trim();
+      const serial_number = String(row.serial_number || "").trim();
+
+      // Check required fields
+      if (!number || !product || !product_type || !serial_number) {
+        result.invalid++;
+        result.rowErrors.push({
+          row: rowIndex,
+          number: number || "N/A",
+          error: "All fields (Number, Product, Product Type, Serial Number) are required"
+        });
+        continue;
+      }
+
+      // Check for binary/control character corruption
+      if (
+        isCorruptedString(number) ||
+        isCorruptedString(product) ||
+        isCorruptedString(product_type) ||
+        isCorruptedString(serial_number)
+      ) {
+        result.invalid++;
+        result.rowErrors.push({
+          row: rowIndex,
+          number: number.substring(0, 15),
+          error: "Row contains binary / corrupted control characters"
+        });
+        continue;
+      }
+
+      // Check duplicate number
+      const normNumber = number.toLowerCase();
+      if (dbNumbers.has(normNumber) || localNumbers.has(normNumber)) {
+        result.duplicate++;
+        result.rowErrors.push({
+          row: rowIndex,
+          number,
+          error: `Duplicate device number: '${number}' already exists`
+        });
+        continue;
+      }
+
+      // Check duplicate serial number
+      const normSerial = serial_number.toLowerCase();
+      if (dbSerials.has(normSerial) || localSerials.has(normSerial)) {
+        result.duplicate++;
+        result.rowErrors.push({
+          row: rowIndex,
+          number,
+          error: `Duplicate serial number: '${serial_number}' already exists`
+        });
+        continue;
+      }
+
+      try {
+        // Create and save device
+        const newDevice = new DeviceManagement({
+          number,
+          product,
+          product_type,
+          serial_number,
+          created_by: req.user._id
+        });
+        await newDevice.save();
+
+        // Track in local sets
+        localNumbers.add(normNumber);
+        localSerials.add(normSerial);
+        result.imported++;
+      } catch (err) {
+        console.error(`Bulk import row ${rowIndex} save error:`, err);
+        result.invalid++;
+        result.rowErrors.push({
+          row: rowIndex,
+          number,
+          error: err.message || "Failed to save device record"
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: "Bulk import process completed",
+      data: result
+    });
+  } catch (err) {
+    console.error("Bulk Import Devices Error:", err);
+    res.status(500).json({ success: false, message: "Server error during bulk import" });
+  }
+};

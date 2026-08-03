@@ -8,6 +8,7 @@ router.use(rbac(["super_user"]));
 
 router.get("/", ctrl.getDevices);
 router.post("/", ctrl.createDevice);
+router.post("/bulk", ctrl.bulkImportDevices);
 router.put("/:id", ctrl.updateDevice);
 router.delete("/:id", ctrl.deleteDevice);
 

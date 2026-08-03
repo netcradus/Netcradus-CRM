@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import axios from "axios";
 import { Plus, Edit, Trash2, Search, ArrowUpDown, ArrowUp, ArrowDown, Download, Upload, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { apiUrl } from "../../config/api";
+import * as XLSX from "xlsx";
 
 const emptyForm = { number: "", product: "Computer", custom_product: "", product_type: "Monitor", custom_product_type: "", serial_number: "" };
 const PRODUCT_OPTIONS = [
@@ -251,6 +252,9 @@ function DeviceManagementPage() {
   const [sortOrder, setSortOrder] = useState("desc");
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
 
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewData, setPreviewData] = useState({ totalRows: 0, validRows: 0, invalidRows: 0, duplicateRows: 0, errors: [], devices: [] });
+
   const fetchDevices = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -382,56 +386,258 @@ function DeviceManagementPage() {
     document.getElementById("csv-file-input").click();
   };
 
-  const handleImport = (e) => {
+  const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setError("");
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const lines = text.split(/\r?\n/);
-      const devicesToImport = [];
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const columns = line.split(",").map(col => col.replace(/^["']|["']$/g, "").trim());
-        if (columns.length >= 4) {
-          devicesToImport.push({
-            number: columns[0],
-            product: columns[1],
-            product_type: columns[2],
-            serial_number: columns[3]
-          });
-        }
-      }
+    const resetInput = () => {
+      e.target.value = "";
+    };
 
-      if (devicesToImport.length === 0) {
-        setError("No valid devices found in the selected file.");
+    try {
+      // Diagnostic logging
+      const ext = file.name.split(".").pop().toLowerCase();
+
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, {
+        type: "array",
+        cellDates: false,
+        raw: false
+      });
+
+      const firstSheetName = workbook.SheetNames?.[0];
+      if (!firstSheetName) {
+        setError("The spreadsheet does not contain any worksheet.");
+        resetInput();
         return;
       }
 
-      let successCount = 0;
-      let failMessages = [];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, {
+        defval: "",
+        raw: false,
+        blankrows: false
+      });
 
-      for (const dev of devicesToImport) {
-        try {
-          await axios.post(apiUrl("/api/device-management"), dev, { headers });
-          successCount++;
-        } catch (err) {
-          failMessages.push(`${dev.number}: ${err.response?.data?.message || err.message}`);
+      if (!Array.isArray(rawRows)) {
+        setError("Invalid spreadsheet format.");
+        resetInput();
+        return;
+      }
+
+      if (rawRows.length === 0) {
+        setError("The spreadsheet does not contain any data rows.");
+        resetInput();
+        return;
+      }
+
+      const normalizeHeader = (value) =>
+        String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[\s-]+/g, "_");
+
+      // Verify headers on the first row
+      const firstRow = rawRows[0];
+      const firstRowNormalized = Object.entries(firstRow).reduce((result, [key, value]) => {
+        result[normalizeHeader(key)] = value;
+        return result;
+      }, {});
+
+      const getMappedValue = (rowObj, keys) => {
+        for (const k of keys) {
+          if (rowObj[k] !== undefined) {
+            return rowObj[k];
+          }
         }
+        return undefined;
+      };
+
+      const missingColumns = [];
+      if (getMappedValue(firstRowNormalized, ["number", "device_number", "asset_number"]) === undefined) {
+        missingColumns.push("Number");
+      }
+      if (getMappedValue(firstRowNormalized, ["product", "device", "product_name"]) === undefined) {
+        missingColumns.push("Product");
+      }
+      if (getMappedValue(firstRowNormalized, ["product_type", "producttype", "type"]) === undefined) {
+        missingColumns.push("Product Type");
+      }
+      if (getMappedValue(firstRowNormalized, ["serial_number", "serialnumber", "serial_no", "serial"]) === undefined) {
+        missingColumns.push("Serial Number");
       }
 
-      let summary = `Import complete: ${successCount} devices imported.`;
-      if (failMessages.length > 0) {
-        summary += ` ${failMessages.length} failed. Details: \n` + failMessages.join("\n");
+      if (missingColumns.length > 0) {
+        setError(`Missing required columns: ${missingColumns.join(", ")}.`);
+        resetInput();
+        return;
       }
-      alert(summary);
-      fetchDevices();
-    };
-    reader.readAsText(file);
-    e.target.value = ""; // Reset file input
+
+      const parsedDevices = [];
+      const duplicateErrors = [];
+      const validationErrors = [];
+
+      const localNumbers = new Set();
+      const localSerials = new Set();
+
+      const isCorruptedString = (str) => {
+        if (typeof str !== "string") return false;
+        const hasControlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(str);
+        const hasZipFragments = /xl\/(sharedStrings|worksheets|drawings|charts)\.xml|docProps\/(core|app)\.xml|\[Content_Types\]\.xml/.test(str);
+        return hasControlChars || hasZipFragments;
+      };
+
+      for (let i = 0; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        const rowIndex = i + 2; // 2-indexed for visual reporting (row 1 is header)
+
+        // Normalize keys of this row
+        const normalizedRow = Object.entries(row).reduce((result, [key, value]) => {
+          result[normalizeHeader(key)] = value;
+          return result;
+        }, {});
+
+        const number = String(getMappedValue(normalizedRow, ["number", "device_number", "asset_number"]) || "").trim();
+        const product = String(getMappedValue(normalizedRow, ["product", "device", "product_name"]) || "").trim();
+        const product_type = String(getMappedValue(normalizedRow, ["product_type", "producttype", "type"]) || "").trim();
+        const serial_number = String(getMappedValue(normalizedRow, ["serial_number", "serialnumber", "serial_no", "serial"]) || "").trim();
+
+        // Skip completely empty rows
+        if (!number && !product && !product_type && !serial_number) {
+          continue;
+        }
+
+        if (!number || !product || !product_type || !serial_number) {
+          validationErrors.push({
+            row: rowIndex,
+            number: number || "N/A",
+            error: "Missing required fields (all fields must be populated)"
+          });
+          continue;
+        }
+
+        if (
+          isCorruptedString(number) ||
+          isCorruptedString(product) ||
+          isCorruptedString(product_type) ||
+          isCorruptedString(serial_number)
+        ) {
+          validationErrors.push({
+            row: rowIndex,
+            number: number.substring(0, 15),
+            error: "Row contains binary / corrupted control characters"
+          });
+          continue;
+        }
+
+        const normNumber = number.toLowerCase();
+        const normSerial = serial_number.toLowerCase();
+
+        let isDup = false;
+        if (localNumbers.has(normNumber)) {
+          duplicateErrors.push({
+            row: rowIndex,
+            number,
+            error: `Duplicate Number '${number}' inside file`
+          });
+          isDup = true;
+        }
+        if (localSerials.has(normSerial)) {
+          duplicateErrors.push({
+            row: rowIndex,
+            number,
+            error: `Duplicate Serial Number '${serial_number}' inside file`
+          });
+          isDup = true;
+        }
+
+        if (isDup) {
+          continue;
+        }
+
+        localNumbers.add(normNumber);
+        localSerials.add(normSerial);
+
+        parsedDevices.push({
+          number,
+          product,
+          product_type,
+          serial_number
+        });
+      }
+
+      // Fetch all database records using the correct outer scope authorization headers
+      const dbRes = await axios.get(apiUrl("/api/device-management?limit=10000"), { headers });
+      const dbDevices = dbRes.data?.data || [];
+      const dbNumbers = new Set(dbDevices.map((d) => String(d.number).trim().toLowerCase()));
+      const dbSerials = new Set(dbDevices.map((d) => String(d.serial_number).trim().toLowerCase()));
+
+      const finalParsedDevices = [];
+      for (const dev of parsedDevices) {
+        const normNumber = dev.number.toLowerCase();
+        const normSerial = dev.serial_number.toLowerCase();
+
+        if (dbNumbers.has(normNumber)) {
+          duplicateErrors.push({
+            row: "?",
+            number: dev.number,
+            error: `Number '${dev.number}' already exists in database`
+          });
+          continue;
+        }
+        if (dbSerials.has(normSerial)) {
+          duplicateErrors.push({
+            row: "?",
+            number: dev.number,
+            error: `Serial Number '${dev.serial_number}' already exists in database`
+          });
+          continue;
+        }
+
+        finalParsedDevices.push(dev);
+      }
+
+      setPreviewData({
+        totalRows: rawRows.length,
+        validRows: finalParsedDevices.length,
+        invalidRows: validationErrors.length,
+        duplicateRows: duplicateErrors.length,
+        errors: [...validationErrors, ...duplicateErrors],
+        devices: finalParsedDevices
+      });
+      setShowPreviewModal(true);
+    } catch (err) {
+      setError("Failed to parse the spreadsheet. Please check the file formatting.");
+      console.error("Spreadsheet Parse Error:", err);
+    } finally {
+      resetInput();
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (previewData.devices.length === 0) {
+      alert("No valid rows to import.");
+      setShowPreviewModal(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.post(apiUrl("/api/device-management/bulk"), {
+        devices: previewData.devices
+      }, { headers });
+      
+      if (res.data?.success) {
+        const summary = res.data.data;
+        alert(`Import summary:\n- Imported: ${summary.imported}\n- Skipped: ${summary.skipped}\n- Invalid: ${summary.invalid}\n- Duplicate: ${summary.duplicate}`);
+        setShowPreviewModal(false);
+        fetchDevices();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to complete bulk import.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderSortIcon = (field) => {
@@ -459,13 +665,13 @@ function DeviceManagementPage() {
             <span>Management</span><ChevronRight size={10} /><span>Device Management</span>
           </div>
           <h1 className="title">Device Management</h1>
-          <p className="subtitle">Overview and details of all company devices and products.</p>
+          <p className="subtitle">Overview and details of all company devices. Supported formats for import: XLSX, XLS, CSV.</p>
         </div>
         <div className="page-header-right" style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
           <input
             type="file"
             id="csv-file-input"
-            accept=".csv"
+            accept=".xlsx,.xls,.csv"
             style={{ display: "none" }}
             onChange={handleImport}
           />
@@ -704,6 +910,113 @@ function DeviceManagementPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPreviewModal && (
+        <div className="nc-modal-overlay" onClick={() => setShowPreviewModal(false)}>
+          <div className="nc-modal-content" onClick={(e) => e.stopPropagation()} style={{ width: "650px", borderRadius: "var(--radius-lg)" }}>
+            <div className="nc-modal-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-6) var(--space-6) var(--space-4)", borderBottom: "1px solid var(--color-border)" }}>
+              <h3 style={{ fontSize: "var(--text-lg)", fontFamily: "var(--font-heading)" }}>Spreadsheet Import Preview</h3>
+              <button className="btn btn-ghost" style={{ padding: 4 }} onClick={() => setShowPreviewModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="nc-modal-body" style={{ padding: "var(--space-6)", maxHeight: "calc(90vh - 140px)", overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
+              {/* Summary metrics */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--space-3)" }}>
+                <div className="nc-stat-card" style={{ minHeight: "80px", padding: "var(--space-3)" }}>
+                  <span className="metric-label" style={{ fontSize: "9px" }}>Total Rows</span>
+                  <span className="metric-value" style={{ fontSize: "var(--text-lg)" }}>{previewData.totalRows}</span>
+                </div>
+                <div className="nc-stat-card" style={{ minHeight: "80px", padding: "var(--space-3)", border: "1px solid var(--color-success)" }}>
+                  <span className="metric-label" style={{ fontSize: "9px", color: "var(--color-success)" }}>Valid</span>
+                  <span className="metric-value" style={{ fontSize: "var(--text-lg)", color: "var(--color-success)" }}>{previewData.validRows}</span>
+                </div>
+                <div className="nc-stat-card" style={{ minHeight: "80px", padding: "var(--space-3)", border: "1px solid var(--color-error)" }}>
+                  <span className="metric-label" style={{ fontSize: "9px", color: "var(--color-error)" }}>Invalid</span>
+                  <span className="metric-value" style={{ fontSize: "var(--text-lg)", color: "var(--color-error)" }}>{previewData.invalidRows}</span>
+                </div>
+                <div className="nc-stat-card" style={{ minHeight: "80px", padding: "var(--space-3)", border: "1px solid var(--color-warning)" }}>
+                  <span className="metric-label" style={{ fontSize: "9px", color: "var(--color-warning)" }}>Duplicates</span>
+                  <span className="metric-value" style={{ fontSize: "var(--text-lg)", color: "var(--color-warning)" }}>{previewData.duplicateRows}</span>
+                </div>
+              </div>
+
+              {/* Valid rows preview table */}
+              {previewData.devices.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)", color: "var(--color-text-primary)" }}>
+                    Valid Records (First 5 Rows Preview)
+                  </h4>
+                  <div className="nc-table-wrapper" style={{ overflowX: "auto" }}>
+                    <table className="nc-table" style={{ fontSize: "var(--text-xs)" }}>
+                      <thead>
+                        <tr>
+                          <th>NUMBER</th>
+                          <th>PRODUCT</th>
+                          <th>PRODUCT TYPE</th>
+                          <th>SERIAL NUMBER</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.devices.slice(0, 5).map((dev, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontWeight: "var(--font-semibold)" }}>{dev.number}</td>
+                            <td><span className="badge badge-neutral">{dev.product}</span></td>
+                            <td><span className="badge badge-neutral">{dev.product_type}</span></td>
+                            <td>{dev.serial_number}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Errors list */}
+              {previewData.errors.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-bold)", marginBottom: "var(--space-2)", color: "var(--color-error)" }}>
+                    Validation & Duplicate Errors ({previewData.errors.length})
+                  </h4>
+                  <div style={{
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                    padding: "var(--space-3)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-bg-soft)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--space-2)"
+                  }}>
+                    {previewData.errors.map((err, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: "var(--space-2)", fontSize: "11px", color: "var(--color-text-muted)" }}>
+                        <span style={{ color: "var(--color-error)", fontWeight: "var(--font-semibold)", minWidth: "50px" }}>Row {err.row}:</span>
+                        <span>{err.error} (Device No: <strong style={{ color: "var(--color-text-primary)" }}>{err.number}</strong>)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-4)" }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ flex: 1, height: "42px" }}
+                  onClick={handleConfirmImport}
+                  disabled={previewData.devices.length === 0}
+                >
+                  Confirm Import ({previewData.devices.length})
+                </button>
+                <button type="button" className="btn btn-ghost" style={{ flex: 1, height: "42px" }} onClick={() => setShowPreviewModal(false)}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
