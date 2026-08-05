@@ -45,10 +45,10 @@ const prettify = (value) =>
 const formatDate = (value) =>
   value
     ? new Date(value).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "No date";
 
 const toDateTimeInput = (value) => {

@@ -119,6 +119,47 @@ async function handlePunchOut(userId, ip, coords) {
   }
 
   const now = new Date();
+
+  // Enforce Self Task logging before Punch Out for non-exempt employees
+  const User = require("../models/User");
+  const user = await User.findById(userId).lean();
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  const exemptRoles = ["super_user", "admin", "coo", "partner"];
+  if (!exemptRoles.includes(user.role)) {
+    const Task = require("../models/Task");
+    const hasQualifyingTask = await Task.findOne({
+      assignedTo: userId,
+      taskType: "self",
+      selfTaskStatus: { $in: ["pending_approval", "approved"] },
+      $or: [
+        {
+          submittedForApprovalAt: {
+            $gte: record.punchIn,
+            $lte: now
+          }
+        },
+        {
+          submittedForApprovalAt: null,
+          createdAt: {
+            $gte: record.punchIn,
+            $lte: now
+          }
+        }
+      ]
+    }).select("_id").lean();
+
+    if (!hasQualifyingTask) {
+      const err = new Error("Log and submit at least one self task before punching out.");
+      err.name = "SelfTaskRequiredError";
+      err.statusCode = 409;
+      err.code = "SELF_TASK_REQUIRED";
+      throw err;
+    }
+  }
+
   if (now < new Date(record.punchIn)) {
     throw new Error("Punch-out cannot be before punch-in.");
   }

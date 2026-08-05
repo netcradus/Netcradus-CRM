@@ -162,8 +162,8 @@ async function buildTaskQuery(query = {}, currentUser, options = {}) {
   if (search) {
     andFilters.push({
       $or: [
-      { title: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } },
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ],
     });
   }
@@ -600,13 +600,13 @@ async function getPendingApprovals(req, res) {
 
     const tasks = visibleCreatorIds.size
       ? await Task.find({
-          taskType: "self",
-          selfTaskStatus: "pending_approval",
-          createdBy: { $in: [...visibleCreatorIds] },
-        })
-          .populate(TASK_POPULATE)
-          .sort({ submittedForApprovalAt: 1 })
-          .lean()
+        taskType: "self",
+        selfTaskStatus: "pending_approval",
+        createdBy: { $in: [...visibleCreatorIds] },
+      })
+        .populate(TASK_POPULATE)
+        .sort({ submittedForApprovalAt: 1 })
+        .lean()
       : [];
 
     return res.json({ success: true, tasks, total: tasks.length });

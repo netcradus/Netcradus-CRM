@@ -13,6 +13,7 @@ import {
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 import { Users, UserCheck, Activity } from "lucide-react";
 
@@ -128,6 +129,10 @@ const AdminDashboard = () => {
             <Activity />
           </div>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>

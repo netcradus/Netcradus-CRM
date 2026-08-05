@@ -13,8 +13,8 @@ const stickyNoteSchema = new mongoose.Schema({
   },
   color: {
     type: String,
-    enum: ["#1e293b", "#115e59", "#312e81", "#334155"],
-    default: "#1e293b",
+    enum: ["#ff6547", "#16b364", "#4f7cff", "#f79009", "#1e293b", "#115e59", "#312e81", "#334155"],
+    default: "#ff6547",
   },
 }, { timestamps: true });
  

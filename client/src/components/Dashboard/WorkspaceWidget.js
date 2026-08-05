@@ -11,6 +11,8 @@ const WorkspaceWidget = () => {
   const [tasks, setTasks] = useState([]);
   const [notesFetched, setNotesFetched] = useState(false);
   const [tasksFetched, setTasksFetched] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
  
   const token = localStorage.getItem("token");
  
@@ -24,6 +26,7 @@ const WorkspaceWidget = () => {
  
   const fetchNotes = async () => {
     try {
+      setErrorMessage("");
       const res = await axios.get(apiUrl("/api/workspace/notes"), {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -33,11 +36,13 @@ const WorkspaceWidget = () => {
       }
     } catch (err) {
       console.error("Error fetching notes:", err);
+      setErrorMessage(err.response?.data?.message || "Failed to fetch notes.");
     }
   };
  
   const fetchTasks = async () => {
     try {
+      setErrorMessage("");
       const res = await axios.get(apiUrl("/api/workspace/tasks"), {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -47,25 +52,41 @@ const WorkspaceWidget = () => {
       }
     } catch (err) {
       console.error("Error fetching tasks:", err);
+      setErrorMessage(err.response?.data?.message || "Failed to fetch tasks.");
     }
   };
  
-  const handleAddNote = async () => {
+  const handleAddNote = () => {
+    const hasDraft = notes.some(n => n._id.startsWith("temp-"));
+    if (hasDraft) return;
+
     const tempId = `temp-${Date.now()}`;
     const newNote = { _id: tempId, content: "", color: DEFAULT_COLOR, isEditing: true };
-   
     setNotes(prev => [newNote, ...prev]);
-   
+  };
+
+  const handleSaveNewNote = async (tempId, contentText, colorCode) => {
+    const trimmed = contentText.trim();
+    if (!trimmed) {
+      setNotes(prev => prev.filter(n => n._id !== tempId));
+      return;
+    }
+
+    setIsSavingNote(true);
+    setErrorMessage("");
     try {
-      const res = await axios.post(apiUrl("/api/workspace/notes"), { content: "", color: DEFAULT_COLOR }, {
+      const res = await axios.post(apiUrl("/api/workspace/notes"), { content: trimmed, color: colorCode }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
-        setNotes(prev => prev.map(n => n._id === tempId ? { ...res.data.data, isEditing: true } : n));
+        setNotes(prev => prev.map(n => n._id === tempId ? res.data.data : n));
       }
     } catch (err) {
-      console.error("Failed to add note:", err);
+      console.error("Failed to save note:", err);
+      setErrorMessage(err.response?.data?.message || "Failed to save note.");
       setNotes(prev => prev.filter(n => n._id !== tempId));
+    } finally {
+      setIsSavingNote(false);
     }
   };
  
@@ -74,11 +95,13 @@ const WorkspaceWidget = () => {
    
     if (!id.startsWith("temp-")) {
       try {
+        setErrorMessage("");
         await axios.patch(apiUrl(`/api/workspace/notes/${id}`), updates, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (err) {
         console.error("Failed to update note:", err);
+        setErrorMessage(err.response?.data?.message || "Failed to update note.");
       }
     }
   };
@@ -89,11 +112,13 @@ const WorkspaceWidget = () => {
    
     if (!id.startsWith("temp-")) {
       try {
+        setErrorMessage("");
         await axios.delete(apiUrl(`/api/workspace/notes/${id}`), {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (err) {
         console.error("Failed to delete note:", err);
+        setErrorMessage(err.response?.data?.message || "Failed to delete note.");
         setNotes(prevNotes);
       }
     }
@@ -175,8 +200,15 @@ const WorkspaceWidget = () => {
  
     const handleBlur = () => {
       setIsEditing(false);
-      if (content !== note.content) {
-        handleUpdateNote(note._id, { content });
+      const trimmed = content.trim();
+      if (note._id.startsWith("temp-")) {
+        handleSaveNewNote(note._id, trimmed, note.color);
+      } else {
+        if (!trimmed) {
+          handleDeleteNote(note._id);
+        } else if (trimmed !== note.content) {
+          handleUpdateNote(note._id, { content: trimmed });
+        }
       }
     };
  
@@ -397,8 +429,31 @@ const WorkspaceWidget = () => {
           flexDirection: "column"
         }}>
           <div style={{ marginBottom: "var(--space-3)" }}>
+            {errorMessage && (
+              <div style={{
+                padding: "6px 12px",
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid var(--color-error, #ef4444)",
+                color: "var(--color-error, #ef4444)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "11px",
+                marginBottom: "var(--space-2)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <span>{errorMessage}</span>
+                <button
+                  onClick={() => setErrorMessage("")}
+                  style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: "14px", padding: 0 }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
             <button
               onClick={handleAddNote}
+              disabled={isSavingNote}
               style={{
                 padding: "4px 12px",
                 borderRadius: "var(--radius-md)",
@@ -406,11 +461,12 @@ const WorkspaceWidget = () => {
                 color: "var(--color-accent)",
                 fontSize: "var(--text-xs)",
                 fontWeight: "var(--font-medium)",
-                cursor: "pointer",
-                background: "transparent"
+                cursor: isSavingNote ? "not-allowed" : "pointer",
+                background: "transparent",
+                opacity: isSavingNote ? 0.7 : 1
               }}
             >
-              + Add Note
+              {isSavingNote ? "Saving..." : "+ Add Note"}
             </button>
           </div>
          

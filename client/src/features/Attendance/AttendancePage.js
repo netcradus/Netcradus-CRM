@@ -3,6 +3,7 @@ import axios from "axios";
 import { format, parseISO } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { Coffee, LogIn, LogOut, PlayCircle, ChevronDown, ChevronUp, Clock, History, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 
 function getAuthHeaders() { return { Authorization: `Bearer ${localStorage.getItem("token")}` }; }
@@ -32,7 +33,9 @@ export default function AttendancePage() {
   const [error, setError] = useState("");
   const [regError, setRegError] = useState("");
   const [success, setSuccess] = useState("");
+  const navigate = useNavigate();
   const [showRegForm, setShowRegForm] = useState(false);
+  const [showSelfTaskModal, setShowSelfTaskModal] = useState(false);
   const [regForm, setRegForm] = useState({ date: "", punchIn: "", punchOut: "", reason: "" });
   const [page, setPage] = useState(1);
   const [tick, setTick] = useState(Date.now());
@@ -77,10 +80,17 @@ export default function AttendancePage() {
 
   const handleAction = async (type, body = {}) => {
     setSubmitting(true);
+    setError("");
     try {
       await axios.post(apiUrl(`/api/attendance/${type}`), body, { headers: getAuthHeaders() });
       fetchStatus(); fetchRecords();
-    } catch (e) { setError(e.response?.data?.message || "Action failed"); }
+    } catch (e) {
+      if (type === "punch-out" && e.response?.data?.code === "SELF_TASK_REQUIRED") {
+        setShowSelfTaskModal(true);
+      } else {
+        setError(e.response?.data?.message || "Action failed");
+      }
+    }
     finally { setSubmitting(false); }
   };
 
@@ -228,30 +238,62 @@ export default function AttendancePage() {
       {showRegForm && (
         <div className="nc-modal-overlay" onClick={() => setShowRegForm(false)}>
           <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
-             <div className="nc-modal-header"><h3>Regularization</h3></div>
-             <form onSubmit={handleRegSubmit} className="form">
-                <div className="form-field">
-                   <label className="form-label">Date</label>
-                   <input className="form-input" type="date" required value={regForm.date} onChange={e => setRegForm({...regForm, date: e.target.value})} />
-                </div>
-                <div className="form-field">
-                   <label className="form-label">Punch-In Time</label>
-                   <input className="form-input" type="time" required value={regForm.punchIn} onChange={e => setRegForm({...regForm, punchIn: e.target.value})} />
-                </div>
-                <div className="form-field">
-                   <label className="form-label">Punch-Out Time</label>
-                   <input className="form-input" type="time" required value={regForm.punchOut} onChange={e => setRegForm({...regForm, punchOut: e.target.value})} />
-                </div>
-                <div className="form-field">
-                   <label className="form-label">Reason</label>
-                   <textarea className="form-input" rows={3} required value={regForm.reason} onChange={e => setRegForm({...regForm, reason: e.target.value})} />
-                </div>
-                {regError && <p style={{ color: 'var(--color-error)', fontSize: 'var(--text-sm)', margin: '0' }}>{regError}</p>}
-                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
-                  <button className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>Submit</button>
-                  <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowRegForm(false)}>Cancel</button>
-                </div>
-             </form>
+              <div className="nc-modal-header"><h3>Regularization</h3></div>
+              <form onSubmit={handleRegSubmit} className="form">
+                 <div className="form-field">
+                    <label className="form-label">Date</label>
+                    <input className="form-input" type="date" required value={regForm.date} onChange={e => setRegForm({...regForm, date: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Punch-In Time</label>
+                    <input className="form-input" type="time" required value={regForm.punchIn} onChange={e => setRegForm({...regForm, punchIn: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Punch-Out Time</label>
+                    <input className="form-input" type="time" required value={regForm.punchOut} onChange={e => setRegForm({...regForm, punchOut: e.target.value})} />
+                 </div>
+                 <div className="form-field">
+                    <label className="form-label">Reason</label>
+                    <textarea className="form-input" rows={3} required value={regForm.reason} onChange={e => setRegForm({...regForm, reason: e.target.value})} />
+                 </div>
+                 {regError && <p style={{ color: 'var(--color-error)', fontSize: 'var(--text-sm)', margin: '0' }}>{regError}</p>}
+                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
+                   <button className="btn btn-primary" style={{ flex: 1 }} disabled={submitting}>Submit</button>
+                   <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowRegForm(false)}>Cancel</button>
+                 </div>
+              </form>
+          </div>
+        </div>
+      )}
+
+      {showSelfTaskModal && (
+        <div className="nc-modal-overlay" onClick={() => setShowSelfTaskModal(false)}>
+          <div className="nc-modal-content" onClick={e => e.stopPropagation()} style={{ width: '400px', padding: 'var(--space-6)' }}>
+             <div className="nc-modal-header" style={{ marginBottom: 'var(--space-4)', borderBottom: 'none', paddingBottom: 0 }}>
+               <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'bold', margin: 0 }}>Self Task Required</h3>
+             </div>
+             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: '1.6', marginBottom: 'var(--space-6)', marginTop: 0 }}>
+               Before punching out, please log and submit at least one self task for your current work session.
+             </p>
+             <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+               <button
+                 className="btn btn-primary"
+                 style={{ flex: 1 }}
+                 onClick={() => {
+                   setShowSelfTaskModal(false);
+                   navigate("/tasks?tab=self");
+                 }}
+               >
+                 Go to My Self Tasks
+               </button>
+               <button
+                 className="btn btn-ghost"
+                 style={{ flex: 1 }}
+                 onClick={() => setShowSelfTaskModal(false)}
+               >
+                 Cancel
+               </button>
+             </div>
           </div>
         </div>
       )}

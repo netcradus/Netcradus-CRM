@@ -225,5 +225,6 @@ taskSchema.index({ assignedTo: 1, queuePosition: 1 }); // queue ordering
 taskSchema.index({ taskType: 1, selfTaskStatus: 1 });
 taskSchema.index({ approvedBy: 1 });
 taskSchema.index({ "approvalHistory.performedBy": 1 });
+taskSchema.index({ assignedTo: 1, taskType: 1, selfTaskStatus: 1, submittedForApprovalAt: 1 });
 
 module.exports = mongoose.model("Task", taskSchema);

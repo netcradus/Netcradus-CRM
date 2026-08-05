@@ -999,6 +999,7 @@ import {
   BarChart, Bar, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import { apiUrl } from "../../config/api";
 
 const API = apiUrl("/api/deals");
@@ -1253,6 +1254,10 @@ const SalesDashboard = ({ preview }) => {
             <span className="metric-value" style={accent ? { color: "var(--color-success)" } : {}}>{value}</span>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       {/* ── Charts ── */}

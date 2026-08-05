@@ -18,6 +18,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { apiUrl } from "../../config/api";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import { Users, UserCheck, Clock, CalendarClock, Receipt } from "lucide-react";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 
@@ -191,6 +192,10 @@ const HRDashboard = ({ preview }) => {
             <Receipt />
           </div>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>

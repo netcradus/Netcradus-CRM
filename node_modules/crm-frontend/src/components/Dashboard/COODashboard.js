@@ -781,6 +781,11 @@ const COODashboard = ({ preview = false, readOnly = false, embedded = false }) =
         </div>
       )}
 
+      {/* Workspace Widget */}
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
+      </div>
+
       {/* Action Center & Tasks */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "var(--space-6)", marginBottom: "var(--space-8)" }}>
         {/* Action Center List */}

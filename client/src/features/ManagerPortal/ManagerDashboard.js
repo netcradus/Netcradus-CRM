@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
+import WorkspaceWidget from "../../components/Dashboard/WorkspaceWidget";
 
 const ManagerDashboard = ({ preview = false }) => {
   const navigate = useNavigate();
@@ -295,6 +296,10 @@ const ManagerDashboard = ({ preview = false }) => {
             {tickets?.openCount === 0 ? "No open tickets." : `${tickets?.highPriorityCount ?? 0} Urgent`}
           </span>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <WorkspaceWidget />
       </div>
 
       {/* Performance Cards */}

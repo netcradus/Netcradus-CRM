@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import axios from "axios";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import { apiUrl } from "../../config/api";
 
 const DASHBOARD_REFRESH_MS = 300000;
@@ -140,6 +141,10 @@ function SupportDashboard({ preview }) {
             <TimerReset />
           </div>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       <div className="nc-card" style={{ marginBottom: 'var(--space-6)' }}>

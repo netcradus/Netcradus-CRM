@@ -23,6 +23,7 @@ import {
   Line,
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import { dmApi, formatCurrency, formatDate, getWeekDates, sameDay, truncate } from "../../features/DigitalMedia/api";
 
 const DIGITAL_CHART_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
@@ -172,6 +173,10 @@ function DigitalMediaDashboard() {
             <span className="metric-value" style={{ color: metric.color }}>{metric.value}</span>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "var(--space-6)", marginBottom: "var(--space-6)" }}>

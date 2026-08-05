@@ -68,6 +68,16 @@ exports.punchOut = async (req, res) => {
         : 'Punched out successfully.',
     });
   } catch (err) {
+    if (err.name === 'SelfTaskRequiredError' || err.code === 'SELF_TASK_REQUIRED') {
+      return res.status(err.statusCode || 409).json({
+        success: false,
+        code: 'SELF_TASK_REQUIRED',
+        message: err.message,
+        details: {
+          qualifyingSelfTaskCount: 0
+        }
+      });
+    }
     res.status(400).json({ success: false, message: err.message });
   }
 };

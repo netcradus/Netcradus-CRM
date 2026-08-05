@@ -18,21 +18,21 @@ const priorityBadge = (priority) => {
 const formatDate = (value) =>
   value
     ? new Date(value).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "No due date";
 
 const formatDateTime = (value) =>
   value
     ? new Date(value).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "";
 
 const timeAgo = (value) => {
@@ -453,8 +453,8 @@ export default function PendingApprovalsView({ tasks, loading, onApprove, onReje
                       modalMode === "approve"
                         ? "Add an optional approval note..."
                         : modalMode === "reject"
-                        ? "Explain why this task is being rejected (min 10 characters)"
-                        : "Explain what needs to be improved or corrected..."
+                          ? "Explain why this task is being rejected (min 10 characters)"
+                          : "Explain what needs to be improved or corrected..."
                     }
                     value={modalNote}
                     onChange={(e) => setModalNote(e.target.value)}
@@ -481,10 +481,10 @@ export default function PendingApprovalsView({ tasks, loading, onApprove, onReje
                         {modalSubmitting
                           ? "Saving..."
                           : modalMode === "approve"
-                          ? "Confirm Approve"
-                          : modalMode === "reject"
-                          ? "Confirm Reject"
-                          : "Send Request"}
+                            ? "Confirm Approve"
+                            : modalMode === "reject"
+                              ? "Confirm Reject"
+                              : "Send Request"}
                       </button>
                       <button
                         type="button"

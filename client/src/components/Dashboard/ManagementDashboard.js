@@ -16,6 +16,7 @@ import {
   Line,
 } from "recharts";
 import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
+import WorkspaceWidget from "./WorkspaceWidget";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, ClipboardList, Ticket, PlayCircle, CheckCircle2 } from "lucide-react";
 
@@ -194,6 +195,10 @@ const ManagementDashboard = () => {
             <CheckCircle2 />
           </div>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "var(--space-8)" }}>
+        <WorkspaceWidget />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
