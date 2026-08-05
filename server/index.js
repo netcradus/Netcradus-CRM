@@ -168,6 +168,7 @@ app.use("/api/tasks", require("./routes/taskRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/broadcasts", require("./routes/broadcastRoutes"));
 app.use("/api/meeting-reminders", require("./routes/meetingReminderRoutes"));
+app.use("/api/policies", require("./routes/policyRoutes"));
 app.use("/api/projects", require("./routes/projectRoutes"));
 app.use("/api/partner", require("./routes/partnerRoutes"));
 app.use("/api/columns", require("./routes/columnRoutes"));

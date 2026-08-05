@@ -30,6 +30,32 @@ const getEffectiveUserId = (req) => {
   return req.user?.id;
 };
 
+const hasDocumentAccess = async (doc, user) => {
+  const isSuperUser = user.role === 'super_user';
+  const isOwner = String(doc.ownerId) === String(user.id);
+  const isAdminOrHR = ['admin', 'coo', 'hr'].includes(user.role);
+
+  if (isSuperUser || isOwner || isAdminOrHR) {
+    return true;
+  }
+
+  // Check if document is linked to a published Policy that applies to this user
+  const Policy = require('../models/Policy');
+  const policy = await Policy.findOne({
+    "attachments.documentId": doc._id,
+    status: "published"
+  });
+
+  if (policy) {
+    if (policy.applicableToAll) return true;
+    const matchesDept = policy.applicableDepartments?.includes(user.department);
+    const matchesRole = policy.applicableRoles?.includes(user.role);
+    return !!(matchesDept || matchesRole);
+  }
+
+  return false;
+};
+
 // ─── GET /api/documents/storage ──────────────────────────────────────────────
 
 /**
@@ -139,18 +165,26 @@ exports.uploadFile = catchAsync(async (req, res) => {
  */
 exports.viewFile = catchAsync(async (req, res) => {
   const { documentId } = req.params;
-  const isSuperUser = req.user.role === 'super_user';
 
-  const query = isSuperUser
-    ? { _id: documentId, isDeleted: false }
-    : { _id: documentId, ownerId: req.user.id, isDeleted: false };
-
-  const doc = await Document.findOne(query);
+  const doc = await Document.findOne({ _id: documentId, isDeleted: false });
   if (!doc) {
     return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
   }
 
-  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.originalName)}"`);
+  const access = await hasDocumentAccess(doc, req.user);
+  if (!access) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to access this document.', code: 'FORBIDDEN' });
+  }
+
+  res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+  if (doc.fileSizeBytes) {
+    res.setHeader('Content-Length', doc.fileSizeBytes);
+  }
+
+  const rawName = doc.originalName || doc.name || doc.fileName || 'attachment';
+  const sanitized = rawName.replace(/"/g, '');
+  const encoded = encodeURIComponent(sanitized);
+  res.setHeader('Content-Disposition', `inline; filename="${sanitized}"; filename*=UTF-8''${encoded}`);
 
   if (!isDriveEnabled()) {
     const fs = require('fs');
@@ -183,18 +217,26 @@ exports.viewFile = catchAsync(async (req, res) => {
  */
 exports.downloadFile = catchAsync(async (req, res) => {
   const { documentId } = req.params;
-  const isSuperUser = req.user.role === 'super_user';
 
-  const query = isSuperUser
-    ? { _id: documentId, isDeleted: false }
-    : { _id: documentId, ownerId: req.user.id, isDeleted: false };
-
-  const doc = await Document.findOne(query);
+  const doc = await Document.findOne({ _id: documentId, isDeleted: false });
   if (!doc) {
     return res.status(404).json({ success: false, message: 'Document not found.', code: 'NOT_FOUND' });
   }
 
-  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.originalName)}"`);
+  const access = await hasDocumentAccess(doc, req.user);
+  if (!access) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to access this document.', code: 'FORBIDDEN' });
+  }
+
+  res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+  if (doc.fileSizeBytes) {
+    res.setHeader('Content-Length', doc.fileSizeBytes);
+  }
+
+  const rawName = doc.originalName || doc.name || doc.fileName || 'attachment';
+  const sanitized = rawName.replace(/"/g, '');
+  const encoded = encodeURIComponent(sanitized);
+  res.setHeader('Content-Disposition', `attachment; filename="${sanitized}"; filename*=UTF-8''${encoded}`);
 
   if (!isDriveEnabled()) {
     const fs = require('fs');

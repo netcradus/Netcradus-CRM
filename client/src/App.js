@@ -67,6 +67,7 @@ const PriceBooks               = lazy(() => import("./features/PriceBooks/PriceB
 const Solutions                = lazy(() => import("./features/Solutions/Solutions"));
 const CT                       = lazy(() => import("./features/CT/CT"));
 const RiskManagement           = lazy(() => import("./features/RiskManagement/RiskManagement"));
+const Policies                 = lazy(() => import("./features/Policies/Policies"));
 
 const AttendancePage           = lazy(() => import("./features/Attendance/AttendancePage"));
 const LeavePage                = lazy(() => import("./features/Attendance/LeavePage"));
@@ -243,6 +244,11 @@ const App = () => {
               <Route path="/my-profile" element={<MyProfilePage />} />
               <Route path="/broadcasts" element={<RoleRoute roles={ACCESS_GROUPS.personal}><BroadcastsPage /></RoleRoute>} />
               
+              {/* Policies Routing */}
+              <Route path="/policies" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Policies /></RoleRoute>} />
+              <Route path="/policies/create" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Policies /></RoleRoute>} />
+              <Route path="/policies/:id" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Policies /></RoleRoute>} />
+              <Route path="/policies/:id/edit" element={<RoleRoute roles={ACCESS_GROUPS.personal}><Policies /></RoleRoute>} />
               <Route path="/employee-profiles" element={
                 <RoleRoute roles={["super_user", "hr", "coo"]}>
                   <EmployeeProfilesPage />

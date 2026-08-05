@@ -1,20 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Users, UserCheck, CalendarClock, Activity, Headphones } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  CartesianGrid,
-} from "recharts";
 import axios from "axios";
 // No longer needed: import "./AdminDashboard.css"; // Reuse existing styles
 
@@ -36,15 +22,6 @@ const DASHBOARD_REFRESH_MS = 300000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 const initialReminderForm = { title: "", meetingLink: "", meetingDate: "", meetingTime: "" };
 
-const GRAPH_TABS = [
-  { key: "liveAttendance", label: "Live Attendance" },
-  { key: "roleDistribution", label: "Role Distribution" },
-  { key: "registeredRoles", label: "Registered Roles" },
-  { key: "coverageTrend", label: "Coverage Trend" },
-];
-
-const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];
-
 const formatRoleLabel = (role = "general") =>
   role === "admin"
     ? "Administrator"
@@ -54,13 +31,11 @@ const formatRoleLabel = (role = "general") =>
 
 const SuperUserDashboard = () => {
   const previewRef = useRef(null);
-  const graphRef = useRef(null);
   const participantDropdownRef = useRef(null);
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedGraph, setSelectedGraph] = useState("liveAttendance");
   const [attendanceSnapshot, setAttendanceSnapshot] = useState(null);
   const [error, setError] = useState("");
   const [meetingReminders, setMeetingReminders] = useState([]);
@@ -384,47 +359,7 @@ const SuperUserDashboard = () => {
     }
   }, [token]);
 
-  const liveAttendanceChartData = useMemo(() => {
-    if (!attendanceSnapshot) return [];
-    return [
-      { label: "Present", count: attendanceSnapshot.presentCount || 0 },
-      { label: "Active", count: attendanceSnapshot.clockedInCount || 0 },
-      { label: "Late", count: attendanceSnapshot.lateCount || 0 },
-      { label: "On Leave", count: attendanceSnapshot.onLeaveCount || 0 },
-      { label: "Absent", count: attendanceSnapshot.absentCount || 0 },
-    ];
-  }, [attendanceSnapshot]);
 
-  const roleDistributionData = useMemo(() => {
-    const employees = attendanceSnapshot?.employees || [];
-    const groupedRoles = employees.reduce((acc, employee) => {
-      const roleLabel = formatRoleLabel(employee.role || "general");
-      acc[roleLabel] = (acc[roleLabel] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(groupedRoles).map(([name, value]) => ({ name, value }));
-  }, [attendanceSnapshot]);
-
-  const registeredRoleData = useMemo(() => {
-    const grouped = internalEmployees.reduce((acc, user) => {
-      const label = formatRoleLabel(user.role || "general");
-      acc[label] = (acc[label] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(grouped)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [internalEmployees]);
-
-  const systemHealthTrendData = useMemo(() => [
-    { point: "Employees", total: internalEmployees.length },
-    { point: "Tracked", total: attendanceSnapshot?.employees?.length || 0 },
-    { point: "Present", total: attendanceSnapshot?.presentCount || 0 },
-    { point: "Active", total: attendanceSnapshot?.clockedInCount || 0 },
-    { point: "Leave", total: attendanceSnapshot?.onLeaveCount || 0 },
-  ], [internalEmployees, attendanceSnapshot]);
 
   const upcomingMeetingReminders = useMemo(() => {
     return meetingReminders;
@@ -723,17 +658,6 @@ const SuperUserDashboard = () => {
       </div>
     );
   };
-
-  const handleGraphTabClick = (graphKey) => {
-    setSelectedGraph(graphKey);
-    setTimeout(() => {
-      graphRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 0);
-  };
-
   const renderSelectedDashboard = () => {
     const role = selectedUser ? selectedUser.role : selectedRole;
     switch (role) {
@@ -749,75 +673,6 @@ const SuperUserDashboard = () => {
       default: return null;
     }
   };
-
-  const renderSelectedGraph = () => {
-    switch (selectedGraph) {
-      case "roleDistribution":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <PieChart>
-              <Pie
-                data={roleDistributionData}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={90}
-                outerRadius={130}
-                paddingAngle={4}
-              >
-                {roleDistributionData.map((entry, index) => (
-                  <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      case "registeredRoles":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={registeredRoleData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="count" fill="var(--color-accent-muted)" stroke="var(--color-accent)" strokeWidth={1} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      case "coverageTrend":
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <LineChart data={systemHealthTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="point" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="var(--color-accent)"
-                strokeWidth={2}
-                dot={{ r: 4, fill: "var(--color-bg-surface)", stroke: "var(--color-accent)", strokeWidth: 2 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        );
-      case "liveAttendance":
-      default:
-        return (
-          <ResponsiveContainer width="100%" height={420}>
-            <BarChart data={liveAttendanceChartData}>
-              <XAxis dataKey="label" axisLine={false} tickLine={false} fontSize={12} />
-              <YAxis axisLine={false} tickLine={false} fontSize={12} />
-              <Tooltip cursor={{ fill: 'var(--color-bg-hover)' }} />
-              <Bar dataKey="count" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-    }
-  };
-
   return (
     <div className="dashboard-container" style={{ padding: 'var(--space-6)' }}>
       <div className="page-header">
@@ -1235,27 +1090,7 @@ const SuperUserDashboard = () => {
         </div>
       </div>
 
-      <div ref={graphRef} className="nc-card" style={{ marginBottom: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-4)', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
-          <h3 style={{ fontSize: 'var(--text-base)' }}>
-            {GRAPH_TABS.find((tab) => tab.key === selectedGraph)?.label || "Live Attendance"}
-          </h3>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {GRAPH_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                className={`btn ${selectedGraph === tab.key ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => handleGraphTabClick(tab.key)}
-                style={{ height: '32px', fontSize: 'var(--text-xs)', padding: '0 var(--space-3)' }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {renderSelectedGraph()}
-      </div>
+
 
       {selectedRole && (
         <div ref={previewRef} className="nc-card" style={{ marginTop: 'var(--space-6)', minHeight: '400px' }}>

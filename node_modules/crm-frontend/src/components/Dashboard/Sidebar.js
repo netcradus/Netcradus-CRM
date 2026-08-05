@@ -12,6 +12,7 @@ import { ACCESS_GROUPS, canAccess } from "../../config/access";
 import useOnboarding from "../../features/Onboarding/useOnboarding";
 import { getAppSocket } from "../../services/socket";
 import { MAIL_UNREAD_EVENT } from "../../hooks/useMail";
+import { useTheme } from "../../context/ThemeContext";
 
 const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
   const token = localStorage.getItem("token");
   const [openSubmenu, setOpenSubmenu] = useState(null);
   const [mailUnreadCount, setMailUnreadCount] = useState(0);
+  const { theme } = useTheme();
+  const sidebarLogoSrc = theme === "light" ? "/boxlogo1.png" : "/boxlogo.png";
 
   const role = userRole || "user";
 
@@ -263,6 +266,8 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
         { label: "Attendance Reports", path: "/attendance-reports", icon: <BarChart3 size={18} />, roles: ACCESS_GROUPS.attendanceAdmin },
         { label: "Holidays", path: "/holidays", icon: <Umbrella size={18} />, roles: ACCESS_GROUPS.peopleOps },
         { label: "Leaves", path: "/leave", icon: <Plane size={18} />, roles: ACCESS_GROUPS.personal },
+        { label: "Policy Management", path: "/policies", icon: <FileText size={18} />, roles: ["super_user", "hr", "admin"] },
+        { label: "Company Policies", path: "/policies", icon: <FileText size={18} />, roles: ACCESS_GROUPS.personal, hiddenForRoles: ["super_user", "hr", "admin"] },
         { label: "Interviews", path: "/interviews", icon: <Users2 size={18} />, roles: ACCESS_GROUPS.peopleOps },
       ]
     });
@@ -335,10 +340,10 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
       ref={sidebarRef}
       className={`sidebar ${isCurrentlyExpanded ? "sidebar-expanded" : "sidebar-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
     >
-      <div className="sidebar-brand" style={{ display: "flex", alignItems: "center", justifyContent: isCurrentlyExpanded ? "flex-start" : "center", padding: isCurrentlyExpanded ? "0 22px" : "16px 0", gap: "14px", width: "100%", borderBottom: "1px solid var(--color-border)" }}>
+      <div className="sidebar-brand" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: isCurrentlyExpanded ? "0 22px" : "16px 0", gap: "14px", width: "100%", borderBottom: "1px solid var(--color-border)" }}>
         <div className="sidebar-logo">
           <img
-            src="/boxlogo.png"
+            src={sidebarLogoSrc}
             alt="Netcradus Logo"
             style={{
               width: "48px",
@@ -347,12 +352,6 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
             }}
           />
         </div>
-        {isCurrentlyExpanded && (
-          <span className="sidebar-brand-text">
-            <span>NET</span>
-            <span style={{ color: "var(--color-accent, #ff6547)" }}>CRADUS</span>
-          </span>
-        )}
       </div>
 
       <div className="sidebar-menu">
