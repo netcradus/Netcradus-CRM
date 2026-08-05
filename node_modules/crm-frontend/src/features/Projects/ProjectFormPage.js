@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import DocumentPickerModal from "./DocumentPickerModal";
 import SensitiveRevealModal from "./SensitiveRevealModal";
 import { projectApi } from "./projectApi";
+import axios from "axios";
+import { apiUrl } from "../../config/api";
 // import "./Projects.css";
 
 
@@ -24,6 +26,7 @@ const emptyForm = {
   clientCompany: "",
   clientCountry: "",
   clientWebsite: "",
+  clientId: "",
   liveUrl: "",
   stagingUrl: "",
   githubUrl: "",
@@ -80,6 +83,53 @@ export default function ProjectFormPage() {
     loadUsers();
   }, []);
 
+  const [clients, setClients] = useState([]);
+
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const res = await axios.get(apiUrl("/api/clients"), {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        if (res.data && res.data.success) {
+          setClients(res.data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load clients list", err);
+      }
+    };
+    loadClients();
+  }, []);
+
+  useEffect(() => {
+    if (editing) return;
+    const queryParams = new URLSearchParams(window.location.search);
+    const preselectedClientId = queryParams.get("clientId");
+    if (preselectedClientId) {
+      const fetchClient = async () => {
+        try {
+          const res = await axios.get(apiUrl(`/api/clients/${preselectedClientId}`), {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+          });
+          if (res.data && res.data.success) {
+            const clientData = res.data.client;
+            setForm(prev => ({
+              ...prev,
+              clientId: clientData._id,
+              clientName: clientData.contactPersonName || "",
+              clientCompany: clientData.clientName || "",
+              clientCountry: clientData.country || "",
+              clientWebsite: clientData.website || ""
+            }));
+          }
+        } catch (err) {
+          console.error("Failed to fetch preselected client details", err);
+        }
+      };
+      fetchClient();
+    }
+  }, [editing]);
+
   useEffect(() => {
     if (!editing) return;
     if (!editUnlocked) return;
@@ -98,6 +148,7 @@ export default function ProjectFormPage() {
         createdBy: createdById,
         partnerId,
         assignedEngineer,
+        clientId: data.project.clientId?._id || data.project.clientId || "",
         collaborators: (data.project.collaborators || []).map((user) => user._id || user).filter(Boolean),
       });
     };
@@ -336,10 +387,49 @@ export default function ProjectFormPage() {
         </section>
 
         <section className="portfolio-panel">
-          <h3>Client Info</h3>
+          <h3>Client Association</h3>
+          <div className="portfolio-form-grid" style={{ gridTemplateColumns: "1fr", marginBottom: "16px" }}>
+            <label className="portfolio-form-field">
+              Associate Client Account
+              <select 
+                name="clientId" 
+                value={form.clientId || ""} 
+                onChange={e => {
+                  const selectedId = e.target.value;
+                  const selectedClient = clients.find(c => c._id === selectedId);
+                  if (selectedClient) {
+                    setForm(prev => ({
+                      ...prev,
+                      clientId: selectedId,
+                      clientName: selectedClient.contactPersonName || "",
+                      clientCompany: selectedClient.clientName || "",
+                      clientCountry: selectedClient.country || "",
+                      clientWebsite: selectedClient.website || ""
+                    }));
+                  } else {
+                    setForm(prev => ({
+                      ...prev,
+                      clientId: "",
+                      clientName: "",
+                      clientCompany: "",
+                      clientCountry: "",
+                      clientWebsite: ""
+                    }));
+                  }
+                }}
+              >
+                <option value="">-- Select Client Profile --</option>
+                {clients.map(c => (
+                  <option key={c._id} value={c._id}>
+                    {c.clientName} ({c.clientId})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="portfolio-form-grid">
-            <TextField label="Client Name" name="clientName" value={form.clientName} onChange={setValue} />
-            <TextField label="Client Company" name="clientCompany" value={form.clientCompany} onChange={setValue} />
+            <TextField label="Client Contact Person" name="clientName" value={form.clientName} onChange={setValue} />
+            <TextField label="Client Company Name" name="clientCompany" value={form.clientCompany} onChange={setValue} />
             <TextField label="Client Country" name="clientCountry" value={form.clientCountry} onChange={setValue} />
             <TextField label="Client Website" name="clientWebsite" value={form.clientWebsite} onChange={setValue} />
           </div>

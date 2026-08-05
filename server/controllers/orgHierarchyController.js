@@ -381,6 +381,7 @@ const bulkUpdateHierarchy = async (req, res) => {
 };
 
 const getAssignableUsers = async (req, res) => {
+  const { buildInternalUserQuery } = require("../utils/userClassification");
   try {
     const currentUserId = req.user._id;
     const currentUserRole = req.user.role;
@@ -393,7 +394,8 @@ const getAssignableUsers = async (req, res) => {
       // Super Admin — return all users except themselves
       users = await User.find({
         _id: { $ne: currentUserId },
-        isDisabled: false
+        isDisabled: false,
+        ...buildInternalUserQuery()
       }).select('_id name email designation role profilePhoto');
 
     } else if (assignableIds === null) {
@@ -403,7 +405,8 @@ const getAssignableUsers = async (req, res) => {
       if (allowedRoles.includes(currentUserRole?.toLowerCase())) {
         users = await User.find({
           _id: { $ne: currentUserId },
-          isDisabled: false
+          isDisabled: false,
+          ...buildInternalUserQuery()
         }).select('_id name email designation role profilePhoto');
       } else {
         // Cannot assign — return empty array
@@ -414,7 +417,8 @@ const getAssignableUsers = async (req, res) => {
       // Return only users whose _id is in assignableIds
       users = await User.find({
         _id: { $in: assignableIds },
-        isDisabled: false
+        isDisabled: false,
+        ...buildInternalUserQuery()
       }).select('_id name email designation role profilePhoto');
     }
 

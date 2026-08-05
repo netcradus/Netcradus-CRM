@@ -82,6 +82,33 @@ function Login() {
 
       const { token, user, passwordExpiryWarning } = response.data;
 
+      if (user && user.role === "support" && user.clientId) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("userRole");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("skipOnboarding");
+        localStorage.removeItem("passwordExpiryWarning");
+
+        const portalUrl = process.env.REACT_APP_SUPPORT_PORTAL_URL || "https://netcradussupportportal-24z5l.ondigitalocean.app/login";
+        setError(
+          <span>
+            This account is for the Netcradus Support Portal.{" "}
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "underline", color: "var(--color-accent, #007bff)" }}
+            >
+              Open Support Portal
+            </a>
+          </span>
+        );
+        setLoading(false);
+        return;
+      }
+
       localStorage.setItem("token", token);
       localStorage.setItem("userId", user.id);
       localStorage.setItem("userRole", user.role);
@@ -185,6 +212,35 @@ function Login() {
         setSecurityAction(null);
         setError("Password reset! Please login.");
       } else {
+        const u = response.data.user;
+        if (u && u.role === "support" && u.clientId) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          localStorage.removeItem("userRole");
+          localStorage.removeItem("userName");
+          localStorage.removeItem("userEmail");
+          localStorage.removeItem("skipOnboarding");
+          localStorage.removeItem("passwordExpiryWarning");
+
+          const portalUrl = process.env.REACT_APP_SUPPORT_PORTAL_URL || "https://netcradussupportportal-24z5l.ondigitalocean.app/login";
+          setError(
+            <span>
+              This account is for the Netcradus Support Portal.{" "}
+              <a
+                href={portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: "underline", color: "var(--color-accent, #007bff)" }}
+              >
+                Open Support Portal
+              </a>
+            </span>
+          );
+          setSecurityAction(null);
+          setLoading(false);
+          return;
+        }
+
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("userId", response.data.user.id);
         localStorage.setItem("userRole", response.data.user.role);

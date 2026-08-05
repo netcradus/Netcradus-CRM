@@ -25,26 +25,25 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
 
   const role = userRole || "user";
 
-  // Close sidebar on click outside or escape key press
+  // Close sidebar on click outside or escape key press (mobile only)
   useEffect(() => {
-    if (!isExpanded) return;
-
     const handleClickOutside = (event) => {
-      if (sidebarRef.current && sidebarRef.current.contains(event.target)) {
-        return;
+      if (window.innerWidth <= 768) {
+        if (sidebarRef.current && sidebarRef.current.contains(event.target)) {
+          return;
+        }
+        if (event.target.closest(".topbar-menu-btn")) {
+          return;
+        }
+        onCloseMobile?.();
       }
-      if (event.target.closest(".topbar-avatar") || event.target.closest(".profile-dropdown") || event.target.closest(".dropdown-menu")) {
-        return;
-      }
-      if (event.target.closest(".modal") || event.target.closest(".modal-content") || event.target.closest(".google-search-modal")) {
-        return;
-      }
-      onSetExpanded(false);
     };
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        onSetExpanded(false);
+        if (window.innerWidth <= 768) {
+          onCloseMobile?.();
+        }
       }
     };
 
@@ -54,7 +53,7 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isExpanded, onSetExpanded]);
+  }, [onCloseMobile]);
 
   const onLogout = () => {
     localStorage.clear();
@@ -68,12 +67,35 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
     return !hiddenForRoles.includes(role) && (!item.roles || canAccess(role, item.roles));
   }, [role]);
 
-  const getItemTargetPath = (item) => {
-    const visibleSubmenu = item.submenu?.filter(canShowNavItem) || [];
-    if (visibleSubmenu.length) {
-      return visibleSubmenu[0].path;
+  const pathMatches = useCallback((parentPath, currentPath) => {
+    if (parentPath === "/" || parentPath === "/dashboard") {
+      return currentPath === parentPath;
     }
-    return item.path || null;
+    return currentPath === parentPath || currentPath.startsWith(parentPath + "/");
+  }, []);
+
+  const isItemActive = useCallback((item) => {
+    if (item.submenu) {
+      const visibleSubmenu = item.submenu.filter(canShowNavItem);
+      return visibleSubmenu.some((sub) => pathMatches(sub.path, location.pathname));
+    }
+    if (!item.path) return false;
+    return pathMatches(item.path, location.pathname);
+  }, [location.pathname, canShowNavItem, pathMatches]);
+
+  const isCurrentlyExpanded = isExpanded || window.innerWidth <= 768;
+
+  const handleLeafClick = (e, path) => {
+    if (guardNavigation(e)) {
+      return;
+    }
+    if (!isCurrentlyExpanded) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSetExpanded(true);
+      return;
+    }
+    handleLeafNavigation();
   };
 
   const handleSubmenuToggle = (e, item) => {
@@ -84,19 +106,16 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
     e.preventDefault();
     e.stopPropagation();
 
-    // Clicking a parent icon always expands the sidebar
-    onSetExpanded(true);
-
-    const targetPath = getItemTargetPath(item);
-    setOpenSubmenu((prev) => (prev === item.label ? null : item.label));
-
-    if (targetPath && location.pathname !== targetPath) {
-      navigate(targetPath);
+    if (!isCurrentlyExpanded) {
+      onSetExpanded(true);
+      setOpenSubmenu(item.label);
+      return;
     }
+
+    setOpenSubmenu((prev) => (prev === item.label ? null : item.label));
   };
 
   const handleLeafNavigation = () => {
-    onSetExpanded(false);
     if (window.innerWidth <= 768) {
       onCloseMobile?.();
     }
@@ -163,17 +182,18 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
       ]
     });
 
-    if (canAccess(role, [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings])) items.push({
+    if (canAccess(role, [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings, ...ACCESS_GROUPS.crmClients])) items.push({
       label: "CRM",
       path: "/leads",
       icon: <Database size={20} />,
-      roles: [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings],
+      roles: [...ACCESS_GROUPS.crmLeads, ...ACCESS_GROUPS.crmAccounts, ...ACCESS_GROUPS.crmContacts, ...ACCESS_GROUPS.crmDeals, ...ACCESS_GROUPS.meetings, ...ACCESS_GROUPS.crmClients],
       submenu: [
         { label: "Leads", path: "/leads", icon: <Target size={18} />, roles: ACCESS_GROUPS.crmLeads },
         { label: "Meetings", path: "/meetings", icon: <Calendar size={18} />, roles: ACCESS_GROUPS.meetings },
         { label: "Contacts", path: "/contacts", icon: <Contact size={18} />, roles: ACCESS_GROUPS.crmContacts },
         { label: "Accounts", path: "/accounts", icon: <Building size={18} />, roles: ACCESS_GROUPS.crmAccounts },
         { label: "Deals", path: "/deals", icon: <Coins size={18} />, roles: ACCESS_GROUPS.crmDeals },
+        { label: "Client Management", path: "/clients", icon: <Briefcase size={18} />, roles: ACCESS_GROUPS.crmClients },
       ]
     });
 
@@ -303,23 +323,36 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
 
   useEffect(() => {
     const activeParent = menuItems.find((item) =>
-      item.submenu?.filter(canShowNavItem).some((sub) => location.pathname.startsWith(sub.path))
+      item.submenu?.filter(canShowNavItem).some((sub) => pathMatches(sub.path, location.pathname))
     );
     if (activeParent) {
       setOpenSubmenu(activeParent.label);
     }
-  }, [location.pathname, menuItems, canShowNavItem]);
+  }, [location.pathname, menuItems, canShowNavItem, pathMatches]);
 
   return (
     <nav 
       ref={sidebarRef}
-      className={`sidebar ${isExpanded ? "sidebar-expanded" : "sidebar-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
+      className={`sidebar ${isCurrentlyExpanded ? "sidebar-expanded" : "sidebar-collapsed"} ${isMobileOpen ? "is-mobile-open" : ""}`}
     >
-      <div className="sidebar-brand" style={{ display: "flex", alignItems: "center", justifyContent: isExpanded ? "flex-start" : "center", padding: isExpanded ? "0 22px" : "16px 0", gap: "14px", width: "100%", borderBottom: "1px solid var(--color-border)" }}>
+      <div className="sidebar-brand" style={{ display: "flex", alignItems: "center", justifyContent: isCurrentlyExpanded ? "flex-start" : "center", padding: isCurrentlyExpanded ? "0 22px" : "16px 0", gap: "14px", width: "100%", borderBottom: "1px solid var(--color-border)" }}>
         <div className="sidebar-logo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <img
+            src="/boxlogo.png"
+            alt="Netcradus Logo"
+            style={{
+              width: "48px",
+              height: "48px",
+              objectFit: "contain"
+            }}
+          />
         </div>
-        {isExpanded && <span className="sidebar-brand-text">Netcradus</span>}
+        {isCurrentlyExpanded && (
+          <span className="sidebar-brand-text">
+            <span>NET</span>
+            <span style={{ color: "var(--color-accent, #ff6547)" }}>CRADUS</span>
+          </span>
+        )}
       </div>
 
       <div className="sidebar-menu">
@@ -327,7 +360,7 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
           const visibleSubmenu = item.submenu?.filter(canShowNavItem) || [];
           const hasSubmenu = visibleSubmenu.length > 0;
           const isSubmenuOpen = openSubmenu === item.label;
-          const isParentActive = hasSubmenu && visibleSubmenu.some((sub) => location.pathname.startsWith(sub.path));
+          const isParentActive = isItemActive(item);
 
           if (hasSubmenu) {
             return (
@@ -335,35 +368,38 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
                 <button 
                   className={`sidebar-item ${isParentActive ? "is-parent-active" : ""}`}
                   onClick={(e) => handleSubmenuToggle(e, item)}
-                  title={!isExpanded ? item.label : ""}
+                  title={!isCurrentlyExpanded ? item.label : ""}
                 >
                   <div className="sidebar-item-icon">{item.icon}</div>
-                  {isExpanded && <span className="sidebar-item-text">{item.label}</span>}
-                  {isExpanded && (
+                  {isCurrentlyExpanded && <span className="sidebar-item-text">{item.label}</span>}
+                  {isCurrentlyExpanded && (
                     <div className="sidebar-item-caret">
                       {isSubmenuOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </div>
                   )}
                 </button>
-                {isSubmenuOpen && isExpanded && (
+                {isSubmenuOpen && isCurrentlyExpanded && (
                   <div className="sidebar-submenu">
-                    {visibleSubmenu.map((sub) => (
-                      <NavLink 
-                        key={sub.path} 
-                        to={sub.path} 
-                        className={({ isActive }) => `sidebar-submenu-item ${isActive ? "is-active" : ""}`}
-                        onClick={(event) => {
-                          if (guardNavigation(event)) {
-                            return;
-                          }
-                          handleLeafNavigation();
-                        }}
-                      >
-                        <div className="sidebar-submenu-icon">{sub.icon}</div>
-                        <span className="sidebar-submenu-text">{sub.label}</span>
-                        {sub.badge ? <span className="bell-dot">{sub.badge}</span> : null}
-                      </NavLink>
-                    ))}
+                    {visibleSubmenu.map((sub) => {
+                      const isSubActive = pathMatches(sub.path, location.pathname);
+                      return (
+                        <NavLink 
+                          key={sub.path} 
+                          to={sub.path} 
+                          className={`sidebar-submenu-item ${isSubActive ? "is-active" : ""}`}
+                          onClick={(event) => {
+                            if (guardNavigation(event)) {
+                              return;
+                            }
+                            handleLeafNavigation();
+                          }}
+                        >
+                          <div className="sidebar-submenu-icon">{sub.icon}</div>
+                          <span className="sidebar-submenu-text">{sub.label}</span>
+                          {sub.badge ? <span className="bell-dot">{sub.badge}</span> : null}
+                        </NavLink>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -374,26 +410,21 @@ const Sidebar = ({ isExpanded, onSetExpanded, isMobileOpen, onCloseMobile }) => 
             <NavLink 
               key={item.path} 
               to={item.path} 
-              className={({ isActive }) => `sidebar-item ${isActive ? "is-active" : ""}`}
-              title={!isExpanded ? item.label : ""}
-              onClick={(event) => {
-                if (guardNavigation(event)) {
-                  return;
-                }
-                handleLeafNavigation();
-              }}
+              className={`sidebar-item ${isParentActive ? "is-active" : ""}`}
+              title={!isCurrentlyExpanded ? item.label : ""}
+              onClick={(event) => handleLeafClick(event, item.path)}
             >
               <div className="sidebar-item-icon">{item.icon}</div>
-              {isExpanded && <span className="sidebar-item-text">{item.label}</span>}
+              {isCurrentlyExpanded && <span className="sidebar-item-text">{item.label}</span>}
             </NavLink>
           );
         })}
       </div>
 
       <div className="sidebar-footer">
-        <button className="sidebar-item sidebar-logout" onClick={onLogout} title={!isExpanded ? "Logout" : ""}>
+        <button className="sidebar-item sidebar-logout" onClick={onLogout} title={!isCurrentlyExpanded ? "Logout" : ""}>
           <div className="sidebar-item-icon"><LogOut size={20} /></div>
-          {isExpanded && <span className="sidebar-item-text">Logout</span>}
+          {isCurrentlyExpanded && <span className="sidebar-item-text">Logout</span>}
         </button>
       </div>
     </nav>

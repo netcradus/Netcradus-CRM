@@ -48,6 +48,7 @@ const PROJECT_FIELDS = [
   "collaborators",
   "partnerId",
   "vendorId",
+  "clientId",
   "assignedEngineer",
   "serviceType",
   "priority",
@@ -74,6 +75,7 @@ const SHOWCASE_FIELDS = [
   "startDate",
   "endDate",
   "deploymentPlatform",
+  "clientId",
 ];
 const PROJECT_LIST_FIELDS = [
   "_id",
@@ -94,6 +96,7 @@ const PROJECT_LIST_FIELDS = [
   "collaborators",
   "partnerId",
   "vendorId",
+  "clientId",
   "serviceType",
   "priority",
   "deadline",
@@ -163,7 +166,7 @@ const buildProjectPayload = (body, allowedFields = PROJECT_FIELDS) => {
       payload.collaborators = normalizeUserIds(value);
     } else if (field === "screenshots") {
       payload.screenshots = normalizeStrings(value, 10);
-    } else if (["createdBy", "partnerId", "vendorId", "assignedEngineer"].includes(field)) {
+    } else if (["createdBy", "partnerId", "vendorId", "assignedEngineer", "clientId"].includes(field)) {
       payload[field] = mongoose.Types.ObjectId.isValid(value) ? value : field === "createdBy" ? undefined : null;
     } else if (field === "thumbnail") {
       payload.thumbnail = trimString(value) || null;
@@ -206,7 +209,8 @@ const findProjectWithUsers = async (id) => {
     .populate("createdBy", "name email role")
     .populate("collaborators", "name email role")
     .populate("partnerId", "name email role")
-    .populate("assignedEngineer", "name email role");
+    .populate("assignedEngineer", "name email role")
+    .populate("clientId", "_id clientId clientName primaryEmail website");
 };
 
 const isSuperUser = (user) => String(user?.role || "").trim().toLowerCase() === "super_user";

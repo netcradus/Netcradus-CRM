@@ -203,6 +203,7 @@ app.use("/api/visits", require("./routes/visitRoutes"));
 app.use("/api/vendors", require("./routes/vendors"));
 app.use("/api/tickets", require("./routes/ticketRoutes"));
 app.use("/api/management", require("./routes/managementRoutes"));
+app.use("/api/clients", require("./routes/clientRoutes"));
 app.use("/api/device-management", require("./routes/deviceManagementRoutes"));
 app.use("/api/domain-management", require("./routes/domainManagementRoutes"));
 app.use("/api/manager", require("./routes/managerRoutes"));
@@ -235,6 +236,17 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
+
+  // One-time role migration: client_support -> support
+  try {
+    const User = require("./models/User");
+    const result = await User.updateMany({ role: "client_support" }, { $set: { role: "support" } });
+    if (result.modifiedCount > 0) {
+      console.log(`[Migration] Migrated ${result.modifiedCount} legacy client_support users to support.`);
+    }
+  } catch (err) {
+    console.error("[Migration] Failed to migrate legacy roles:", err);
+  }
 
   if (process.env.DISABLE_CRON === "true") {
     console.log("[CRON] Disabled by DISABLE_CRON=true");

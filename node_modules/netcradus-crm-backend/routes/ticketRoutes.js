@@ -20,8 +20,8 @@ router.get("/", getTickets);
 // Get Ticket by ID (Role and ownership checked in controller)
 router.get("/:id", getTicketById);
 
-// Add Comment (Super User and COO only)
-router.post("/:id/comment", rbac(["super_user", "coo"]), addComment);
+// Add Comment (Super User, COO, and Support)
+router.post("/:id/comment", rbac(["super_user", "coo", "support"]), addComment);
 
 // Add Info (Raiser ONLY - logic in controller)
 router.post("/:id/info", addInfo);

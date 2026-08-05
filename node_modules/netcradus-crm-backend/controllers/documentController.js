@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const UserStorage = require('../models/UserStorage');
 const User = require('../models/User');
+const Client = require('../models/Client');
 const AuditLog = require('../models/AuditLog');
 const storageService = require('../services/storageService');
 const driveService = require('../services/driveService');
@@ -582,3 +583,149 @@ exports.uploadEmployeeDocument = catchAsync(async (req, res) => {
     data: sanitizeDoc(doc),
   });
 });
+
+/**
+ * GET /api/clients/:clientId/documents
+ * List all non-deleted documents uploaded for this client.
+ */
+exports.getClientDocuments = catchAsync(async (req, res) => {
+  const { clientId } = req.params;
+  const docs = await Document.find({ entityType: 'Client', entityId: clientId, isDeleted: false })
+    .sort({ uploadedAt: -1 })
+    .populate('ownerId', 'name email')
+    .lean();
+
+  res.json({
+    success: true,
+    data: docs.map(d => {
+      const { driveFileId, driveViewLink, ...safe } = d;
+      return safe;
+    })
+  });
+});
+
+/**
+ * POST /api/clients/:clientId/documents
+ * Upload a document and link it to the client.
+ */
+exports.uploadClientDocument = catchAsync(async (req, res) => {
+  const { clientId } = req.params;
+  const { documentType, notes } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded.', code: 'NO_FILE' });
+  }
+
+  const client = await Client.findById(clientId);
+  if (!client) {
+    return res.status(404).json({ success: false, message: 'Client not found.' });
+  }
+
+  // Resolve user's storage
+  const storage = await storageService.getUserStorage(req.user.id);
+  const clientDocsFolder = storage.subFolders.find(f => f.name === 'client-docs') ||
+                            storage.subFolders.find(f => f.name === 'general') ||
+                            storage.subFolders[0];
+
+  if (!clientDocsFolder) {
+    return res.status(400).json({ success: false, message: 'No suitable destination folder found in user storage.', code: 'NO_FOLDER' });
+  }
+
+  const doc = await storageService.uploadToFolder(
+    req.user.id,
+    clientDocsFolder.driveFolderId,
+    req.file,
+    'Client',
+    clientId,
+    documentType || null,
+    notes || null
+  );
+
+  // Log upload audit
+  await AuditLog.create({
+    action: 'DOCUMENT_UPLOAD',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    details: { clientId, originalName: doc.originalName },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Document uploaded successfully.',
+    data: sanitizeDoc(doc)
+  });
+});
+
+/**
+ * PUT /api/clients/:clientId/documents/:documentId
+ * Update document details (metadata).
+ */
+exports.updateClientDocument = catchAsync(async (req, res) => {
+  const { clientId, documentId } = req.params;
+  const { title, documentType, notes } = req.body;
+
+  const doc = await Document.findOne({ _id: documentId, entityType: 'Client', entityId: clientId, isDeleted: false });
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.' });
+  }
+
+  if (title !== undefined) doc.originalName = title;
+  if (documentType !== undefined) doc.documentType = documentType;
+  if (notes !== undefined) doc.notes = notes;
+
+  await doc.save();
+
+  await AuditLog.create({
+    action: 'DOCUMENT_UPDATE',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    details: { clientId, documentId },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ success: true, message: 'Document details updated.', data: sanitizeDoc(doc) });
+});
+
+/**
+ * PATCH /api/clients/:clientId/documents/:documentId/archive
+ * Soft delete a client document.
+ */
+exports.archiveClientDocument = catchAsync(async (req, res) => {
+  const { clientId, documentId } = req.params;
+  const doc = await Document.findOne({ _id: documentId, entityType: 'Client', entityId: clientId, isDeleted: false });
+  if (!doc) {
+    return res.status(404).json({ success: false, message: 'Document not found.' });
+  }
+
+  doc.isDeleted = true;
+  doc.deletedAt = new Date();
+  doc.deletedBy = req.user.id;
+  await doc.save();
+
+  // Recalculate user storage space
+  try {
+    const storage = await UserStorage.findOne({ userId: doc.ownerId });
+    if (storage) {
+      storage.usedMB = Math.max(0, parseFloat((storage.usedMB - doc.fileSizeMB).toFixed(4)));
+      storage.fileCount = Math.max(0, storage.fileCount - 1);
+      await storage.save();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  await AuditLog.create({
+    action: 'DOCUMENT_ARCHIVE',
+    performedBy: req.user.id,
+    documentId: doc._id,
+    details: { clientId, documentId },
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ success: true, message: 'Document archived successfully.' });
+});
+

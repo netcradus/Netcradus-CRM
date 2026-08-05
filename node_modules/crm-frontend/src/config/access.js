@@ -27,6 +27,7 @@ export const ACCESS_GROUPS = {
   crmAccounts: ["super_user", "admin"],
   crmContacts: ["super_user", "hr", "coo"],
   crmDeals: ["super_user", "coo"],
+  crmClients: ["super_user", "coo", "admin", "manager", "sales", "finance"],
   projects: ["super_user", "it", "management", "coo"],
   management: ["super_user", "management", "coo"],
   // Manager Portal is the dedicated Phase 1 portal for the manager role.
@@ -70,4 +71,14 @@ export function canAccess(role, allowedRoles = ALL_ROLES) {
   }
 
   return normalizedAllowed.includes(normalizedRole);
+}
+
+export function isExternalClientSupportUser(user) {
+  return normalizeRole(user?.role) === "support" && !!user?.clientId;
+}
+
+export function isInternalUser(user) {
+  if (user?.isDisabled) return false;
+  if (normalizeRole(user?.role) === "partner") return false;
+  return !isExternalClientSupportUser(user);
 }

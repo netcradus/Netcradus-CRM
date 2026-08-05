@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../Dashboard/Sidebar";
 import Topbar from "../Topbar/Topbar";
 import ChatLauncher from "../Chat/ChatLauncher";
 import OnboardingBanner from "../../features/Onboarding/OnboardingBanner";
 
 const MainLayout = () => {
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const location = useLocation();
+  const [isManuallyExpanded, setIsManuallyExpanded] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsManuallyExpanded(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -24,11 +29,13 @@ const MainLayout = () => {
     setIsMobileSidebarOpen((current) => !current);
   };
 
+  const isSidebarExpanded = isManuallyExpanded;
+
   return (
     <div className="dashboard-layout">
       <Sidebar
         isExpanded={isSidebarExpanded}
-        onSetExpanded={setIsSidebarExpanded}
+        onSetExpanded={setIsManuallyExpanded}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -36,7 +43,6 @@ const MainLayout = () => {
       <div className={`dashboard-main ${isSidebarExpanded ? "is-sidebar-expanded" : ""}`}>
         <Topbar
           onToggleSidebar={handleToggleSidebar}
-          isSidebarExpanded={isSidebarExpanded}
         />
         <OnboardingBanner />
         <main className="dashboard-content">

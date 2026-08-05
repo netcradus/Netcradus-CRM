@@ -46,6 +46,7 @@ const createTicket = async (req, res) => {
             ticketId,
             raisedBy: req.user.id,
             createdBy: req.user.id,
+            clientId: req.user.clientId || null,
             source: req.headers['x-source'] || 'crm',
             role: req.user.role,
             title,
@@ -77,7 +78,11 @@ const getTickets = async (req, res) => {
         // Admins, COO and super_users see all tickets; standard users only see their own
         const isAdmin = req.user.role === 'super_user' || req.user.role === 'admin' || req.user.role === 'coo';
         if (!isAdmin) {
-            query.raisedBy = req.user.id;
+            if (req.user.role === 'support' && req.user.clientId) {
+                query.clientId = req.user.clientId;
+            } else {
+                query.raisedBy = req.user.id;
+            }
         }
 
         const tickets = await Ticket.find(query).populate('raisedBy', 'name email').sort({ createdAt: -1 });
@@ -95,9 +100,11 @@ const getTicketById = async (req, res) => {
             return res.status(404).json({ success: false, message: "Ticket not found" });
         }
 
-        // Authorization check: owner, or admin/coo/super_user, or support role
+        // Authorization check: owner, or admin/coo/super_user, or support role, or member of same client company
         const isOwner = ticket.raisedBy && ticket.raisedBy._id.toString() === req.user.id;
-        const hasAccess = req.user.role === 'super_user' || req.user.role === 'admin' || req.user.role === 'coo' || req.user.role === 'support' || isOwner;
+        const isInternalSupportAgent = req.user.role === 'support' && !req.user.clientId;
+        const isClientCompanyMember = ticket.clientId && req.user.clientId && ticket.clientId.toString() === req.user.clientId.toString() && req.user.role === 'support';
+        const hasAccess = req.user.role === 'super_user' || req.user.role === 'admin' || req.user.role === 'coo' || isInternalSupportAgent || isOwner || isClientCompanyMember;
 
         if (!hasAccess) {
             return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to view this ticket" });
@@ -121,6 +128,13 @@ const addComment = async (req, res) => {
 
         const ticket = await Ticket.findById(id);
         if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
+
+        if (req.user.role === "support" && req.user.clientId) {
+          const isMember = ticket.clientId && req.user.clientId && ticket.clientId.toString() === req.user.clientId.toString();
+          if (!isMember) {
+            return res.status(403).json({ success: false, message: "Forbidden: You are not authorized to comment on this ticket" });
+          }
+        }
 
         ticket.comments.push({
             senderId: req.user.id,

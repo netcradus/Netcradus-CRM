@@ -59,6 +59,7 @@ const projectSchema = new mongoose.Schema({
   // Partner project fields let external partners submit work without becoming employees.
   partnerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor", default: null, index: true },
+  clientId: { type: mongoose.Schema.Types.ObjectId, ref: "Client", default: null, index: true },
   serviceType: { type: String, trim: true, default: "" },
   priority: { type: String, enum: ["Low", "Medium", "High", "Critical", ""], default: "" },
   expectedBudget: { type: Number, default: 0 },

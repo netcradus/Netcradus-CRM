@@ -81,6 +81,8 @@ const MyProfilePage            = lazy(() => import("./features/MyProfile/MyProfi
 const InterviewsPage           = lazy(() => import("./features/Interviews/InterviewsPage"));
 const StorageAdminPage         = lazy(() => import("./features/Documents/admin/StorageAdminPage"));
 const ManagementHub            = lazy(() => import("./features/Management/ManagementHub"));
+const ClientsPage              = lazy(() => import("./features/Clients/ClientsPage"));
+const ClientDetailPage         = lazy(() => import("./features/Clients/ClientDetailPage"));
 const PasswordManager          = lazy(() => import("./features/PasswordManager/PasswordManager"));
 const OnboardingPage           = lazy(() => import("./features/Onboarding/OnboardingPage"));
 const MailPage                 = lazy(() => import("./features/Mail/MailPage"));
@@ -274,6 +276,8 @@ const App = () => {
               <Route path="/calls" element={<RoleRoute roles={ACCESS_GROUPS.calls}><Calls /></RoleRoute>} />
               <Route path="/cases" element={<RoleRoute roles={ACCESS_GROUPS.cases}><Cases /></RoleRoute>} />
               <Route path="/contacts" element={<RoleRoute roles={ACCESS_GROUPS.crmContacts}><Contacts /></RoleRoute>} />
+              <Route path="/clients" element={<RoleRoute roles={ACCESS_GROUPS.crmClients}><ClientsPage /></RoleRoute>} />
+              <Route path="/clients/:id" element={<RoleRoute roles={ACCESS_GROUPS.crmClients}><ClientDetailPage /></RoleRoute>} />
 
               {/* Manager Portal Routes — manager role only */}
               <Route path="/manager/dashboard" element={

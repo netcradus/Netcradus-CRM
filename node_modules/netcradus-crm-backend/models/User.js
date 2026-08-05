@@ -21,7 +21,6 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    // Partner is a non-admin, non-employee role used only for vendor/project collaboration.
     enum: ["super_user", "admin", "management", "manager", "sales", "support", "it", "hr", "digital_media", "partner", "coo"],
     default: "management",
     trim: true,
@@ -106,6 +105,15 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   skipOnboarding: {
+    type: Boolean,
+    default: false
+  },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Client",
+    default: null
+  },
+  forcePasswordChange: {
     type: Boolean,
     default: false
   },

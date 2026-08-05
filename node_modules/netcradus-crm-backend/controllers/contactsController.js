@@ -147,11 +147,19 @@ const ensureContactProfileForUser = async (userId) => {
             linkedUser: user._id,
             name: user.name,
             email: normalizeEmail(user.email),
-            status: "Employee",
+            status: (user.role === "support" && user.clientId) ? "Customer" : "Employee",
             department: user.department || "General",
             designation: formatRoleLabel(user.role || "employee"),
             joiningDate: user.createdAt,
             isActive: true,
+            emergencyContact: {
+                name: "Not Provided",
+                relationship: "Other",
+                contactNumber: "0000000000",
+                alternateContactNumber: "0000000000",
+                address: "Not Provided",
+                notes: "Not Provided"
+            }
         });
         return contact;
     }
@@ -175,6 +183,26 @@ const ensureContactProfileForUser = async (userId) => {
     }
     if (!contact.designation && user.role) {
         contact.designation = formatRoleLabel(user.role);
+        shouldSave = true;
+    }
+
+    const ec = contact.emergencyContact || {};
+    const validName = typeof ec.name === 'string' && ec.name.length >= 2;
+    const validRel = ["Father", "Mother", "Brother", "Sister", "Spouse", "Friend", "Guardian", "Other"].includes(ec.relationship);
+    const validNum = /^[0-9]{10}$/.test(ec.contactNumber);
+    const validAlt = /^[0-9]{10}$/.test(ec.alternateContactNumber);
+    const validAddr = typeof ec.address === 'string' && ec.address.length >= 10;
+    const validNotes = typeof ec.notes === 'string' && ec.notes.length >= 5;
+
+    if (!validName || !validRel || !validNum || !validAlt || !validAddr || !validNotes) {
+        contact.emergencyContact = {
+            name: validName ? ec.name : "Not Provided",
+            relationship: validRel ? ec.relationship : "Other",
+            contactNumber: validNum ? ec.contactNumber : "0000000000",
+            alternateContactNumber: validAlt ? ec.alternateContactNumber : "0000000000",
+            address: validAddr ? ec.address : "Not Provided",
+            notes: validNotes ? ec.notes : "Not Provided"
+        };
         shouldSave = true;
     }
 

@@ -157,8 +157,8 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-6)' }}>
-        <div className="nc-card">
+      <div className="attendance-content">
+        <div className="nc-card attendance-action-card">
           <h3 style={{ marginBottom: 'var(--space-4)' }}>Control Center</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             {!isPunchedIn && !statusData?.record?.punchOut ? (

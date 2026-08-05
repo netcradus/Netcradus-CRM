@@ -50,6 +50,22 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
             className="topbar-menu-btn"
             onClick={onToggleSidebar}
             aria-label="Open menu"
+            style={{
+              background: "none",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              color: "var(--color-text-secondary)",
+              transition: "background-color 0.2s",
+              cursor: "pointer",
+              padding: 0
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}
           >
             <PanelLeft size={18} />
           </button>

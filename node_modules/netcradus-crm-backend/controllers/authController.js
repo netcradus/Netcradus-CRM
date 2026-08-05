@@ -598,7 +598,7 @@ const resetPasswordWithOTP = async (req, res) => {
 const getUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select("_id userId name email role department designation reportsTo createdAt isDisabled disabledAt disabledReason");
+      .select("_id userId name email role department designation reportsTo createdAt isDisabled disabledAt disabledReason clientId");
 
     res.json(users);
   } catch (err) {

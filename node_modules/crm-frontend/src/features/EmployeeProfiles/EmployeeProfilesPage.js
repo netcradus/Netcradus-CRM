@@ -169,13 +169,19 @@ function EmployeeProfilesPage() {
     try {
       setLoading(true);
       const { data } = await axios.get(apiUrl("/api/contacts/profiles"), { headers });
-      setProfiles(data);
-      if (data.length) {
-        const hasQueryUser = queryUserId && data.some(p => p.linkedUser?._id === queryUserId);
+      const filtered = data.filter(p => {
+        if (p.role === "support" && p.clientId) return false;
+        if (p.linkedUser && p.linkedUser.role === "support" && p.linkedUser.clientId) return false;
+        if (p.status === "Customer") return false;
+        return true;
+      });
+      setProfiles(filtered);
+      if (filtered.length) {
+        const hasQueryUser = queryUserId && filtered.some(p => p.linkedUser?._id === queryUserId);
         if (hasQueryUser) {
           setSelectedUserId(queryUserId);
         } else if (!selectedUserId) {
-          setSelectedUserId(data[0].linkedUser?._id);
+          setSelectedUserId(filtered[0].linkedUser?._id);
         }
       }
     } catch (err) { setError("Failed to load profiles"); }

@@ -200,8 +200,16 @@
 [data-theme="light"] .sidebar-item.is-active,
 [data-theme="light"] .sidebar-item.is-parent-active,
 [data-theme="light"] .sidebar-submenu-item.is-active {
-  color: #ff6547;
-  background: linear-gradient(135deg, rgba(255, 101, 71, 0.12), rgba(255, 184, 150, 0.22));
+  color: #ff6547 !important;
+  background: linear-gradient(135deg, rgba(255, 101, 71, 0.12), rgba(255, 184, 150, 0.22)) !important;
+  border-left: 4px solid #ff6547 !important;
+  border-radius: var(--radius-md) !important;
+}
+
+[data-theme="light"] .sidebar-item.is-active .sidebar-item-icon svg,
+[data-theme="light"] .sidebar-item.is-parent-active .sidebar-item-icon svg,
+[data-theme="light"] .sidebar-submenu-item.is-active .sidebar-submenu-icon svg {
+  color: #ff6547 !important;
 }
 
 [data-theme="light"] .sidebar-submenu {
@@ -674,23 +682,29 @@ ol {
 }
 
 .sidebar-logo {
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: var(--radius-md) !important;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%) !important;
-  box-shadow: var(--shadow-accent) !important;
+  width: 48px !important;
+  height: 48px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .sidebar-brand-text {
   font-family: var(--font-heading);
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  color: var(--color-text-primary);
+  font-size: 21px !important;
+  font-weight: 800 !important;
+  color: var(--color-text-primary) !important;
+  letter-spacing: -0.015em !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .sidebar-menu {
@@ -1052,7 +1066,8 @@ ol {
   padding: 0;
 }
 
-.notification-container {
+.notification-container,
+.notification-menu-wrapper {
   position: relative;
 }
 
@@ -1102,6 +1117,7 @@ ol {
   box-shadow: var(--shadow-xl);
   overflow: hidden;
   backdrop-filter: blur(24px);
+  z-index: 1200;
 }
 
 .popup-head {
@@ -4064,23 +4080,29 @@ body, p {
 }
 
 .sidebar-logo {
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: var(--radius-md) !important;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%) !important;
-  box-shadow: var(--shadow-accent) !important;
+  width: 48px !important;
+  height: 48px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .sidebar-brand-text {
   font-family: var(--font-heading);
-  font-size: 20px !important;
-  font-weight: 700 !important;
-  color: var(--color-text-primary);
+  font-size: 21px !important;
+  font-weight: 800 !important;
+  color: var(--color-text-primary) !important;
+  letter-spacing: -0.015em !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .sidebar-menu {
@@ -4257,7 +4279,7 @@ body, p {
   backdrop-filter: blur(16px) !important;
   box-shadow: none !important;
   transition: left var(--sidebar-transition), width var(--sidebar-transition) !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 [data-theme="light"] .topbar {
@@ -4991,3 +5013,30 @@ select.crm-filter-select {
 [data-theme="dark"] .recharts-tooltip-label {
   color: #FFFFFF !important;
 }
+
+/* Attendance Page Layout Enhancements */
+.attendance-content {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.attendance-action-card {
+  align-self: start !important;
+  margin-top: 0 !important;
+  position: sticky !important;
+  top: calc(var(--topbar-height) + 24px) !important;
+  justify-content: flex-start !important;
+}
+
+@media (max-width: 768px) {
+  .attendance-content {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  .attendance-action-card {
+    position: static !important;
+  }
+}
+

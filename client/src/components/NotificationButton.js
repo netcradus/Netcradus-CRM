@@ -216,7 +216,7 @@ export default function NotificationButton() {
   };
 
   return (
-    <div className="notification-container" ref={containerRef}>
+    <div className="notification-menu-wrapper" ref={containerRef}>
       <button
         type="button"
         className="bell-pill"

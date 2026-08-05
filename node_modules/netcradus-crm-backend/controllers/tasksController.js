@@ -687,6 +687,7 @@ async function getMyTasks(req, res) {
 }
 
 async function getAssignableUsers(req, res) {
+  const { buildInternalUserQuery } = require("../utils/userClassification");
   try {
     if (!canLoadAssignableUsers(req.user)) {
       return res.status(403).json({ success: false, message: "You are not allowed to load assignable users" });
@@ -696,6 +697,7 @@ async function getAssignableUsers(req, res) {
     const userQuery = {
       _id: { $ne: req.user._id },
       isDisabled: false,
+      ...buildInternalUserQuery(),
     };
 
     if (req.user.role === "super_user" || req.user.role === "coo" || assignableIds === "ALL") {

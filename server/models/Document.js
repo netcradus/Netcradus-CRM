@@ -32,7 +32,7 @@ const documentSchema = new mongoose.Schema({
   // CRM entity link (optional — for attaching docs to leads, deals, etc.)
   entityType: {
     type: String,
-    enum: ['user', 'lead', 'deal', 'contact', 'company', 'ticket', null],
+    enum: ['user', 'lead', 'deal', 'contact', 'company', 'ticket', 'Client', null],
     default: null,
   },
   entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
