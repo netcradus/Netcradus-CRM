@@ -70,12 +70,48 @@ const authMiddleware = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if password has been changed since token was issued
-    // decoded.iat is in seconds, lastPasswordChange is in MS
+    // 1. Invalidate token if it is older than user's last password change timestamp
     if (user.lastPasswordChange) {
-      const changedTimestamp = parseInt(user.lastPasswordChange.getTime() / 1000, 10);
+      const changedTimestamp = parseInt(new Date(user.lastPasswordChange).getTime() / 1000, 10);
       if (decoded.iat < changedTimestamp) {
         return res.status(401).json({ message: "Session expired. Please log in again." });
+      }
+    }
+
+    // 2. Token Version Validation
+    if (
+      decoded.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined &&
+      decoded.tokenVersion < user.tokenVersion
+    ) {
+      return res.status(401).json({ message: "Session expired. Please log in again." });
+    }
+
+    // 3. Password Expiry Gating Checks
+    const expiryDays = Number(process.env.PASSWORD_EXPIRY_DAYS) || 15;
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
+
+    const lastChange = user.passwordChangedAt || user.lastPasswordChange || new Date();
+    const timeElapsed = Date.now() - new Date(lastChange).getTime();
+
+    const passwordExpired = !user.passwordExpiryExempt && timeElapsed >= expiryTime;
+    const passwordChangeRequired = user.mustChangePassword || passwordExpired;
+
+    if (passwordChangeRequired) {
+      const path = (req.baseUrl + req.path).trim().toLowerCase();
+      const isExempt =
+        path === "/api/auth/change-password" ||
+        path === "/api/auth/logout" ||
+        path === "/api/auth/me" ||
+        path === "/api/auth/user" ||
+        path === "/api/auth/session";
+
+      if (!isExempt) {
+        return res.status(403).json({
+          success: false,
+          code: "PASSWORD_CHANGE_REQUIRED",
+          message: "You must change your password before continuing."
+        });
       }
     }
 
@@ -91,6 +127,11 @@ const authMiddleware = async (req, res, next) => {
     console.error("Auth Middleware Error:", err);
     return res.status(401).json({ message: "Unauthorized. Invalid or expired token.", error: err.message });
   }
+};
+
+// Expose user cache invalidation utility on the middleware function object
+authMiddleware.clearUserCache = (userId) => {
+  userCache.delete(String(userId));
 };
 
 module.exports = authMiddleware;

@@ -150,6 +150,8 @@ app.use("/api", require("./routes/zohoRoutes"));
 const authMiddleware = require("./middleware/authMiddleware");
 app.use("/api", authMiddleware);
 
+app.use("/api", require("./routes/webSearchRoutes"));
+
 app.use("/api/conversations", require("./routes/conversationRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes"));
 app.use("/api/users", require("./routes/userPresenceRoutes"));
@@ -264,6 +266,12 @@ const startServer = async () => {
     console.log(`[Startup] Socket.IO: Initialized`);
     console.log(`[Startup] Socket.IO Path: /socket.io`);
     console.log(`Server is running on port ${PORT}`);
+
+    try {
+      require("./services/emailService").verifyTransporter();
+    } catch (mailErr) {
+      console.error("[Startup] Transporter verification failed to run:", mailErr.message);
+    }
 
     const driveStatus = await checkDriveHealth();
     if (driveStatus.status === "maintenance") {

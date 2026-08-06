@@ -422,11 +422,46 @@ const login = async (req, res) => {
       if (daysSincePass >= 25) passwordExpiryWarning = true;
     }
 
-    // Success - Create JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    // Calculate password expiry
+    const expiryDays = Number(process.env.PASSWORD_EXPIRY_DAYS) || 15;
+    const warningDays = Number(process.env.PASSWORD_EXPIRY_WARNING_DAYS) || 5;
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
+
+    const lastChange = user.passwordChangedAt || user.lastPasswordChange || new Date();
+    const timeElapsed = Date.now() - new Date(lastChange).getTime();
+    
+    const passwordExpired = !user.passwordExpiryExempt && timeElapsed >= expiryTime;
+    const passwordChangeRequired = user.mustChangePassword || passwordExpired;
+
+    const msRemaining = expiryTime - timeElapsed;
+    const daysRemaining = Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
+
+    const showPasswordExpiryWarning = !user.passwordExpiryExempt && (daysRemaining <= warningDays || passwordExpired);
+
+    // Success - Create JWT with tokenVersion
+    const token = jwt.sign(
+      { id: user._id, tokenVersion: user.tokenVersion || 0 },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     res.status(200).json({
-      token, passwordExpiryWarning,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt, skipOnboarding: user.skipOnboarding }
+      token,
+      passwordExpiryWarning: showPasswordExpiryWarning,
+      passwordExpiry: {
+        passwordChangeRequired,
+        passwordExpired,
+        passwordExpiresInDays: user.passwordExpiryExempt ? 999 : daysRemaining,
+        showPasswordExpiryWarning
+      },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        skipOnboarding: user.skipOnboarding
+      }
     });
   } catch (err) {
     console.error("Login Error:", err);
@@ -655,9 +690,11 @@ const adminChangeUserPassword = async (req, res) => {
     user.password = hashed;
     // Reset security timers so the user isn't immediately prompted on login
     user.lastPasswordChange = new Date();
+    user.passwordChangedAt = new Date();
     user.lastWeeklyVerification = new Date();
     user.failedLoginAttempts = 0;
     user.lastFailedLogin = null;
+    user.mustChangePassword = true;
 
     await user.save();
 
@@ -1007,6 +1044,309 @@ const revokeAdminDevice = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.user.id || req.user._id;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "New passwords do not match" });
+    }
+
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ message: "New password must be different from current password" });
+    }
+
+    // Password Policy Check
+    const strengthCheck = require('../services/passwordPolicyService').validateStrength(newPassword);
+    if (!strengthCheck.valid) {
+      return res.status(400).json({ message: strengthCheck.message });
+    }
+
+    const historyCheck = await require('../services/passwordPolicyService').checkHistory(userId, newPassword);
+    if (!historyCheck.valid) {
+      return res.status(400).json({ message: historyCheck.message });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      await require('../services/securityService').logAuthEvent(userId, "PASSWORD_CHANGE_FAILED", ipAddress, userAgent, "Invalid current password");
+      return res.status(400).json({ message: "Invalid current password" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.passwordChangedAt = new Date();
+    user.lastPasswordChange = new Date();
+    user.lastWeeklyVerification = new Date();
+    user.mustChangePassword = false;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+    // Keep only last 3 passwords in history
+    await PasswordHistory.create({
+      userId: user._id,
+      passwordHash: hashedPassword
+    });
+
+    const history = await PasswordHistory.find({ userId: user._id }).sort({ createdAt: -1 });
+    if (history.length > 3) {
+      const toDelete = history.slice(3).map(h => h._id);
+      await PasswordHistory.deleteMany({ _id: { $in: toDelete } });
+    }
+
+    await user.save();
+
+    // Clear authentication cache dynamically
+    try {
+      const authMiddleware = require("../middleware/authMiddleware");
+      if (authMiddleware && typeof authMiddleware.clearUserCache === "function") {
+        authMiddleware.clearUserCache(user._id);
+      }
+    } catch (e) {
+      console.warn("Failed to clear auth user cache:", e.message);
+    }
+
+    // Log success
+    await require('../services/securityService').logAuthEvent(userId, "PASSWORD_CHANGED", ipAddress, userAgent);
+
+    // Issue new Token with updated tokenVersion
+    const token = jwt.sign(
+      { id: user._id, tokenVersion: user.tokenVersion },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+      token,
+      passwordExpiry: {
+        passwordChangeRequired: false,
+        passwordExpired: false,
+        passwordExpiresInDays: 15,
+        showPasswordExpiryWarning: false
+      },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        skipOnboarding: user.skipOnboarding
+      }
+    });
+  } catch (err) {
+    console.error("Password Change Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id || req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Calculate password expiry
+    const expiryDays = Number(process.env.PASSWORD_EXPIRY_DAYS) || 15;
+    const warningDays = Number(process.env.PASSWORD_EXPIRY_WARNING_DAYS) || 5;
+    const expiryTime = expiryDays * 24 * 60 * 60 * 1000;
+
+    const lastChange = user.passwordChangedAt || user.lastPasswordChange || new Date();
+    const timeElapsed = Date.now() - new Date(lastChange).getTime();
+    
+    const passwordExpired = !user.passwordExpiryExempt && timeElapsed >= expiryTime;
+    const passwordChangeRequired = user.mustChangePassword || passwordExpired;
+
+    const msRemaining = expiryTime - timeElapsed;
+    const daysRemaining = Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
+
+    const showPasswordExpiryWarning = !user.passwordExpiryExempt && (daysRemaining <= warningDays || passwordExpired);
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        skipOnboarding: user.skipOnboarding
+      },
+      passwordExpiry: {
+        passwordChangeRequired,
+        passwordExpired,
+        passwordExpiresInDays: user.passwordExpiryExempt ? 999 : daysRemaining,
+        showPasswordExpiryWarning
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    console.log(`[Forgot Password] Request received for: ${normalizedEmail}`);
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    // Account enumeration protection: always return same message
+    if (!user) {
+      console.log(`[Forgot Password] User not found for email: ${normalizedEmail}`);
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists for this email, a password reset link has been sent."
+      });
+    }
+
+    // Generate secure random reset token (raw hex)
+    const rawResetToken = crypto.randomBytes(32).toString("hex");
+
+    // Hash token and store in DB with 15 minutes expiration
+    user.resetToken = crypto.createHash("sha256").update(rawResetToken).digest("hex");
+    user.resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    await user.save({ validateBeforeSave: false });
+    console.log(`[Forgot Password] Reset token stored for user: ${normalizedEmail}`);
+
+    try {
+      // Send the reset link email
+      const { sendPasswordResetEmail } = require("../services/emailService");
+      await sendPasswordResetEmail(user.email, user.name, rawResetToken);
+      console.log(`[Forgot Password] Email dispatched successfully to: ${user.email}`);
+    } catch (mailErr) {
+      console.error(`[Forgot Password] Failed to send email to ${user.email}:`, mailErr.message);
+      // Clear token fields on mail failure
+      user.resetToken = undefined;
+      user.resetTokenExpiry = undefined;
+      await user.save({ validateBeforeSave: false });
+      throw mailErr;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "If an account exists for this email, a password reset link has been sent."
+    });
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Token is required" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+
+    // Hash URL token to compare with database hash
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetToken: hashedToken,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Password reset token is invalid or has expired." });
+    }
+
+    // Password strength check
+    const strengthCheck = require('../services/passwordPolicyService').validateStrength(password);
+    if (!strengthCheck.valid) {
+      return res.status(400).json({ message: strengthCheck.message });
+    }
+
+    // Password history reuse check
+    const historyCheck = await require('../services/passwordPolicyService').checkHistory(user._id, password);
+    if (!historyCheck.valid) {
+      return res.status(400).json({ message: historyCheck.message });
+    }
+
+    // Check that new password is not same as current password
+    const isSameAsCurrent = await bcrypt.compare(password, user.password);
+    if (isSameAsCurrent) {
+      return res.status(400).json({ message: "New password must be different from current password." });
+    }
+
+    // Hash and update password, clear recovery states, increment tokenVersion
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    user.passwordChangedAt = new Date();
+    user.lastPasswordChange = new Date();
+    user.lastWeeklyVerification = new Date();
+    user.mustChangePassword = false;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+    // Save history (last 3)
+    const PasswordHistory = require("../models/PasswordHistory");
+    await PasswordHistory.create({
+      userId: user._id,
+      passwordHash: hashedPassword
+    });
+
+    const history = await PasswordHistory.find({ userId: user._id }).sort({ createdAt: -1 });
+    if (history.length > 3) {
+      const toDelete = history.slice(3).map(h => h._id);
+      await PasswordHistory.deleteMany({ _id: { $in: toDelete } });
+    }
+
+    await user.save();
+
+    // Clear session cache
+    try {
+      const authMiddleware = require("../middleware/authMiddleware");
+      if (authMiddleware && typeof authMiddleware.clearUserCache === "function") {
+        authMiddleware.clearUserCache(user._id);
+      }
+    } catch (e) {
+      console.warn("Failed to clear auth user cache:", e.message);
+    }
+
+    // Log auth success
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+    await require('../services/securityService').logAuthEvent(user._id, "PASSWORD_CHANGED", ipAddress, userAgent);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been reset successfully."
+    });
+  } catch (err) {
+    console.error("Reset Password Error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   createUserByAdmin,
   saveAndOnboardUserInternal,
@@ -1025,5 +1365,9 @@ module.exports = {
   getAdminDevices,
   revokeAdminDevice,
   verifyPasswordForReAuth,
-  checkReAuthToken
+  checkReAuthToken,
+  changePassword,
+  getMe,
+  forgotPassword,
+  resetPassword
 };

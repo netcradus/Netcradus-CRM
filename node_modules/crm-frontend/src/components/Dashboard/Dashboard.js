@@ -1,4 +1,5 @@
 import React, { lazy, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { apiUrl } from "../../config/api";
 import SuperUserDashboard from "./SuperUserDashboard.js";
@@ -79,14 +80,150 @@ function Dashboard() {
     }
   };
 
+  const [expiryInfo, setExpiryInfo] = useState(null);
+  const [isWarningDismissed, setIsWarningDismissed] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if warning dismissed for today
+    const lastDismissedDate = localStorage.getItem("passwordWarningDismissedDate");
+    const today = new Date().toDateString();
+    if (lastDismissedDate === today) {
+      setIsWarningDismissed(true);
+    }
+
+    const fetchMe = async () => {
+      try {
+        const res = await axios.get(apiUrl("/api/auth/me"), {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data && res.data.success) {
+          setExpiryInfo(res.data.passwordExpiry);
+          if (res.data.passwordExpiry.passwordChangeRequired) {
+            localStorage.setItem("passwordChangeRequired", "true");
+            navigate("/change-password");
+          } else {
+            localStorage.setItem("passwordChangeRequired", "false");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user info:", err);
+      }
+    };
+    if (token) {
+      fetchMe();
+    }
+  }, [token, navigate]);
+
+  const handleDismissWarning = () => {
+    localStorage.setItem("passwordWarningDismissedDate", new Date().toDateString());
+    setIsWarningDismissed(true);
+  };
+
+  const getWarningStyle = (days) => {
+    if (days <= 1) {
+      return {
+        backgroundColor: "rgba(234, 67, 53, 0.15)",
+        borderColor: "var(--color-error, #ea4335)",
+        color: "var(--color-error, #ea4335)"
+      };
+    }
+    if (days <= 3) {
+      return {
+        backgroundColor: "rgba(251, 188, 5, 0.15)",
+        borderColor: "var(--color-warning, #fbbc05)",
+        color: "var(--color-warning, #fbbc05)"
+      };
+    }
+    return {
+      backgroundColor: "rgba(66, 133, 244, 0.15)",
+      borderColor: "var(--color-accent, #4285F4)",
+      color: "var(--color-accent, #4285F4)"
+    };
+  };
+
+  const renderWarningBanner = () => {
+    if (!expiryInfo || !expiryInfo.showPasswordExpiryWarning || isWarningDismissed) {
+      return null;
+    }
+
+    const style = getWarningStyle(expiryInfo.passwordExpiresInDays);
+    const dayText = expiryInfo.passwordExpiresInDays === 1 ? "1 day" : `${expiryInfo.passwordExpiresInDays} days`;
+    const message = `Your password will expire in ${dayText}. Please change it to avoid losing access to the CRM.`;
+
+    return (
+      <div style={{ padding: "var(--space-6) var(--space-6) 0 var(--space-6)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderRadius: "16px",
+            border: `1px solid ${style.borderColor}`,
+            backgroundColor: style.backgroundColor,
+            color: style.color,
+            gap: "16px",
+            flexWrap: "wrap",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+          }}
+        >
+          <span style={{ fontSize: "14px", fontWeight: "600" }}>{message}</span>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => navigate("/change-password")}
+              style={{
+                padding: "6px 16px",
+                fontSize: "13px",
+                fontWeight: "600",
+                border: "none",
+                borderRadius: "6px",
+                backgroundColor: style.borderColor,
+                color: "#fff",
+                cursor: "pointer",
+                transition: "opacity 0.2s"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+            >
+              Change Password
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissWarning}
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                fontSize: "13px",
+                fontWeight: "600",
+                cursor: "pointer",
+                textDecoration: "underline"
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const dashboardContent = renderDashboard();
 
   if (userRole === "super_user") {
-    return dashboardContent;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        {renderWarningBanner()}
+        {dashboardContent}
+      </div>
+    );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      {renderWarningBanner()}
       {myMeetings.length > 0 && (
         <div style={{ padding: 'var(--space-6) var(--space-6) 0 var(--space-6)' }}>
           <div className="nc-card" style={{ background: 'var(--color-bg-surface-strong, #1f1f1f)', border: '1px solid var(--color-border)', borderRadius: '24px', padding: 'var(--space-5)' }}>

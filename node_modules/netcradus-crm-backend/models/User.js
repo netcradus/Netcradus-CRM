@@ -117,6 +117,21 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  passwordChangedAt: {
+    type: Date
+  },
+  mustChangePassword: {
+    type: Boolean,
+    default: false
+  },
+  passwordExpiryExempt: {
+    type: Boolean,
+    default: false
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   emergencyContact: {
     name: String,
     relationship: String,

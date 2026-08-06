@@ -8,8 +8,9 @@ export async function sendLog(path) {
 
     await fetch(`${LOGGER_URL}/log`, {
       method: "POST",
+      mode: "no-cors",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain",
       },
       body: JSON.stringify({
         site: window.location.hostname,

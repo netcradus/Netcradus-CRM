@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { PanelLeft, Search, Globe } from "lucide-react";
 import NotificationButton from "../NotificationButton";
 import ThemeToggle from "../ThemeToggle";
@@ -13,9 +13,16 @@ const Topbar = ({ onToggleSidebar, isSidebarExpanded }) => {
   const userName = localStorage.getItem("userName") || "User";
   const initials = userName.slice(0, 2).toUpperCase();
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+  const location = useLocation();
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [isGoogleSearchOpen, setIsGoogleSearchOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.openSearchModal) {
+      setIsGoogleSearchOpen(true);
+    }
+  }, [location]);
 
   useEffect(() => {
     const fetchUnreadCount = () => {

@@ -1,8 +1,8 @@
-import React, { lazy, Suspense } from "react";
-import { useEffect } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { sendLog } from "./utils/logger";
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import axios from "axios";
 
 
 import { ChatProvider } from "./context/ChatContext";
@@ -108,11 +108,15 @@ const ManagerMeetingsPage      = lazy(() => import("./features/ManagerPortal/Man
 const ManagerMeetingFormPage    = lazy(() => import("./features/ManagerPortal/ManagerMeetingFormPage"));
 const ManagerMeetingDetailPage  = lazy(() => import("./features/ManagerPortal/ManagerMeetingDetailPage"));
 const ManagerBroadcastsPage    = lazy(() => import("./features/Broadcasts/ManagerBroadcastsPage"));
+const WebSearchViewer          = lazy(() => import("./features/WebSearch/WebSearchViewer"));
+const ChangePasswordPage       = lazy(() => import("./Pages/ChangePasswordPage"));
+
 
 
 
 /* ========== Protected Wrapper ========== */
 function ProtectedApp() {
+  const location = useLocation();
   const rawToken = localStorage.getItem("token");
   const rawRole = localStorage.getItem("userRole");
   
@@ -123,6 +127,12 @@ function ProtectedApp() {
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
     return <Navigate to="/login" replace />;
+  }
+
+  // 1. Password change required has highest redirect priority
+  const passwordChangeRequired = localStorage.getItem("passwordChangeRequired") === "true";
+  if (passwordChangeRequired && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
   }
 
   return (
@@ -179,6 +189,28 @@ function RouteLogger() {
 }
 
 const App = () => {
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (
+          error.response?.status === 403 &&
+          error.response?.data?.code === "PASSWORD_CHANGE_REQUIRED"
+        ) {
+          localStorage.setItem("passwordChangeRequired", "true");
+          if (window.location.pathname !== "/change-password") {
+            window.location.href = "/change-password";
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptorId);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
@@ -194,6 +226,7 @@ const App = () => {
             {/* ================= PROTECTED ================= */}
             <Route element={<ProtectedApp />}>
               <Route path="/onboarding" element={<RoleRoute roles={ACCESS_GROUPS.personal}><OnboardingPage /></RoleRoute>} />
+              <Route path="/change-password" element={<ChangePasswordPage />} />
               <Route element={<ProtectedLayout />}>
               <Route path="/welcome" element={<WelcomeAnimation />} />
               <Route path="/dashboard" element={<Dashboard />} />
@@ -240,6 +273,7 @@ const App = () => {
               />
               <Route path="/mail" element={<MailPage />} />
               <Route path="/dashboard/mail" element={<RoleRoute roles={ACCESS_GROUPS.personal}><InternalMailPage /></RoleRoute>} />
+              <Route path="/dashboard/web-search/view" element={<RoleRoute roles={ACCESS_GROUPS.personal}><WebSearchViewer /></RoleRoute>} />
               <Route path="/tickets" element={<RoleRoute roles={ACCESS_GROUPS.tickets}><TicketsPage /></RoleRoute>} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               <Route path="/broadcasts" element={<RoleRoute roles={ACCESS_GROUPS.personal}><BroadcastsPage /></RoleRoute>} />

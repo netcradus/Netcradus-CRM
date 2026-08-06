@@ -29,6 +29,7 @@ HR_EMAIL=hr@netcradus.com
 
 
 CLIENT_ORIGIN=
+CLIENT_URL=
 
 # Google Drive - OAuth2 (Personal Account method)
 # Keep false while Drive is under maintenance. Set true only when ready to re-enable Drive routes and startup checks.
@@ -62,3 +63,6 @@ MIN_HOURS_FOR_PRESENT=4
 MAX_SHIFT_HOURS=12
 WEEKEND_DAYS=0,6
 ONBOARDING_GRACE_PERIOD_DAYS=3
+SERPER_API_KEY=
+PASSWORD_EXPIRY_DAYS=
+PASSWORD_EXPIRY_WARNING_DAYS=

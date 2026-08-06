@@ -106,6 +106,19 @@ const onboardingSubmissionLimiter = rateLimit({
     skip: shouldSkip,
 });
 
+const webSearchLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 20,
+    keyGenerator: (req) => req.user?._id?.toString() || req.user?.id || req.ip,
+    validate: { keyGeneratorIpFallback: false },
+    message: {
+        success: false,
+        message: "Too many searches. Please wait and try again.",
+        code: "RATE_LIMIT_REACHED",
+    },
+    skip: shouldSkip,
+});
+
 module.exports = {
     loginLimiter,
     otpRequestLimiter,
@@ -115,4 +128,5 @@ module.exports = {
     projectRouteLimiter,
     passwordVerificationLimiter,
     onboardingSubmissionLimiter,
+    webSearchLimiter,
 };

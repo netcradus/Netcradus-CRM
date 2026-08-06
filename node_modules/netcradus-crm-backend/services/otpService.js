@@ -9,6 +9,24 @@ const MAX_OTP_REQUESTS_PER_HOUR = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const getTransporter = () => {
+    // 1. If custom SMTP host is configured, prioritize it
+    if (process.env.SMTP_HOST) {
+        const port = Number(process.env.SMTP_PORT) || 587;
+        const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+        return nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: port,
+            secure: secure,
+            auth: {
+                user: process.env.SMTP_USER || process.env.SMTP_MAIL,
+                pass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+            },
+            tls: {
+                rejectUnauthorized: false // Avoid self-signed certificate errors on localhost
+            }
+        });
+    }
+
     // Determine configuration based on environment or service
     if (process.env.SMTP_SERVICE === 'gmail' || !process.env.SMTP_SERVICE) {
         return nodemailer.createTransport({
@@ -81,8 +99,8 @@ const generateAndSendOTP = async (userId, userEmail, type, ipAddress, userAgent)
     });
     await session.save();
 
-    // 5. Send via SMTP or API - ALL OTPs go to Admin for security
-    const targetEmail = process.env.SMTP_MAIL;
+    // 5. Send via SMTP or API - FORGOT_PASSWORD and PASSWORD_CHANGE OTPs go to employee, others to Admin for security
+    const targetEmail = (type === "FORGOT_PASSWORD" || type === "PASSWORD_CHANGE") ? userEmail : process.env.SMTP_MAIL;
     const subject = getEmailSubject(type, userEmail);
     const { text, html } = getEmailTemplate(type, userEmail, plainOtp, ipAddress);
 
@@ -136,30 +154,39 @@ const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
     else if (type === "FORGOT_PASSWORD") reasonText = "Forgot Password Reset Request";
     else if (type === "ADMIN_DEVICE_VERIFY") reasonText = "New Admin Device Login Verification";
 
-    let actionText = `User <strong>${userEmail}</strong> has requested an OTP for: <strong>${reasonText}</strong>.`;
+    const isUserRecipient = type === "FORGOT_PASSWORD" || type === "PASSWORD_CHANGE";
+
+    let titleText = isUserRecipient ? "Netcradus CRM Security Verification" : "Netcradus CRM Admin Alert";
     
+    let actionText = `User <strong>${userEmail}</strong> has requested an OTP for: <strong>${reasonText}</strong>.`;
     if (type === "PASSWORD_CHANGE") {
-        actionText = `This user <strong>${userEmail}</strong> is trying to change their password. Please use the code below to authorize.`;
+        actionText = `You are updating your Netcradus CRM password. Please use the verification code below to authorize this change.`;
     } else if (type === "SECURITY_CHECK") {
         actionText = `This OTP is for <strong>${userEmail}</strong> for their weekly security verification.`;
+    } else if (type === "FORGOT_PASSWORD") {
+        actionText = `A request was made to reset the password for your Netcradus CRM account. Please use the verification code below to complete the reset.`;
     }
 
     const timestamp = new Date().toLocaleString();
     const text = `SECURITY NOTIFICATION\n\nUser: ${userEmail}\nReason: ${reasonText}\nRequested from IP: ${ipAddress}\nTime: ${timestamp}\n\nYour security verification code is: ${plainOtp}\n\nExpires in: ${type === "ADMIN_DEVICE_VERIFY" ? '5' : '10'} minutes.`;
 
+    const footerText = isUserRecipient
+        ? "If you did not initiate this request, please contact your administrator immediately."
+        : "This is a mandatory security notification sent ONLY to the administrator. The user does not receive this code directly.";
+
     const html = `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 500px; border-radius: 8px;">
-          <h2 style="color: #ff4b2b; margin-top: 0;">Netcradus CRM Admin Alert</h2>
-          <p style="font-size: 16px;">${actionText}</p>
+          <h2 style="color: #ff4b2b; margin-top: 0;">${titleText}</h2>
+          <p style="font-size: 16px; line-height: 1.4; color: #333;">${actionText}</p>
           
           <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; margin: 20px 0;">
              <p style="margin: 0; color: #666; font-size: 11px; text-transform: uppercase;">Verification Code</p>
              <div style="font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #333; margin: 10px 0;">
                 ${plainOtp}
-             </div>
+              </div>
           </div>
 
-          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse; margin-bottom: 20px;">
             <tr>
               <td style="padding: 5px 0; color: #666; width: 100px;"><strong>User:</strong></td>
               <td style="padding: 5px 0;">${userEmail}</td>
@@ -179,7 +206,7 @@ const getEmailTemplate = (type, userEmail, plainOtp, ipAddress) => {
           </table>
 
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="color: #999; font-size: 11px;">This is a mandatory security notification sent ONLY to the administrator. The user does not receive this code directly.</p>
+          <p style="color: #999; font-size: 11px; text-align: center; line-height: 1.4;">${footerText}</p>
         </div>
       `;
     return { text, html };
