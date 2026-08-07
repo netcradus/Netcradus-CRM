@@ -1119,7 +1119,7 @@ const SalesDashboard = ({ preview }) => {
 
     const start = () => {
       fetchDeals();
-      intervalId = setInterval(fetchDeals, 30000);
+      intervalId = setInterval(fetchDeals, 60000);
     };
 
     const token = getToken();

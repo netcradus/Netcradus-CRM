@@ -18,7 +18,7 @@ import WorkspaceWidget from "./WorkspaceWidget";
 import ManagerDashboard from "../../features/ManagerPortal/ManagerDashboard";
 import COODashboard from "./COODashboard";
 
-const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REFRESH_MS = 60000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 const initialReminderForm = { title: "", meetingLink: "", meetingDate: "", meetingTime: "" };
 

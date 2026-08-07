@@ -20,7 +20,12 @@ export default function PartnerDashboard() {
 
   useEffect(() => {
     // Partner dashboard reads only partner-scoped aggregate data from the backend.
-    partnerApi.dashboard().then((res) => setData(res.data.data)).catch(() => setData({}));
+    const fetchDashboard = () => {
+      partnerApi.dashboard().then((res) => setData(res.data.data)).catch(() => setData({}));
+    };
+    fetchDashboard();
+    const interval = setInterval(fetchDashboard, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const stats = data || {};

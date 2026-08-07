@@ -140,10 +140,12 @@ const ManagerDashboard = ({ preview = false }) => {
     }
   };
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
-      setError("");
+      if (!isSilent) {
+        setLoading(true);
+        setError("");
+      }
       const res = await axios.get(apiUrl("/api/manager/dashboard"), {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -153,18 +155,28 @@ const ManagerDashboard = ({ preview = false }) => {
           ...(res.data.data ?? {})
         }));
       } else {
-        setError("Failed to load dashboard statistics.");
+        if (!isSilent) {
+          setError("Failed to load dashboard statistics.");
+        }
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || "Failed to load dashboard data.");
+      if (!isSilent) {
+        setError(err.response?.data?.message || "Failed to load dashboard data.");
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
   }, [token]);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboardData(false);
+    const interval = setInterval(() => {
+      fetchDashboardData(true);
+    }, 60000);
+    return () => clearInterval(interval);
   }, [fetchDashboardData]);
 
   const formatDate = (dateStr) => {

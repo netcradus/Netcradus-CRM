@@ -37,7 +37,7 @@ function Dashboard() {
       };
       fetchMyMeetings();
 
-      const interval = setInterval(fetchMyMeetings, 300000);
+      const interval = setInterval(fetchMyMeetings, 60000);
       return () => clearInterval(interval);
     }
   }, [token, userRole]);

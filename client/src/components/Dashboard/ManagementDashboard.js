@@ -20,7 +20,7 @@ import WorkspaceWidget from "./WorkspaceWidget";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, ClipboardList, Ticket, PlayCircle, CheckCircle2 } from "lucide-react";
 
-const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REFRESH_MS = 60000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
 const TASK_COLORS = {

@@ -18,7 +18,7 @@ import AttendanceWidget from "../../features/Attendance/AttendanceWidget";
 import WorkspaceWidget from "./WorkspaceWidget";
 import { apiUrl } from "../../config/api";
 
-const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REFRESH_MS = 60000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
 const STATUS_COLORS = {

@@ -17,7 +17,7 @@ import WorkspaceWidget from "./WorkspaceWidget";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 import { Users, UserCheck, Activity } from "lucide-react";
 
-const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REFRESH_MS = 60000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
 const PIE_COLORS = ["#ff7a18", "#ff5f3d", "#ff3f6c", "#ff2d8f", "#ff8a00", "#c084fc"];

@@ -619,8 +619,24 @@ const getChatFile = async (req, res) => {
 
     const fileUrlPart = `/api/messages/file/${safeFilename}`;
     const message = await Message.findOne({ fileUrl: fileUrlPart });
+    
+    // Fallback: If message doesn't exist yet, it's an upload preview.
+    // Allow authenticated users to view it.
     if (!message) {
-      return res.status(404).json({ success: false, message: "Associated chat message not found" });
+      const disposition = req.query.disposition === "inline" ? "inline" : "attachment";
+      const ext = path.extname(safeFilename).toLowerCase();
+      let mimeType = "application/octet-stream";
+      if (ext === ".png") mimeType = "image/png";
+      else if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+      else if (ext === ".webp") mimeType = "image/webp";
+      else if (ext === ".gif") mimeType = "image/gif";
+      else if (ext === ".pdf") mimeType = "application/pdf";
+      else if (ext === ".txt") mimeType = "text/plain";
+      
+      res.setHeader("Content-Type", mimeType);
+      const escapedFilename = encodeURIComponent(safeFilename).replace(/'/g, "%27");
+      res.setHeader("Content-Disposition", `${disposition}; filename*=UTF-8''${escapedFilename}`);
+      return res.sendFile(resolvedPath);
     }
 
     const conversation = await Conversation.findOne({

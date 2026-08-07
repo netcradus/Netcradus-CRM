@@ -22,7 +22,7 @@ import WorkspaceWidget from "./WorkspaceWidget";
 import { Users, UserCheck, Clock, CalendarClock, Receipt } from "lucide-react";
 import ApprovalQueueWidget from "../../features/DigitalMedia/ApprovalQueueWidget";
 
-const DASHBOARD_REFRESH_MS = 300000;
+const DASHBOARD_REFRESH_MS = 60000;
 const DASHBOARD_REQUEST_TIMEOUT_MS = 10000;
 
 const DEPARTMENT_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f59e0b", "#10b981"];
