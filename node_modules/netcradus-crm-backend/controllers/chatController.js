@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
+const ChatAttachment = require("../models/ChatAttachment");
 const User = require("../models/User");
 const { emitToUsers, getPresenceForUsers } = require("../socket");
 const { buildConversationSummary, normalizeMessage } = require("../utils/chatSerializers");
@@ -490,19 +491,7 @@ async function getChatDirectory(req, res) {
   }
 }
 
-const chatStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = "./uploads/chat/";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const cleanOriginalName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(cleanOriginalName).toLowerCase();
-    cb(null, `chat-${uniqueSuffix}${ext}`);
-  }
-});
+const chatStorage = multer.memoryStorage();
 
 const ALLOWED_ATTACHMENT_TYPES = [
   'image/jpeg', 'image/png', 'image/webp',
@@ -540,7 +529,7 @@ const chatFileFilter = (req, file, cb) => {
 
 const chatMulter = multer({
   storage: chatStorage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB to comfortably fit within 16MB MongoDB document limit
   fileFilter: chatFileFilter
 }).single("file");
 
@@ -570,7 +559,6 @@ const uploadChatFile = (req, res) => {
     try {
       const conversationId = req.body.conversationId;
       if (!conversationId) {
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         return res.status(400).json({ success: false, message: "conversationId is required" });
       }
 
@@ -580,11 +568,24 @@ const uploadChatFile = (req, res) => {
       });
 
       if (!conversation) {
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         return res.status(403).json({ success: false, message: "Unauthorized access to conversation" });
       }
 
-      const fileUrl = `/api/messages/file/${req.file.filename}`;
+      const cleanOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(cleanOriginalName).toLowerCase();
+      const filename = `chat-${uniqueSuffix}${ext}`;
+
+      // Save the file persistently in MongoDB
+      await ChatAttachment.create({
+        filename,
+        data: req.file.buffer,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        uploadedBy: req.user._id
+      });
+
+      const fileUrl = `/api/messages/file/${filename}`;
       const msgType = getMessageType(req.file.mimetype);
 
       return res.json({
@@ -599,9 +600,6 @@ const uploadChatFile = (req, res) => {
       });
     } catch (error) {
       console.error("Upload chat file error:", error);
-      if (req.file && fs.existsSync(req.file.path)) {
-        try { fs.unlinkSync(req.file.path); } catch (e) {}
-      }
       return res.status(500).json({ success: false, message: "Failed to save upload info" });
     }
   });
@@ -611,9 +609,9 @@ const getChatFile = async (req, res) => {
   try {
     const { filename } = req.params;
     const safeFilename = path.basename(filename);
-    const resolvedPath = path.resolve("./uploads/chat/", safeFilename);
 
-    if (!fs.existsSync(resolvedPath)) {
+    const attachment = await ChatAttachment.findOne({ filename: safeFilename });
+    if (!attachment) {
       return res.status(404).json({ success: false, message: "File not found" });
     }
 
@@ -624,19 +622,10 @@ const getChatFile = async (req, res) => {
     // Allow authenticated users to view it.
     if (!message) {
       const disposition = req.query.disposition === "inline" ? "inline" : "attachment";
-      const ext = path.extname(safeFilename).toLowerCase();
-      let mimeType = "application/octet-stream";
-      if (ext === ".png") mimeType = "image/png";
-      else if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
-      else if (ext === ".webp") mimeType = "image/webp";
-      else if (ext === ".gif") mimeType = "image/gif";
-      else if (ext === ".pdf") mimeType = "application/pdf";
-      else if (ext === ".txt") mimeType = "text/plain";
-      
-      res.setHeader("Content-Type", mimeType);
-      const escapedFilename = encodeURIComponent(safeFilename).replace(/'/g, "%27");
+      res.setHeader("Content-Type", attachment.mimeType || "application/octet-stream");
+      const escapedFilename = encodeURIComponent(attachment.filename).replace(/'/g, "%27");
       res.setHeader("Content-Disposition", `${disposition}; filename*=UTF-8''${escapedFilename}`);
-      return res.sendFile(resolvedPath);
+      return res.send(attachment.data);
     }
 
     const conversation = await Conversation.findOne({
@@ -649,12 +638,12 @@ const getChatFile = async (req, res) => {
 
     const disposition = req.query.disposition === "inline" ? "inline" : "attachment";
     
-    res.setHeader("Content-Type", message.mimeType || "application/octet-stream");
+    res.setHeader("Content-Type", message.mimeType || attachment.mimeType || "application/octet-stream");
     
-    const escapedFilename = encodeURIComponent(message.fileName).replace(/'/g, "%27");
+    const escapedFilename = encodeURIComponent(message.fileName || attachment.filename).replace(/'/g, "%27");
     res.setHeader("Content-Disposition", `${disposition}; filename*=UTF-8''${escapedFilename}`);
 
-    return res.sendFile(resolvedPath);
+    return res.send(attachment.data);
   } catch (error) {
     console.error("Get chat file error:", error);
     return res.status(500).json({ success: false, message: "Failed to download file" });
